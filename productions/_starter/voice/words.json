@@ -1,0 +1,10 @@
+[
+  { "text": "Halo", "start": 0.2, "end": 0.6 },
+  { "text": "dunia", "start": 0.7, "end": 1.2 },
+  { "text": "ini", "start": 1.3, "end": 1.6 },
+  { "text": "cuma", "start": 1.7, "end": 2.1 },
+  { "text": "contoh", "start": 2.2, "end": 2.8 },
+  { "text": "mengejutkan", "start": 3.0, "end": 3.9 },
+  { "text": "sekali", "start": 4.0, "end": 4.6 },
+  { "text": "bukan?", "start": 5.2, "end": 5.8 }
+]

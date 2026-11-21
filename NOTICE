@@ -1,0 +1,22 @@
+MotionForge Atelier
+-------------------
+Dibuat dengan terinspirasi oleh repositori "2d-in-3d-animation-agent" (MIT License, Copyright (c) 2026).
+
+Ditulis ulang di sini: nama proyek, struktur folder, seluruh agent dan skill, kode engine,
+pipeline, sound lab, tes, dan dokumentasi.
+
+Diadaptasi dari alur referensi (ide dan angka kerja, bukan teks atau kode):
+  - urutan pass post-processing
+  - target kecepatan naskah 3,7 kata per detik
+  - kedip 4 frame dan kick kamera singkat
+  - target loudness sekitar -14 LUFS
+  - prinsip gate persetujuan antar fase
+
+Frame dan contact sheet di references/ berasal dari materi referensi tersebut. Gunakan untuk belajar
+gaya secara privat dan jangan dipublikasikan.
+
+Teks lisensi MIT referensi:
+  Copyright (c) 2026
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+  and associated documentation files, to deal in the Software without restriction, subject to
+  inclusion of this copyright notice and permission notice in all copies or substantial portions.

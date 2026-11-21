@@ -1,0 +1,40 @@
+{
+  "name": "motionforge-atelier",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Template studio untuk animasi 2D-in-3D vertikal: karakter kartun 2D di dunia 3D prosedural, dirender dengan Remotion + three.js.",
+  "scripts": {
+    "doctor": "node pipeline/doctor.mjs",
+    "forge:new": "node pipeline/forge-new.mjs",
+    "studio": "remotion studio studio/index.ts",
+    "still": "node pipeline/stills.mjs",
+    "preview": "node pipeline/preview.mjs",
+    "render": "node pipeline/render.mjs",
+    "mux": "node pipeline/mux.mjs",
+    "sound": "python3 sound/mix.py",
+    "qa": "python3 pipeline/qa/qa_check.py",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p \"test_*.py\"",
+    "check": "npm run typecheck && npm test"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@react-three/fiber": "^9.8.2",
+    "@remotion/bundler": "4.0.545",
+    "@remotion/cli": "4.0.545",
+    "@remotion/renderer": "4.0.545",
+    "@remotion/three": "4.0.545",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "4.0.545",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/three": "^0.187.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

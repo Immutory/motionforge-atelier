@@ -1,0 +1,13 @@
+node_modules/
+out/*
+!out/.gitkeep
+.env
+.DS_Store
+*.log
+# aset berat dan materi referensi privat
+public/*.mp3
+public/*.wav
+references/frames/
+references/sheets/
+productions/*/voice/*.wav
+productions/*/voice/*.mp3
