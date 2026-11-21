@@ -12,4 +12,5 @@ export * from './cast/expressions';
 export * from './cast/nusantara';
 export * from './cast/ActorBillboard';
 export * from './textures';
+export * from './sets';
 export * from './post';

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { blinkLidAt } from '../engine/cast/bean';
 import { talkAt, talkWave } from '../engine/cast/lipsync';
 import { CAST_PRESETS, resolveActorSpec } from '../engine/cast/nusantara';
-import { cameraRelativeSun } from '../engine/stage/lights';
+import { SET_PRESETS, indoorLight } from '../engine/sets';
+import { LIGHTS, cameraRelativeSun } from '../engine/stage/lights';
 import { pxScale } from '../engine/post/scale';
 
 test('blinkLidAt tidak mulai tertutup di frame 0 dan membentuk 4-frame half/shut/shut/half pada swap', () => {
@@ -76,4 +77,15 @@ test('cameraRelativeSun menempatkan backlight az=0 di depan arah kamera', () => 
 test('pxScale menjaga lebar piksel konsisten antara still 0.5x dan master', () => {
   assert.equal(pxScale(960), 0.5);
   assert.equal(pxScale(1920), 1);
+});
+
+test('SET_PRESETS memuat 3 set Blender (warkop, kost, kampus) dan indoorLight mematikan cameraRelative', () => {
+  assert.deepEqual(Object.keys(SET_PRESETS).sort(), ['kampus', 'kost', 'warkop']);
+  assert.equal(SET_PRESETS.warkop.glb, 'sets/warkop.glb');
+  assert.equal(SET_PRESETS.kost.glb, 'sets/kost.glb');
+  assert.equal(SET_PRESETS.kampus.glb, 'sets/kampus.glb');
+
+  const interior = indoorLight(LIGHTS.dusk);
+  assert.equal(interior.key.cameraRelative, false);
+  assert.equal(LIGHTS.dusk.key.cameraRelative, true);
 });

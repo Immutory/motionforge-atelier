@@ -91,6 +91,8 @@ export type StageProps = {
   light: LightPreset;
   ground?: string;
   groundMap?: THREE.Texture | null;
+  /** Tampilkan bidang tanah tak terhingga di y=0 (default true; matikan bila set 3D sudah punya lantai penuh). */
+  showGround?: boolean;
   /** Posisi kamera & target saat ini (opsional; dipakai jika preset key.cameraRelative = true). */
   camPos?: Vec3;
   camLook?: Vec3;
@@ -107,6 +109,7 @@ export const Stage: React.FC<StageProps> = ({
   light,
   ground = '#d9c59b',
   groundMap = null,
+  showGround = true,
   camPos,
   camLook,
   shadowRange,
@@ -159,9 +162,11 @@ export const Stage: React.FC<StageProps> = ({
         shadow-normalBias={light.shadow.normalBias}
       />
       <directionalLight color={light.fill.color} intensity={light.fill.intensity} position={[-sun[0], 14, -sun[2]]} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow material={groundMat}>
-        <planeGeometry args={[600, 600]} />
-      </mesh>
+      {showGround ? (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow material={groundMat}>
+          <planeGeometry args={[600, 600]} />
+        </mesh>
+      ) : null}
       {children}
     </>
   );

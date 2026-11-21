@@ -6,6 +6,8 @@ out/*
 *.log
 __pycache__/
 *.pyc
+*.blend1
+*.blend2
 # aset berat dan materi referensi privat
 public/*.mp3
 public/*.wav

@@ -12,6 +12,8 @@ import {
   riglabMeta,
   BangUtohProduction,
   bangUtohMeta,
+  SetLabProduction,
+  setLabMeta,
 } from './charlab';
 // @forge:imports
 
@@ -20,6 +22,7 @@ export type RegisteredProduction = { meta: ProductionMeta; Component: ComponentT
 export const PRODUCTIONS: RegisteredProduction[] = [
   { meta: starterMeta, Component: StarterProduction },
   { meta: bangUtohMeta, Component: BangUtohProduction },
+  { meta: setLabMeta, Component: SetLabProduction },
   { meta: charlabMeta, Component: CharlabProduction },
   { meta: nusantaraMeta, Component: NusantaraProduction },
   { meta: wargaMeta, Component: WargaProduction },

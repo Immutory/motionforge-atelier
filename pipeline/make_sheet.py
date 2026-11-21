@@ -105,6 +105,7 @@ def main() -> None:
     w_src = OUT / "warga" / "stills"
     r_src = OUT / "riglab" / "stills"
     u_src = OUT / "bangutoh" / "stills"
+    s_src = OUT / "setlab" / "stills"
 
     global_items = [
         (copy_if_exists(g_src / "f0000.jpg", FRAMES_DIR / "global_lineup.jpg"), "Lineup Global (A / B / C)"),
@@ -305,6 +306,24 @@ def main() -> None:
             dest=SHEETS_DIR / "sheet_bang_utoh_anim_strip.jpg",
             cell_w=380,
             cell_h=675,
+        )
+
+    sets_dir = ROOT / "assets" / "sets"
+    set_items = [
+        (copy_if_exists(s_src / "f0000.jpg", sets_dir / "frames" / "set_01_warkop_siang.jpg"), "Warkop Ngoding (Siang)"),
+        (copy_if_exists(s_src / "f0030.jpg", sets_dir / "frames" / "set_02_warkop_senja.jpg"), "Warkop Ngoding (Senja + Bloom)"),
+        (copy_if_exists(s_src / "f0060.jpg", sets_dir / "frames" / "set_03_kost_malam.jpg"), "Kamar Kost Anak S1 TI (Malam)"),
+        (copy_if_exists(s_src / "f0090.jpg", sets_dir / "frames" / "set_04_kampus_lab.jpg"), "Lab Komputer S1 Informatika"),
+    ]
+    if any(p.exists() for p, _ in set_items):
+        build_grid_sheet(
+            set_items,
+            cols=4,
+            title="MOTIONFORGE ATELIER — PAKET SET DUNIA 3D BLENDER (engine/sets)",
+            subtitle="Dimodelkan di Blender 5.3 (.blend + .glb) -> Shader twoTone + InkPass + HDR Bloom · Siap pakai <WarkopSet /> <KostSet /> <KampusSet />",
+            dest=sets_dir / "sheets" / "sheet_blender_sets_showcase.jpg",
+            cell_w=420,
+            cell_h=746,
         )
 
     for src, dst_name in [
