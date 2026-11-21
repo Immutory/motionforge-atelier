@@ -1,9 +1,9 @@
 // Cek lingkungan: node pipeline/doctor.mjs
 import { spawnSync } from 'node:child_process';
+import { findPython } from './py.mjs';
 
 const checks = [
   ['node', ['--version'], (v) => Number(v.replace('v', '').split('.')[0]) >= 18, 'Node 18 atau lebih baru'],
-  ['python3', ['--version'], (v) => /Python 3\.(\d+)/.test(v) && Number(v.match(/3\.(\d+)/)[1]) >= 10, 'Python 3.10 atau lebih baru'],
   ['ffmpeg', ['-version'], (v) => /ffmpeg version/.test(v), 'FFmpeg ada di PATH'],
   ['ffprobe', ['-version'], (v) => /ffprobe version/.test(v), 'ffprobe ada di PATH'],
 ];
@@ -15,8 +15,23 @@ for (const [cmd, args, ok, label] of checks) {
   if (!pass) bad++;
   console.log(`${pass ? 'OK  ' : 'GAGAL'}  ${label}  ${pass ? '(' + out.trim() + ')' : ''}`);
 }
-const py = spawnSync('python3', ['-c', 'import numpy; print(numpy.__version__)'], { encoding: 'utf8' });
-console.log(`${py.status === 0 ? 'OK  ' : 'GAGAL'}  numpy untuk sound lab ${py.status === 0 ? '(' + py.stdout.trim() + ')' : ''}`);
-if (py.status !== 0) bad++;
-console.log(process.env.REMOTION_TMP ? `OK    REMOTION_TMP = ${process.env.REMOTION_TMP}` : 'INFO  REMOTION_TMP belum diset, temp bundle akan ke folder sistem.');
+
+const py = findPython();
+if (py) {
+  console.log(`OK    Python 3.10 atau lebih baru  (${py.version} via ${py.cmd})`);
+  const np = spawnSync(py.cmd, ['-c', 'import numpy; print(numpy.__version__)'], { encoding: 'utf8' });
+  const okNp = np.status === 0;
+  if (!okNp) bad++;
+  console.log(`${okNp ? 'OK  ' : 'GAGAL'}  numpy untuk sound lab  ${okNp ? '(' + np.stdout.trim() + ')' : ''}`);
+} else {
+  bad += 2;
+  console.log('GAGAL  Python 3.10 atau lebih baru');
+  console.log('GAGAL  numpy untuk sound lab');
+}
+
+console.log(
+  process.env.REMOTION_TMP
+    ? `OK    REMOTION_TMP = ${process.env.REMOTION_TMP}`
+    : 'INFO  REMOTION_TMP belum diset, temp bundle akan ke folder sistem.',
+);
 process.exit(bad ? 1 : 0);

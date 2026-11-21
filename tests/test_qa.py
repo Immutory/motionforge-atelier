@@ -2,6 +2,7 @@
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,7 +22,7 @@ def make(tmp: Path, name: str, src: str) -> str:
 
 
 def report(path: str) -> dict:
-    r = subprocess.run(["python3", str(QA), path, "--json"], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(QA), path, "--json"], capture_output=True, text=True)
     return json.loads(r.stdout)
 
 

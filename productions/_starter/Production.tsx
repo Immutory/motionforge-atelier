@@ -1,11 +1,22 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AbsoluteFill, Audio, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
 import { useThree } from '@react-three/fiber';
 import type { PerspectiveCamera } from 'three';
-import { Billboard, PostStack, Stage, kickOffset, sampleCamera, shotAt, type CamPose, type Vec3 } from '../../engine';
+import * as THREE from 'three';
+import {
+  ActorBillboard,
+  PostStack,
+  Stage,
+  cobbleTexture,
+  kickOffset,
+  sampleCamera,
+  shotAt,
+  type CamPose,
+  type Vec3,
+} from '../../engine';
 import { ACTORS, poseFor } from './cast';
-import { LOOK, POST, lightFor } from './look';
+import { LOOK, lightFor, postFor } from './look';
 import { SetPieces } from './set';
 import { CAMS, DOF, KICKS, SHOTS } from './shots';
 import { PREVIEW_VOICE } from './words';
@@ -28,17 +39,34 @@ export const StarterProduction: React.FC = () => {
   const pose = sampleCamera(CAMS, frame);
   const shake = kickOffset(KICKS, frame);
   const shot = shotAt(SHOTS, frame);
-  const post = { ...POST, blur: DOF[shot.id] ?? 0, focus: dist(pose.pos, pose.look) };
+  const light = lightFor(shot.light);
+  const post = postFor(shot.light, DOF[shot.id] ?? 0, dist(pose.pos, pose.look));
+  const groundMap = useMemo(() => cobbleTexture({ repeat: [150, 150] }), []);
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
       {PREVIEW_VOICE ? <Audio src={staticFile(PREVIEW_VOICE)} /> : null}
-      <ThreeCanvas width={width} height={height} camera={{ fov: pose.fov, position: pose.pos, near: 0.1, far: 800 }}>
+      <ThreeCanvas
+        shadows={{ type: THREE.PCFShadowMap }}
+        width={width}
+        height={height}
+        camera={{ fov: pose.fov, position: pose.pos, near: 0.1, far: 800 }}
+      >
         <CameraRig pose={pose} shake={shake} />
-        <Stage light={lightFor(shot.light)} ground={LOOK.ground}>
-          <SetPieces />
+        <Stage light={light} ground={LOOK.ground} groundMap={groundMap} camPos={pose.pos} camLook={pose.look}>
+          <SetPieces lightId={shot.light} />
           {ACTORS.map((a) => (
-            <Billboard key={a.id} position={a.base as Vec3} faceTo={pose.pos} look={a.look} pose={poseFor(a.id, frame)} />
+            <ActorBillboard
+              key={a.id}
+              actor={a.preset}
+              overrides={a.overrides}
+              position={a.base}
+              faceTo={pose.pos}
+              pose={poseFor(a.id, frame)}
+              height={a.height}
+              castShadow={light.card.castShadow}
+              blobColor={light.card.blob}
+            />
           ))}
         </Stage>
         <PostStack params={post} />

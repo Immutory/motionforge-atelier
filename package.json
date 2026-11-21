@@ -12,10 +12,10 @@
     "preview": "node pipeline/preview.mjs",
     "render": "node pipeline/render.mjs",
     "mux": "node pipeline/mux.mjs",
-    "sound": "python3 sound/mix.py",
-    "qa": "python3 pipeline/qa/qa_check.py",
+    "sound": "node pipeline/py.mjs sound/mix.py",
+    "qa": "node pipeline/py.mjs pipeline/qa/qa_check.py",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p \"test_*.py\"",
+    "test": "tsx --test tests/*.test.ts && node pipeline/py.mjs -m unittest discover -s tests -p \"test_*.py\"",
     "check": "npm run typecheck && npm test"
   },
   "license": "MIT",

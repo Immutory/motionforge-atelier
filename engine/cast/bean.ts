@@ -25,7 +25,8 @@ export type BeanLook = {
 
 export type BeanPose = {
   face: Face;
-  blink: boolean;
+  /** false/0 = terbuka, 0.5 = setengah tertutup (in-between), true/1 = tertutup penuh */
+  blink: boolean | number;
   /** 0 = tangan turun, 1 = tangan terangkat tinggi */
   armsUp: number;
   /** -1..1 posisi langkah kaki */
@@ -35,6 +36,32 @@ export type BeanPose = {
   /** -1..1 sisi yang dihadapi wajah (default 0.35) */
   facing?: number;
 };
+
+const BLINK_SHAPE = [0.5, 1, 1, 0.5] as const;
+
+function hash01(n: number): number {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453123;
+  return x - Math.floor(x);
+}
+
+/**
+ * Kedip 4 frame bergaya referensi (half / shut / shut / half) dengan jeda tidak teratur 0.5-2.3 detik,
+ * tidak pernah mulai tertutup di frame 0, dan otomatis mengedip menutupi setiap pergantian ekspresi.
+ */
+export function blinkLidAt(frame: number, seed: number, fps = 30, swapFrames: number[] = []): number {
+  for (const sf of swapFrames) {
+    const k = frame - (sf - 1);
+    if (k >= 0 && k < 4) return BLINK_SHAPE[k];
+  }
+  const t = frame / fps;
+  let next = 0.65 + 1.15 * hash01(seed * 19 + 7);
+  for (let n = 0; next <= t + 0.2 && n < 300; n++) {
+    const k = Math.floor((t - next) * fps);
+    if (k >= 0 && k < 4) return BLINK_SHAPE[k];
+    next += 0.5 + 1.8 * hash01(seed * 31 + n * 13 + 3);
+  }
+  return 0;
+}
 
 export const CANVAS_W = 600;
 export const CANVAS_H = 1000;
@@ -248,16 +275,33 @@ export function drawBean(ctx: Ctx, look: BeanLook, pose: BeanPose) {
   ctx.fillStyle = ink;
   ctx.strokeStyle = ink;
   const f = pose.face;
+  const lid = pose.blink === true ? 1 : pose.blink === false ? 0 : Math.max(0, Math.min(1, pose.blink));
   for (const side of [-1, 1]) {
     const x = ex(side);
-    if (pose.blink) {
+    if (lid >= 0.85) {
+      ctx.fillStyle = ink;
+      ctx.strokeStyle = ink;
       ctx.lineWidth = 6;
       ctx.beginPath();
       ctx.moveTo(x - W * 0.08, eyeY);
       ctx.lineTo(x + W * 0.08, eyeY);
       ctx.stroke();
+    } else if (lid >= 0.25) {
+      // in-between half-lid: kelopak turun setengah dengan celah tipis di bawahnya
+      const w = W * 0.075;
+      ctx.fillStyle = ink;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(x - w, eyeY - 1);
+      ctx.lineTo(x + w, eyeY - 1);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(x, eyeY, w * 0.78, W * 0.028, 0, 0, Math.PI);
+      ctx.fill();
     } else if (f === 'shock') {
       ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = ink;
       ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.arc(x, eyeY - 2, W * 0.115, 0, Math.PI * 2);
@@ -270,6 +314,8 @@ export function drawBean(ctx: Ctx, look: BeanLook, pose: BeanPose) {
     } else if (f === 'neutral' || f === 'smug') {
       // mata berkelopak: garis kelopak + setengah cakram di bawahnya
       const w = W * 0.075, h = f === 'smug' ? W * 0.05 : W * 0.07;
+      ctx.fillStyle = ink;
+      ctx.strokeStyle = ink;
       ctx.lineWidth = 6;
       ctx.beginPath();
       ctx.moveTo(x - w, eyeY - 4);
@@ -280,6 +326,7 @@ export function drawBean(ctx: Ctx, look: BeanLook, pose: BeanPose) {
       ctx.fill();
     } else {
       // happy dan sad: oval tegak
+      ctx.fillStyle = ink;
       ctx.beginPath();
       ctx.ellipse(x, eyeY, W * 0.045, W * 0.065, 0, 0, Math.PI * 2);
       ctx.fill();
