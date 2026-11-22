@@ -65,15 +65,15 @@ import { ActorBillboard, blinkLidAt, talkAt } from '../../engine';
 | `oyen` (`<CatBillboard />`) | **Si Oyen (Kucing Warkop)** | Tabby oranye-jahe loreng coklat (tanda M dahi, mata emas pupil celah, moncong/dada/cakar krem, ekor cincin) | 5 stance (`sit`/`stand`/`walk`/`sleep`/`jump`), 4 sudut, angkat cakar (toe-beans), lip-sync meong, ekor mekar saat shock | Maskot Warkop 24 Jam, komedi kampung, sidekick Bang Utoh (plus varian `abu` & `belang`) |
 
 ## Suara Karakter (casting terkunci)
-Supaya suara tiap tokoh konsisten di semua episode, pakai suara di bawah ini. Bang Utoh selalu memakai rekaman suara asli pemilik kanal.
-Suara pendukung dibuat dengan TTS ElevenLabs (model `eleven_v4`, bahasa Indonesia) dari pustaka suara; uji coba disetujui 22 Nov 2026.
+Supaya suara tiap tokoh konsisten di semua episode, pakai suara di bawah ini. Bang Utoh selalu memakai rekaman suara asli pemilik kanal (`npm run vo:align`).
+Suara pendukung dapat digenerate lokal di RTX 3060 memakai **Chatterbox-TTS-Indonesian (MIT/Apache-2.0)** via `npm run vo:gen` dengan klip referensi terkunci di `assets/voices/` (atau opsional ElevenLabs `eleven_v4` berbayar).
 
-| Tokoh | Sumber suara | Voice ID | Ciri |
+| Tokoh | Sumber Suara Terkunci | Pipeline | Ciri |
 |---|---|---|---|
-| `bangUtoh` | Rekaman asli pemilik kanal | – | Suara utama, narator |
-| `tio` | ElevenLabs: Genesius | `2lcxSPWqG78QhJnKPyMX` | Pria dewasa, santai, ekspresif |
-| `mbakYuni` | ElevenLabs: Damayanti | `DrldqYsaKOiBNak7yH5o` | Ceria, ekspresif, nyeletuk |
-| `pakUjang` | ElevenLabs: Arga Dahana | `CyYm0pDg8bfmn6QckQk4` | Paruh baya, logat Jawa, serius (straight man) |
+| `bangUtoh` | Rekaman asli pemilik kanal | `npm run vo:align` (48 kHz + auto `words.json`) | Suara utama, narator |
+| `tio` | Rekaman suara asli (voice note teman) · contoh: `assets/voices/tio.wav` | `npm run vo:align` (48 kHz + auto `words.json`) | Pria dewasa, santai, natural asli |
+| `pakUjang` | TTS lokal `Chatterbox-TTS-Indonesian` · ref: `assets/voices/pakUjang.wav` | `npm run vo:gen` (CUDA lokal, preset terkunci) | Paruh baya, logat Jawa, serius (straight man) |
+| `mbakYuni` | ElevenLabs: Damayanti (`DrldqYsaKOiBNak7yH5o`) / opsional ref lokal `assets/voices/mbakYuni.wav` | `npm run vo:gen` / ElevenLabs | Ceria, ekspresif, nyeletuk |
 
 Catatan lisensi: pakai suara TTS di video yang dimonetisasi hanya bila paket akun ElevenLabs mengizinkan pemakaian komersial
 (umumnya paket berbayar). Tokoh lain belum punya suara terkunci; tambahkan barisnya di sini saat pertama kali dicasting.

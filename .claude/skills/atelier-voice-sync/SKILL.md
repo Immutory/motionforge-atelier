@@ -9,17 +9,23 @@ Every cut, kick and sound effect is timed to `words.json`, so an error here spre
 
 ## Steps
 1. Obtain the voice. Keep one steady tone across the short.
-2. Convert: `ffmpeg -i input.m4a -ar 48000 -ac 1 productions/<slug>/voice/voice.wav`.
-3. Get per-word timestamps from a speech-to-text tool that supports word times. If you only have an SRT, run `python3 pipeline/voice/srt_to_words.py voice.srt productions/<slug>/voice/words.json` and expect to fix times by hand.
-4. Format: `[{ "text": "Halo", "start": 0.0, "end": 0.42 }]` with times in seconds.
-5. Hand-verify the first word, each beat boundary, and every punchline word by listening.
-6. Report total seconds and frames at 30 fps (`durationFromWords` in `engine/core/timeline.ts` adds a closing breath).
+2. Convert & auto-align in one command using local CUDA `faster-whisper`:
+   `npm run vo:align -- input.m4a productions/<slug>/voice/words.json --speaker bangUtoh --normalize-wav productions/<slug>/voice/voice.wav`
+   *(Fallback manual: `ffmpeg -i input.m4a -ar 48000 -ac 1 productions/<slug>/voice/voice.wav` + `python3 pipeline/voice/srt_to_words.py voice.srt productions/<slug>/voice/words.json`.)*
+3. Format: `[{ "text": "Halo", "start": 0.0, "end": 0.42, "speaker": "bangUtoh" }]` with times in seconds.
+4. Hand-verify the first word, each beat boundary, and every punchline word by listening.
+5. Report total seconds and frames at 30 fps (`durationFromWords` in `engine/core/timeline.ts` adds a closing breath).
 
-## Multi-voice (Bang Utoh + supporting cast)
-- Bang Utoh is always the channel owner's own recording. Supporting characters use the locked TTS voices in `assets/characters/README.md` (section "Suara Karakter"); never swap a voice without updating that table.
-- Generate each supporting line as its own clip (`eleven_v4`, Indonesian, audio tags like `[sarcastic]`, `[laughs]` for delivery), save as `productions/<slug>/voice/<character>_<nn>.wav` (48 kHz mono after ffmpeg), and note the take used in `PRODUCTION_LOG.md`.
-- Assemble all clips on one timeline into `voice.wav` with 0.15–0.35 s gaps between speakers (tighter for comedic interruptions), then build one `words.json` with a `"speaker"` field per word (e.g. `"tio"`). `talkAt` itself has no speaker filter, so pass each character only its own words: `talkAt(WORDS.filter((w) => w.speaker === 'tio'), frame, FPS)`.
-- Confirm the account plan allows commercial use before a TTS line goes into a monetized upload.
+## Multi-voice (Bang Utoh + Tio + supporting cast)
+- **Bang Utoh** (pemilik kanal) dan **Tio** (rekaman voice note asli teman) **selalu memakai rekaman suara asli** — jangan diganti TTS! Cukup normalkan & sinkronkan otomatis dengan `npm run vo:align -- <vn.ogg> <words.json> --speaker tio --normalize-wav <tio.wav>`.
+- **Pak Ujang** & NPC pendukung lainnya menggunakan **Local Commercial-Safe TTS (`Chatterbox-TTS-Indonesian`, MIT/Apache-2.0)** via `npm run vo:gen`:
+  - Referensi suara terkunci di `assets/voices/<character>.wav` (mis. `pakUjang.wav`) dengan parameter di `assets/voices/presets.json`.
+  - Write `productions/<slug>/voice/script.json` (`[{"speaker":"pakUjang","text":"...","gap":0.24}]`) and run:
+    `npm run vo:gen -- --script productions/<slug>/voice/script.json --out-dir productions/<slug>/voice`
+  - This automatically generates 48 kHz mono per-line clips (`01_pakUjang.wav`, ...), concatenates `voice.wav` with natural gaps, and builds speaker-tagged `words.json` via `faster-whisper` CUDA!
+  - *(Optional cloud alternative: ElevenLabs `eleven_v4` on a commercial plan for flagship takes, documented in `assets/characters/README.md`.)*
+- `talkAt` itself has no speaker filter, so pass each character only its own words: `talkAt(WORDS.filter((w) => w.speaker === 'tio'), frame, FPS)`.
+- Confirm commercial licensing before a TTS line goes into a monetized upload (avoid `CC-BY-NC` weights such as Fish Speech 1.5 for monetized uploads).
 
 ## Rules
 - Do not edit script wording here. Wording changes go back to `story-architect`.

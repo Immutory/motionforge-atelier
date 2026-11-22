@@ -1,4 +1,5 @@
 node_modules/
+.venv-vo/
 out/*
 !out/.gitkeep
 .env

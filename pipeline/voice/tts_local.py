@@ -1,0 +1,245 @@
+"""Local Commercial-Safe Indonesian TTS Engine — Chatterbox-TTS-Indonesian (MIT / Apache-2.0).
+
+Menghasilkan dialog Bahasa Indonesia yang ekspresif & natural di GPU lokal (CUDA RTX 3060),
+mendukung zero-shot voice cloning (klip referensi 5–10 dtk di `assets/voices/<speaker>.wav`),
+ekspor 48 kHz mono WAV standar studio, dan auto-sync `words.json` via `faster-whisper`.
+
+Contoh pakai:
+  # 1 baris tes cepat
+  npm run vo:gen -- --text "Pagi Bang Utoh! Mampir dulu makan bakmie ayam!" --out out/vo_test/tio.wav --exaggeration 0.65
+
+  # 1 skrip multi-karakter lengkap -> klip per karakter + voice.wav + words.json
+  npm run vo:gen -- --script productions/ep02/voice/script.json --out-dir productions/ep02/voice
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from voice_utils import (
+    concat_wavs_with_gaps,
+    load_dialogue_script,
+    normalize_wav,
+    summarize_words,
+)
+
+INDO_REPO_ID = "grandhigh/Chatterbox-TTS-Indonesian"
+INDO_T3_FILE = "t3_cfg.safetensors"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+VOICES_DIR = PROJECT_ROOT / "assets" / "voices"
+
+
+def load_chatterbox_indo(device: str = "cuda", use_indo_weights: bool = True):
+    """Muat base ChatterboxTTS lalu pasang bobot fine-tune Bahasa Indonesia (`t3_cfg.safetensors`)."""
+    import perth
+    import torch
+    from chatterbox.tts import ChatterboxTTS
+    from huggingface_hub import hf_hub_download
+    from safetensors.torch import load_file
+
+    # Fallback aman di Windows bila resemble-perth tidak menemukan binary/pkg_resources watermarker
+    if getattr(perth, "PerthImplicitWatermarker", None) is None and hasattr(perth, "DummyWatermarker"):
+        perth.PerthImplicitWatermarker = perth.DummyWatermarker
+
+    actual_device = device
+    if device == "cuda" and not torch.cuda.is_available():
+        print("[vo:gen] CUDA tidak terdeteksi, fallback ke CPU.")
+        actual_device = "cpu"
+
+    print(f"[vo:gen] Memuat ChatterboxTTS di {actual_device}...")
+    model = ChatterboxTTS.from_pretrained(device=actual_device)
+
+    if use_indo_weights:
+        print(f"[vo:gen] Memuat bobot Bahasa Indonesia: {INDO_REPO_ID}/{INDO_T3_FILE} ...")
+        ckpt_path = hf_hub_download(repo_id=INDO_REPO_ID, filename=INDO_T3_FILE)
+        t3_state = load_file(ckpt_path, device="cpu")
+        model.t3.load_state_dict(t3_state)
+        if actual_device == "cuda":
+            torch.cuda.empty_cache()
+
+    return model, actual_device
+
+
+def resolve_voice_ref(speaker: str | None, explicit_ref: str | None) -> str | None:
+    if explicit_ref:
+        p = Path(explicit_ref)
+        if not p.is_absolute():
+            p = PROJECT_ROOT / p
+        if not p.exists():
+            raise FileNotFoundError(f"Referensi suara tidak ditemukan: {p}")
+        return str(p)
+    if speaker:
+        for ext in (".wav", ".mp3", ".m4a"):
+            cand = VOICES_DIR / f"{speaker}{ext}"
+            if cand.exists():
+                return str(cand)
+    return None
+
+
+def load_voice_presets() -> dict[str, dict]:
+    p = VOICES_DIR / "presets.json"
+    if p.exists():
+        return json.loads(p.read_text(encoding="utf-8"))
+    return {}
+
+
+def resolve_voice_params(
+    speaker: str | None,
+    presets: dict[str, dict],
+    exaggeration: float | None,
+    cfg: float | None,
+    temperature: float | None,
+) -> tuple[float, float, float]:
+    sp = presets.get(speaker or "", {})
+    ex = exaggeration if exaggeration is not None else float(sp.get("exaggeration", 0.52))
+    cf = cfg if cfg is not None else float(sp.get("cfg", 0.55))
+    tp = temperature if temperature is not None else float(sp.get("temperature", 0.72))
+    return ex, cf, tp
+
+
+def synth_to_studio_wav(
+    model,
+    text: str,
+    out_wav: Path,
+    *,
+    audio_prompt_path: str | None = None,
+    exaggeration: float = 0.52,
+    cfg_weight: float = 0.55,
+    temperature: float = 0.72,
+) -> Path:
+    """Sintesis 1 kalimat ke WAV 48 kHz mono 16-bit PCM."""
+    import torchaudio as ta
+
+    kwargs = {
+        "exaggeration": exaggeration,
+        "cfg_weight": cfg_weight,
+        "temperature": temperature,
+    }
+    if audio_prompt_path:
+        kwargs["audio_prompt_path"] = audio_prompt_path
+
+    wav = model.generate(text, **kwargs)
+    if wav.dim() == 1:
+        wav = wav.unsqueeze(0)
+
+    out_wav.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as td:
+        raw_path = Path(td) / "raw.wav"
+        ta.save(str(raw_path), wav.cpu(), model.sr)
+        normalize_wav(raw_path, out_wav)
+    return out_wav
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Chatterbox-TTS-Indonesian local VO generator")
+    mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--text", help="Teks tunggal untuk disintesis cepat")
+    mode.add_argument("--script", help="Path JSON skrip dialog multi-karakter")
+
+    ap.add_argument("--out", help="Path output WAV (untuk mode --text)")
+    ap.add_argument("--out-dir", help="Folder output klip + voice.wav + words.json (untuk mode --script)")
+    ap.add_argument("--speaker", default=None, help="Nama karakter (untuk auto-cari ref & preset di assets/voices/)")
+    ap.add_argument("--ref", default=None, help="Path klip referensi suara 5–10 dtk (opsional)")
+    ap.add_argument("--exaggeration", type=float, default=None, help="Tingkat ekspresi 0.2..1.0 (default: dari presets.json / 0.52)")
+    ap.add_argument("--cfg", type=float, default=None, help="Guidance weight 0.2..1.0 (tinggi = lebih mirip referensi)")
+    ap.add_argument("--temperature", type=float, default=None, help="Sampling temperature 0.4..1.0 (rendah = lebih stabil)")
+    ap.add_argument("--device", default="cuda", choices=["cuda", "cpu"], help="Device inferensi (default: cuda)")
+    ap.add_argument("--base-only", action="store_true", help="Pakai bobot base Chatterbox tanpa fine-tune Indonesia")
+    ap.add_argument("--no-align", action="store_true", help="Lewati auto-generate words.json via faster-whisper")
+    ap.add_argument("--whisper-model", default="small", help="Model faster-whisper untuk auto-align (default: small)")
+    args = ap.parse_args()
+
+    presets = load_voice_presets()
+    model, actual_device = load_chatterbox_indo(device=args.device, use_indo_weights=not args.base_only)
+
+    if args.text:
+        if not args.out:
+            raise SystemExit("Mode --text membutuhkan --out <path.wav>")
+        ref = resolve_voice_ref(args.speaker, args.ref)
+        ex, cf, tp = resolve_voice_params(args.speaker, presets, args.exaggeration, args.cfg, args.temperature)
+        out_wav = Path(args.out)
+        print(
+            f"[vo:gen] Sintesis tunggal -> {out_wav} (ex={ex}, cfg={cf}, temp={tp})"
+            + (f" | ref={Path(ref).name}" if ref else " | suara default Indo")
+        )
+        synth_to_studio_wav(
+            model,
+            args.text,
+            out_wav,
+            audio_prompt_path=ref,
+            exaggeration=ex,
+            cfg_weight=cf,
+            temperature=tp,
+        )
+        print(f"[vo:gen] Selesai: {out_wav}")
+
+        if not args.no_align:
+            from align_words import load_whisper_model, transcribe_words
+
+            w_model = load_whisper_model(args.whisper_model, device=actual_device)
+            words = transcribe_words(out_wav, model=w_model, speaker=args.speaker, initial_prompt=args.text)
+            words_path = out_wav.with_suffix(".words.json")
+            words_path.write_text(json.dumps(words, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            stats = summarize_words(words)
+            print(f"[vo:gen] Auto-align {stats['wordCount']} kata -> {words_path} ({stats['totalSecWithTail']}s / {stats['framesAt30Fps']}f)")
+        return
+
+    # Mode --script (multi-karakter)
+    if not args.out_dir:
+        raise SystemExit("Mode --script membutuhkan --out-dir <folder>")
+    lines = load_dialogue_script(args.script)
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    clip_entries: list[tuple[Path, float, dict]] = []
+    for idx, line in enumerate(lines, start=1):
+        spk = line["speaker"]
+        ref = resolve_voice_ref(spk, line["ref"])
+        ex, cf, tp = resolve_voice_params(spk, presets, line["exaggeration"], line["cfg"], line["temperature"])
+        clip_path = out_dir / f"{idx:02d}_{spk}.wav"
+        print(f"[vo:gen] [{idx}/{len(lines)}] {spk} (ex={ex}, cfg={cf}, temp={tp}): \"{line['text']}\"")
+        synth_to_studio_wav(
+            model,
+            line["text"],
+            clip_path,
+            audio_prompt_path=ref,
+            exaggeration=ex,
+            cfg_weight=cf,
+            temperature=tp,
+        )
+        clip_entries.append((clip_path, line["gap"], line))
+
+    master_wav = out_dir / "voice.wav"
+    spans = concat_wavs_with_gaps([(p, g) for p, g, _ in clip_entries], master_wav)
+    print(f"[vo:gen] Gabungan master -> {master_wav} ({len(clip_entries)} klip)")
+
+    if not args.no_align:
+        from align_words import load_whisper_model, transcribe_words
+
+        w_model = load_whisper_model(args.whisper_model, device=actual_device)
+        all_words = []
+        for (clip_path, _gap, line), (start_sec, _end_sec) in zip(clip_entries, spans):
+            w = transcribe_words(
+                clip_path,
+                model=w_model,
+                speaker=line["speaker"],
+                offset_sec=start_sec,
+                initial_prompt=line["text"],
+            )
+            all_words.extend(w)
+
+        words_path = out_dir / "words.json"
+        words_path.write_text(json.dumps(all_words, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        stats = summarize_words(all_words)
+        print(
+            f"[vo:gen] Auto-align {stats['wordCount']} kata multi-speaker -> {words_path} "
+            f"(total+napas: {stats['totalSecWithTail']}s = {stats['framesAt30Fps']} frame @ 30fps)"
+        )
+
+
+if __name__ == "__main__":
+    main()
