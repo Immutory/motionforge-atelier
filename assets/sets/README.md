@@ -3,7 +3,7 @@
 Seluruh set dunia 3D di folder ini **dimodelkan langsung di Blender 5.3.0**, disimpan dalam file master `.blend` agar bisa diedit bebas kapan saja di Blender, dan diekspor ke `.glb` (`public/sets/*.glb`) untuk langsung dipakai di Remotion + Three.js dengan konversi otomatis ke shader `twoTone()`, `InkPass` garis komik 3D, dan `UnrealBloomPass` HDR glow!
 
 ## File Sumber & Output
-- **Master Blender File:** [bang_utoh_sets.blend](file:///c:/xampp/htdocs/motionforge-atelier/assets/sets/blend/bang_utoh_sets.blend)
+- **Master Blender File:** [bang_utoh_sets.blend](blend/bang_utoh_sets.blend)
   - Berisi 3 koleksi terpisah rapi di Outliner (`WarkopSet`, `KostSet`, `KampusSet`) + `_PreviewRig` (kamera & lampu preview Blender).
   - Untuk mengedit set tertentu di Blender, cukup klik ikon mata pada koleksi yang diinginkan, ubah geometri/warnanya, lalu ekspor koleksi tersebut ke `public/sets/<nama>.glb` (`Export glTF 2.0`, `Selected Objects`, `+Y Up`).
 - **Asset glTF Siap Render (`public/sets/`):**

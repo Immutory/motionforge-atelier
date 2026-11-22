@@ -1,7 +1,9 @@
 # MotionForge Atelier
 
-Studio template untuk video animasi vertikal 9:16 (1080x1920, 30 fps, 55-70 detik) bergaya
-karakter 2D di dunia 3D prosedural. Stack: Remotion, three.js (react-three-fiber), Python untuk audio.
+Studio template untuk video animasi bergaya karakter 2D di dunia 3D. Format utama Short 9:16
+(1080x1920, 30 fps, 55-70 detik); juga episode YouTube 16:9 (1920x1080) dan branding kanal.
+Stack: Remotion, three.js (react-three-fiber), Blender untuk set (`.blend` ke `public/sets/*.glb`),
+Python untuk audio.
 
 ## Cara kerja dengan Claude Code
 1. Jalankan showrunner sebagai sesi utama: `claude --agent showrunner`. Hanya dia yang memanggil agent lain lewat tool `Agent`.

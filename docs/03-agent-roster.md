@@ -8,8 +8,8 @@ Setiap agent adalah file di `.claude/agents/`. Skill yang dipakai ada di `.claud
 | 2 | story-architect | sonnet | Memilih cerita, memverifikasi fakta, menulis naskah sembilan beat | atelier-story-forge |
 | 3 | voice-director | sonnet | Menyiapkan suara 48 kHz dan `words.json` | atelier-voice-sync |
 | 4 | cinematographer | opus | Merancang shot, kamera, kick, flash, DOF | atelier-shot-plan |
-| 5 | set-designer | opus | Membangun set dan props 3D prosedural | atelier-set-craft |
-| 6 | character-animator | opus | Menggambar dan menganimasikan tokoh | atelier-cast-craft |
+| 5 | set-designer | opus | Membangun set 3D di Blender (ekspor `.glb`), props, dan tekstur PBR | atelier-set-craft |
+| 6 | character-animator | opus | Menggambar dan menganimasikan tokoh dan kucing 2D | atelier-cast-craft |
 | 7 | light-colorist | opus | Cahaya, kabut, palet, grade | atelier-light-grade |
 | 8 | post-compositor | opus | Ink, lens blur, bloom, urutan composer | atelier-ink-lens |
 | 9 | sound-designer | sonnet | SFX, musik, mix, loudness | atelier-sound-lab |
