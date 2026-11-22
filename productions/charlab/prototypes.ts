@@ -8,7 +8,7 @@
  */
 
 export type ProtoId = 'A' | 'B' | 'C';
-export type ProtoMode = 'idle' | 'explain' | 'shock';
+export type ProtoMode = 'idle' | 'explain' | 'shock' | 'wave';
 
 export const CHAR_W = 700;
 export const CHAR_H = 1100;
@@ -273,7 +273,7 @@ function drawAtelierIndie(ctx: Ctx, mode: ProtoMode) {
   let rhx = CX + 136;
   let rhy = torsoTop + 188;
   let rbend = 24;
-  if (mode === 'explain') {
+  if (mode === 'explain' || mode === 'wave') {
     rhx = CX + 178;
     rhy = torsoTop - 26;
     rbend = 32;
@@ -671,7 +671,7 @@ function drawSquirclePlush(ctx: Ctx, mode: ProtoMode) {
   const rsy = torsoTop + 58;
   let rhx = CX + 148;
   let rhy = torsoTop + 168;
-  if (mode === 'explain') {
+  if (mode === 'explain' || mode === 'wave') {
     rhx = CX + 186;
     rhy = torsoTop - 16;
   } else if (mode === 'shock') {

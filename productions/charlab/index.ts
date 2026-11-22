@@ -6,6 +6,9 @@ export { WargaProduction } from './WargaProduction';
 export { RigLabProduction } from './RigLabProduction';
 export { BangUtohProduction } from './BangUtohProduction';
 export { SetLabProduction } from './SetLabProduction';
+export { KucingOyenProduction } from './KucingOyenProduction';
+export { YoutubeBannerProduction } from './YoutubeBannerProduction';
+export { YoutubeProfileProduction } from './YoutubeProfileProduction';
 
 export const charlabMeta: ProductionMeta = {
   id: 'charlab',
@@ -59,4 +62,31 @@ export const setLabMeta: ProductionMeta = {
   height: 1920,
   fps: 30,
   durationInFrames: 120,
+};
+
+export const kucingOyenMeta: ProductionMeta = {
+  id: 'kucingoyen',
+  title: 'Karakter Kucing 2D — Si Oyen (Tabby Oranye Warkop 24 Jam)',
+  width: 1080,
+  height: 1920,
+  fps: 30,
+  durationInFrames: 240,
+};
+
+export const youtubeBannerMeta: ProductionMeta = {
+  id: 'youtubebanner',
+  title: 'YouTube Channel Banner (2560x1440) — Warga Kampung Rawa Sari di Warkop 24 Jam',
+  width: 2560,
+  height: 1440,
+  fps: 30,
+  durationInFrames: 2,
+};
+
+export const youtubeProfileMeta: ProductionMeta = {
+  id: 'youtubeprofile',
+  title: 'YouTube Profile Picture (2048x2048) — Bang Utoh + Atelier Indie + Squircle Plush + Ink-Pop Comic',
+  width: 2048,
+  height: 2048,
+  fps: 30,
+  durationInFrames: 2,
 };

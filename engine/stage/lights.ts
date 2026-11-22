@@ -53,10 +53,10 @@ export type LightPreset = {
 };
 
 /**
- * Empat preset cahaya yang dikalibrasi ke pengukuran references/reports/{lighting,depth,textures}.md.
- * Nilai ini titik mulai siap pakai — tuning per produksi milik agent light-colorist.
+ * Lima preset cahaya yang dikalibrasi untuk produksi animasi 2.5D:
+ * `noon` (Siang Cerah), `amber` (Sore / Golden Hour), `dusk` (Senja), `night` (Malam Kampung Hangat), & `neon`.
  */
-export const LIGHTS: Record<'noon' | 'amber' | 'dusk' | 'neon', LightPreset> = {
+export const LIGHTS: Record<'noon' | 'amber' | 'dusk' | 'night' | 'neon', LightPreset> = {
   noon: {
     id: 'noon',
     sky: {
@@ -151,6 +151,38 @@ export const LIGHTS: Record<'noon' | 'amber' | 'dusk' | 'neon', LightPreset> = {
       castShadow: true,
     },
     shadow: { bias: -0.0005, normalBias: 0.025, range: 18 },
+  },
+  night: {
+    id: 'night',
+    sky: {
+      top: '#060a18',
+      horizon: '#1a274c',
+      stops: ['#1a274c', '#131d3d', '#0b122b', '#060a18'],
+      elevations: [5, 16, 38],
+    },
+    fog: { color: '#121c38', near: 18, far: 210 },
+    // Moonlight biru-perak lembut dari atas-belakang + ambient gelap agar lampu jalan & Warkop menyala kontras.
+    key: { color: '#8ab4f8', intensity: 1.15, azimuth: 38, elevation: 34 },
+    fill: { color: '#ffae5c', intensity: 0.55 },
+    ambient: { color: '#263664', intensity: 0.42 },
+    tone: {
+      lit: [0.68, 0.78, 1.05],
+      shade: [0.16, 0.2, 0.38],
+      lift: [0.02, 0.024, 0.048],
+      lambert: 0.42,
+      sideK: 0.78,
+      term: 0.16,
+    },
+    card: {
+      tint: [0.88, 0.9, 1.02],
+      shadeFloor: 0.82,
+      headGrad: 0.1,
+      bodyGrad: 0.24,
+      sideTint: [0.64, 0.7, 0.96],
+      blob: [0.32, 0.34, 0.52],
+      castShadow: false,
+    },
+    shadow: { bias: -0.0004, normalBias: 0.022, range: 18 },
   },
   neon: {
     id: 'neon',

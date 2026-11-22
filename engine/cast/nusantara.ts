@@ -24,7 +24,7 @@ export type OutfitStyle =
   | 'casual';
 export type ShoeStyle = 'loafer' | 'sneaker' | 'sandal' | 'boot';
 export type ArmPose = 'rest' | 'hip' | 'point' | 'raise' | 'hold' | 'wave' | 'cross';
-export type ActorStance = 'stand' | 'walk' | 'sit' | 'jump';
+export type ActorStance = 'stand' | 'walk' | 'sit' | 'sitCross' | 'squat' | 'jump';
 export type ActorView = 'front' | 'threeQuarter' | 'side' | 'back';
 
 export type CharacterSpec = {
@@ -1327,7 +1327,17 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
 
   const ph = (pose.walkPhase ?? 0) * TAU;
   const swing = isWalk ? Math.sin(ph) : 0;
-  const bob = isWalk ? -Math.abs(Math.sin(ph)) * 36 : stance === 'sit' ? 105 : stance === 'jump' ? -82 : 0;
+  const bob = isWalk
+    ? -Math.abs(Math.sin(ph)) * 36
+    : stance === 'sit'
+      ? 105
+      : stance === 'sitCross'
+        ? 268
+        : stance === 'squat'
+          ? 205
+          : stance === 'jump'
+            ? -82
+            : 0;
   const lean =
     pose.lean !== undefined
       ? pose.lean
@@ -1358,66 +1368,129 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  // --- 1. KAKI (mendukung stand, walk, sit, jump & side profile) ---
+  // --- 1. KAKI (mendukung stand, walk, sit, sitCross/bersila, jump & side profile) ---
   const isSkirted = spec.outfit === 'kotakSarung' || spec.outfit === 'dasterCelemek';
   const legSides: (-1 | 1)[] = isSide ? [-1, 1] : [-1, 1];
-  for (const side of legSides) {
-    const dir = isSide ? (facing >= 0 ? 1 : -1) : side;
-    if (stance === 'sit') {
-      // Duduk di bangku/kursi: paha maju/keluar, lutut menekuk turun
-      const hx = CX + (isSide ? side * 14 : side * 46);
-      const kx = CX + (isSide ? dir * 108 + side * 14 : side * 84);
-      const ky = hipY + 72;
-      const fx = CX + (isSide ? dir * 116 + side * 14 : side * 72);
-      const fy = ACTOR_SOLE_Y - 12;
+  if (stance === 'sitCross') {
+    // Duduk bersila santai di lantai (kaki kiri terlipat di bawah, kaki kanan menyilang di depan!)
+    const drawCrossedLeg = (side: -1 | 1, inFront: boolean) => {
+      const hx = CX + side * 34;
+      const hy = hipY - 8;
+      const kx = CX + side * 144;
+      const ky = hipY + (inFront ? 48 : 38);
+      const fx = CX - side * 78;
+      const fy = ACTOR_SOLE_Y - (inFront ? 10 : 18);
 
+      // Paha keluar ke lutut
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 30;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.quadraticCurveTo(CX + side * 112, hy + 8, kx, ky);
+      ctx.stroke();
+      ctx.strokeStyle = pantsColor;
+      ctx.lineWidth = 18;
+      ctx.stroke();
+
+      // Betis melipat menyilang ke sisi berlawanan
       ctx.strokeStyle = ink;
       ctx.lineWidth = 28;
       ctx.beginPath();
-      ctx.moveTo(hx, hipY);
-      ctx.quadraticCurveTo(kx, hipY + 12, kx, ky);
-      ctx.lineTo(fx, fy - 20);
+      ctx.moveTo(kx, ky);
+      ctx.quadraticCurveTo(CX + side * 42, ACTOR_SOLE_Y - 14, fx, fy - 12);
       ctx.stroke();
       ctx.strokeStyle = pantsColor;
       ctx.lineWidth = 17;
       ctx.stroke();
-      drawShoe(ctx, fx, fy, dir, spec);
-    } else if (stance === 'jump') {
-      const hx = CX + side * 38;
-      const kx = CX + side * 86;
-      const ky = hipY + 110;
-      const fx = CX + side * 54;
-      const fy = hipY + 210;
-      ctx.strokeStyle = ink;
-      ctx.lineWidth = 28;
-      ctx.beginPath();
-      ctx.moveTo(hx, hipY);
-      ctx.quadraticCurveTo(kx, ky, fx, fy - 18);
-      ctx.stroke();
-      ctx.strokeStyle = pantsColor;
-      ctx.lineWidth = 17;
-      ctx.stroke();
-      drawShoe(ctx, fx, fy, dir, spec);
-    } else {
-      const stride = isSide ? 110 : isSkirted ? 56 : 72;
-      const stepX = swing * side * stride;
-      const liftY = isWalk ? Math.max(0, -swing * side) * 34 : 0;
-      const baseSpread = isSide ? side * 20 : side * (pose.face === 'shock' ? 74 : isSkirted ? 48 : 54);
-      const fx = CX + baseSpread + stepX;
-      const fy = ACTOR_SOLE_Y - liftY;
-      const hx = CX + (isSide ? side * 8 : side * 36);
-      const startY = isSkirted ? hipY + 90 : hipY;
 
+      drawShoe(ctx, fx, fy, -side, spec);
+    };
+    drawCrossedLeg(-1, false);
+    drawCrossedLeg(1, true);
+  } else if (stance === 'squat') {
+    // Gaya jongkok nongkrong khas warkop: lutut naik lebar di kiri-kanan, kaki menapak mantap!
+    for (const side of legSides) {
+      const hx = CX + side * 34;
+      const hy = hipY - 6;
+      const kx = CX + side * 124;
+      const ky = hipY - 42;
+      const fx = CX + side * 72;
+      const fy = ACTOR_SOLE_Y - 4;
+
+      // Paha naik keluar ke lutut tinggi
       ctx.strokeStyle = ink;
-      ctx.lineWidth = isSkirted ? 22 : 28;
+      ctx.lineWidth = 30;
       ctx.beginPath();
-      ctx.moveTo(hx, startY);
-      ctx.quadraticCurveTo((hx + fx) / 2 - side * 5, (startY + fy) / 2, fx, fy - 22);
+      ctx.moveTo(hx, hy);
+      ctx.quadraticCurveTo(CX + side * 96, hy - 34, kx, ky);
+      // Betis turun menapak ke sepatu
+      ctx.quadraticCurveTo(kx + side * 8, (ky + fy) * 0.52, fx, fy - 18);
       ctx.stroke();
       ctx.strokeStyle = pantsColor;
-      ctx.lineWidth = isSkirted ? 12 : 17;
+      ctx.lineWidth = 18;
       ctx.stroke();
-      drawShoe(ctx, fx, fy, dir, spec);
+
+      drawShoe(ctx, fx, fy, side, spec);
+    }
+  } else {
+    for (const side of legSides) {
+      const dir = isSide ? (facing >= 0 ? 1 : -1) : side;
+      if (stance === 'sit') {
+        // Duduk di bangku/kursi: paha maju/keluar, lutut menekuk turun
+        const hx = CX + (isSide ? side * 14 : side * 46);
+        const kx = CX + (isSide ? dir * 108 + side * 14 : side * 84);
+        const ky = hipY + 72;
+        const fx = CX + (isSide ? dir * 116 + side * 14 : side * 72);
+        const fy = ACTOR_SOLE_Y - 12;
+
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 28;
+        ctx.beginPath();
+        ctx.moveTo(hx, hipY);
+        ctx.quadraticCurveTo(kx, hipY + 12, kx, ky);
+        ctx.lineTo(fx, fy - 20);
+        ctx.stroke();
+        ctx.strokeStyle = pantsColor;
+        ctx.lineWidth = 17;
+        ctx.stroke();
+        drawShoe(ctx, fx, fy, dir, spec);
+      } else if (stance === 'jump') {
+        const hx = CX + side * 38;
+        const kx = CX + side * 86;
+        const ky = hipY + 110;
+        const fx = CX + side * 54;
+        const fy = hipY + 210;
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 28;
+        ctx.beginPath();
+        ctx.moveTo(hx, hipY);
+        ctx.quadraticCurveTo(kx, ky, fx, fy - 18);
+        ctx.stroke();
+        ctx.strokeStyle = pantsColor;
+        ctx.lineWidth = 17;
+        ctx.stroke();
+        drawShoe(ctx, fx, fy, dir, spec);
+      } else {
+        const stride = isSide ? 110 : isSkirted ? 56 : 72;
+        const stepX = swing * side * stride;
+        const liftY = isWalk ? Math.max(0, -swing * side) * 34 : 0;
+        const baseSpread = isSide ? side * 20 : side * (pose.face === 'shock' ? 74 : isSkirted ? 48 : 54);
+        const fx = CX + baseSpread + stepX;
+        const fy = ACTOR_SOLE_Y - liftY;
+        const hx = CX + (isSide ? side * 8 : side * 36);
+        const startY = isSkirted ? hipY + 90 : hipY;
+
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = isSkirted ? 22 : 28;
+        ctx.beginPath();
+        ctx.moveTo(hx, startY);
+        ctx.quadraticCurveTo((hx + fx) / 2 - side * 5, (startY + fy) / 2, fx, fy - 22);
+        ctx.stroke();
+        ctx.strokeStyle = pantsColor;
+        ctx.lineWidth = isSkirted ? 12 : 17;
+        ctx.stroke();
+        drawShoe(ctx, fx, fy, dir, spec);
+      }
     }
   }
 

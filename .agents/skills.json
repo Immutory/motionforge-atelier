@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "path": ".claude/skills",
+      "include_only": ["atelier-*"]
+    },
+    {
+      "path": ".agents/youtube-skills",
+      "include_only": ["yt-*"]
+    }
+  ]
+}

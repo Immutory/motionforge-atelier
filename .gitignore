@@ -13,5 +13,6 @@ public/*.mp3
 public/*.wav
 references/frames/
 references/sheets/
+contohvideo/
 productions/*/voice/*.wav
 productions/*/voice/*.mp3

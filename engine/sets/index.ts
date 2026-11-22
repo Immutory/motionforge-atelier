@@ -1,29 +1,42 @@
 import type { LightPreset } from '../stage/lights';
 
-export { GlbSet, type GlbSetProps } from './GlbSet';
+export { GlbSet, type GlbSetProps, type TimeOfDayMode } from './GlbSet';
 export { WarkopSet, WARKOP_SPOTS, type WorldSetProps } from './WarkopSet';
 export { KostSet, KOST_SPOTS, type KostSetProps } from './KostSet';
 export { KampusSet, KAMPUS_SPOTS, type KampusSetProps } from './KampusSet';
+export {
+  KampungSet,
+  KAMPUNG_SPOTS,
+  KAMPUNG_MODES,
+  type KampungSetProps,
+  type KampungTimeMode,
+} from './KampungSet';
 
-export type SetPresetId = 'warkop' | 'kost' | 'kampus';
+export type SetPresetId = 'warkop' | 'kost' | 'kampus' | 'kampung';
 
 export const SET_PRESETS: Record<SetPresetId, { id: SetPresetId; name: string; glb: string; blend: string }> = {
   warkop: {
     id: 'warkop',
-    name: 'Warkop Ngoding 24 Jam',
+    name: 'Warkop Ngoding 24 Jam (PBR Textured)',
     glb: 'sets/warkop.glb',
     blend: 'assets/sets/blend/bang_utoh_sets.blend',
   },
   kost: {
     id: 'kost',
-    name: 'Kamar Kost Anak S1 TI',
+    name: 'Kamar Kost Anak S1 TI (PBR Textured)',
     glb: 'sets/kost.glb',
     blend: 'assets/sets/blend/bang_utoh_sets.blend',
   },
   kampus: {
     id: 'kampus',
-    name: 'Lab Komputer S1 Teknik Informatika',
+    name: 'Lab Komputer S1 Teknik Informatika (PBR Textured)',
     glb: 'sets/kampus.glb',
+    blend: 'assets/sets/blend/bang_utoh_sets.blend',
+  },
+  kampung: {
+    id: 'kampung',
+    name: 'Perkampungan Kos, Warkop & Kampus Bang Utoh (Unified PBR World)',
+    glb: 'sets/kampung.glb',
     blend: 'assets/sets/blend/bang_utoh_sets.blend',
   },
 };

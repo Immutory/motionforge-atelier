@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blinkLidAt } from '../engine/cast/bean';
 import { talkAt, talkWave } from '../engine/cast/lipsync';
-import { CAST_PRESETS, resolveActorSpec } from '../engine/cast/nusantara';
-import { SET_PRESETS, indoorLight } from '../engine/sets';
+import { CAST_PRESETS, resolveActorSpec, type ActorStance } from '../engine/cast/nusantara';
+import { CAT_PRESETS, resolveCatSpec } from '../engine/cast/cat';
+import { KAMPUNG_SPOTS, SET_PRESETS, indoorLight } from '../engine/sets';
 import { LIGHTS, cameraRelativeSun } from '../engine/stage/lights';
 import { pxScale } from '../engine/post/scale';
 
@@ -64,6 +65,17 @@ test('CAST_PRESETS memuat 9 karakter Indonesia (termasuk Pemeran #1 bangUtoh) da
   assert.equal(CAST_PRESETS.bangUtoh.headgear, 'headphones');
 });
 
+test('CAT_PRESETS memuat 3 karakter kucing 2D (oyen, abu, belang) dan resolveCatSpec tidak memutasi preset', () => {
+  assert.deepEqual(Object.keys(CAT_PRESETS).sort(), ['abu', 'belang', 'oyen']);
+  assert.equal(CAT_PRESETS.oyen.id, 'oyen');
+  assert.equal(CAT_PRESETS.oyen.collarColor, undefined);
+
+  const collared = resolveCatSpec('oyen', { collarColor: '#d9383a', bellColor: '#ffd54f' });
+  assert.equal(collared.collarColor, '#d9383a');
+  assert.equal(collared.furBase, CAT_PRESETS.oyen.furBase);
+  assert.equal(CAT_PRESETS.oyen.collarColor, undefined);
+});
+
 test('cameraRelativeSun menempatkan backlight az=0 di depan arah kamera', () => {
   // Kamera di (0, 2, 10) menghadap (0, 1, 0) -> arah maju adalah -Z.
   const back = cameraRelativeSun([0, 2, 10], [0, 1, 0], 0, 10, 50);
@@ -79,13 +91,24 @@ test('pxScale menjaga lebar piksel konsisten antara still 0.5x dan master', () =
   assert.equal(pxScale(1920), 1);
 });
 
-test('SET_PRESETS memuat 3 set Blender (warkop, kost, kampus) dan indoorLight mematikan cameraRelative', () => {
-  assert.deepEqual(Object.keys(SET_PRESETS).sort(), ['kampus', 'kost', 'warkop']);
+test('SET_PRESETS memuat 4 set Blender (warkop, kost, kampus, kampung) dan indoorLight mematikan cameraRelative', () => {
+  assert.deepEqual(Object.keys(SET_PRESETS).sort(), ['kampung', 'kampus', 'kost', 'warkop']);
   assert.equal(SET_PRESETS.warkop.glb, 'sets/warkop.glb');
   assert.equal(SET_PRESETS.kost.glb, 'sets/kost.glb');
   assert.equal(SET_PRESETS.kampus.glb, 'sets/kampus.glb');
+  assert.equal(SET_PRESETS.kampung.glb, 'sets/kampung.glb');
 
   const interior = indoorLight(LIGHTS.dusk);
   assert.equal(interior.key.cameraRelative, false);
   assert.equal(LIGHTS.dusk.key.cameraRelative, true);
+});
+
+test('KAMPUNG_SPOTS memuat spot Kos Putra Rawa Sari 2 Lantai & atap kanopi Warkop 24 Jam, serta ActorStance mencakup sitCross dan squat', () => {
+  assert.ok(KAMPUNG_SPOTS.kostDoor01[1] > 0, 'teras Lantai 1 Kos berada di atas lantai dasar');
+  assert.ok(KAMPUNG_SPOTS.kostBalcony2[1] > 3.2, 'balkon Lantai 2 Kos berada di ketinggian lantai 2');
+  assert.equal(KAMPUNG_SPOTS.warkopCanopyLeft[1], 2.8);
+  assert.equal(KAMPUNG_SPOTS.warkopCanopyRight[1], 2.8);
+
+  const stances: ActorStance[] = ['stand', 'walk', 'sit', 'sitCross', 'squat', 'jump'];
+  assert.equal(stances.length, 6);
 });

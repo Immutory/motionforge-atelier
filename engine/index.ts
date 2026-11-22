@@ -11,6 +11,8 @@ export * from './cast/props2d';
 export * from './cast/expressions';
 export * from './cast/nusantara';
 export * from './cast/ActorBillboard';
+export * from './cast/cat';
+export * from './cast/CatBillboard';
 export * from './textures';
 export * from './sets';
 export * from './post';

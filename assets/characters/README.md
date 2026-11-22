@@ -6,6 +6,8 @@ Seluruh karakter, sheet, dan preview animasi di folder ini adalah **karya prosed
 - `sheets/` — Contact sheet gabungan siap lihat & referensi casting:
   - `sheet_bang_utoh_main.jpg` — **Pemeran Utama #1: Bolohoutoh alias Bang Utoh** (Mahasiswa S1 Teknik Informatika: Hero, Turnaround 4 sudut, 4 Mood, & Cast Utama)
   - `sheet_bang_utoh_anim_strip.jpg` — Filmstrip 8-frame uji animasi 30 fps Bang Utoh (Jalan Bouncy -> Lip-Sync Laptop -> Shock Headphone Loncat!)
+  - `sheet_kucing_oyen_main.jpg` — **Karakter Kucing 2D: Si Oyen (Tabby Oranye Warkop 24 Jam)** (diadaptasi dari referensi `12221_Cat_v1_l3` + `Cat_diffuse.jpg`: Hero, Turnaround 4 sudut, 4 Mood & Pose, & Showcase Warkop 24 Jam + Bang Utoh + Mpus Abu & Si Belang)
+  - `sheet_kucing_oyen_anim_strip.jpg` — Filmstrip 8-frame uji animasi 30 fps Si Oyen di Warkop 24 Jam (Jalan 4 Kaki -> Duduk & Lip-Sync Meong -> Kaget Loncat Ekor Mekar!)
   - `sheet_modular_rig_showcase.jpg` — **Modular Rig Showcase (`engine/cast/`)**: 12 ekspresi + comic FX, 15 hand prop, 4 stance (`stand/walk/sit/jump`), 4 sudut pandang (`front/threeQuarter/side/back`), auto lip-sync `words.json`, & override NPC 1-baris
   - `sheet_master_indonesia_all.jpg` — **Master Cast 8 Karakter Pendukung Ala Indonesia** (Baris atas: Host Nusantara `ID-1..ID-4`, Baris bawah: NPC Warga Sehari-hari `ID-5..ID-8`)
   - `sheet_warga_indonesia.jpg` — 4 NPC Sehari-hari Indonesia (`ID-5 Pak Budi`, `ID-6 Bu Siti`, `ID-7 Raka SMA`, `ID-8 Bang Udin Ojol`)
@@ -17,6 +19,7 @@ Seluruh karakter, sheet, dan preview animasi di folder ini adalah **karya prosed
 - `frames/` — Still 3D terpisah untuk tiap lineup, close-up, turnaround, rig showcase, dan frame animasi (46 file JPG).
 - `previews/` — Klip preview animasi gerak 30 fps (semua lulus `npm run qa`):
   - `bang_utoh_anim_preview.mp4` (**Pemeran Utama #1 — Bolohoutoh alias Bang Utoh**)
+  - `kucing_oyen_anim_preview.mp4` (**Karakter Kucing 2D — Si Oyen di Warkop 24 Jam**)
   - `nusantara_anim_preview.mp4` (Mas Arya & Mbak Rara)
   - `warga_anim_preview.mp4` (Pak Budi & Bang Udin Ojol)
 
@@ -56,6 +59,7 @@ import { ActorBillboard, blinkLidAt, talkAt } from '../../engine';
 | `ID6` | **Bu Siti (Warung)** | Cepol tinggi + jepit merah, daster bunga, celemek | Spatula / sodet warung | Emak-emak, pemilik warung, gosip gang |
 | `ID7` | **Raka (Pelajar SMA)** | Seragam putih-abu, dasi + badge OSIS, ransel merah | Smartphone | Cerita sekolah, pelajar, penanya muda |
 | `ID8` | **Bang Udin (Ojol)** | Jaket hijau-hitam strip reflektor, helm visor biru | HP peta rute · helm loncat | Abang ojol, kurir, cerita jalanan kota |
+| `oyen` (`<CatBillboard />`) | **Si Oyen (Kucing Warkop)** | Tabby oranye-jahe loreng coklat (tanda M dahi, mata emas pupil celah, moncong/dada/cakar krem, ekor cincin) | 5 stance (`sit`/`stand`/`walk`/`sleep`/`jump`), 4 sudut, angkat cakar (toe-beans), lip-sync meong, ekor mekar saat shock | Maskot Warkop 24 Jam, komedi kampung, sidekick Bang Utoh (plus varian `abu` & `belang`) |
 
 ## Perintah Regenerasi Sheet & Preview
 ```bash
@@ -64,7 +68,9 @@ npm run still -- nusantara --frames 0,30,60,90,120,150,160,170,180,192,204,217,2
 npm run still -- warga --frames 0,30,60,90,120,150,160,170,180,192,204,217,232 --scale 0.5
 npm run still -- riglab --frames 0,30,60,90 --scale 0.5
 npm run still -- bangutoh --frames 0,30,60,90,150,160,170,180,192,204,217,232 --scale 0.5
+npm run still -- kucingoyen --frames 0,30,60,90,150,160,170,180,192,204,217,232 --scale 0.5
 npm run preview -- bangutoh --ranges 150-240 --scale 0.5
+npm run preview -- kucingoyen --ranges 150-240 --scale 0.5
 npm run preview -- nusantara --ranges 150-240 --scale 0.5
 npm run preview -- warga --ranges 150-240 --scale 0.5
 node pipeline/py.mjs pipeline/make_sheet.py

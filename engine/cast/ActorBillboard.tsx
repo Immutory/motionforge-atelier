@@ -45,6 +45,8 @@ export type ActorBillboardProps = {
   castShadow?: boolean;
   /** Warna multiply bayangan kontak di bawah kaki (linear RGB). */
   blobColor?: Vec3;
+  /** Garis tepi stiker ala thumbnail YouTube (mis. `{ color: '#ffffff', width: 18, outerColor: '#0a090d' }`). */
+  stickerOutline?: { color?: string; width?: number; outerColor?: string };
 };
 
 /**
@@ -63,17 +65,64 @@ export const ActorBillboard: React.FC<ActorBillboardProps> = ({
   height = 1.96,
   castShadow = false,
   blobColor = [0.6, 0.56, 0.62],
+  stickerOutline,
 }) => {
   const spec = useMemo(() => resolveActorSpec(actor, overrides), [actor, overrides]);
   const talkKey = typeof pose.talk === 'number' ? `n${pose.talk.toFixed(2)}` : pose.talk ? `${pose.talk.shape}_${pose.talk.open.toFixed(2)}` : '0';
+  const stickerKey = stickerOutline ? `${stickerOutline.color ?? '#fff'}_${stickerOutline.width ?? 16}_${stickerOutline.outerColor ?? ''}` : '';
 
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = ACTOR_W * 2;
     canvas.height = ACTOR_H * 2;
     const ctx = canvas.getContext('2d')!;
-    ctx.scale(2, 2);
-    drawActor(ctx, spec, pose);
+    if (!stickerOutline) {
+      ctx.scale(2, 2);
+      drawActor(ctx, spec, pose);
+    } else {
+      const off = document.createElement('canvas');
+      off.width = ACTOR_W * 2;
+      off.height = ACTOR_H * 2;
+      const offCtx = off.getContext('2d')!;
+      offCtx.scale(2, 2);
+      drawActor(offCtx, spec, pose);
+
+      const bodyOnly = document.createElement('canvas');
+      bodyOnly.width = ACTOR_W * 2;
+      bodyOnly.height = ACTOR_H * 2;
+      const bodyCtx = bodyOnly.getContext('2d')!;
+      bodyCtx.scale(2, 2);
+      drawActor(bodyCtx, spec, { ...pose, fx: 'none' });
+
+      const sil = document.createElement('canvas');
+      sil.width = ACTOR_W * 2;
+      sil.height = ACTOR_H * 2;
+      const silCtx = sil.getContext('2d')!;
+
+      const stampRing = (col: string, radPx: number) => {
+        silCtx.globalCompositeOperation = 'source-over';
+        silCtx.clearRect(0, 0, sil.width, sil.height);
+        silCtx.drawImage(bodyOnly, 0, 0);
+        silCtx.globalCompositeOperation = 'source-in';
+        silCtx.fillStyle = col;
+        silCtx.fillRect(0, 0, sil.width, sil.height);
+
+        const steps = 28;
+        for (const r of [radPx * 0.55, radPx]) {
+          for (let i = 0; i < steps; i++) {
+            const a = (i / steps) * Math.PI * 2;
+            ctx.drawImage(sil, Math.cos(a) * r, Math.sin(a) * r);
+          }
+        }
+      };
+
+      const wPx = (stickerOutline.width ?? 16) * 2;
+      if (stickerOutline.outerColor) {
+        stampRing(stickerOutline.outerColor, wPx + 9);
+      }
+      stampRing(stickerOutline.color ?? '#ffffff', wPx);
+      ctx.drawImage(off, 0, 0);
+    }
     const t = new THREE.CanvasTexture(canvas);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
@@ -94,6 +143,7 @@ export const ActorBillboard: React.FC<ActorBillboardProps> = ({
     pose.walkPhase,
     pose.lean,
     pose.facing,
+    stickerKey,
   ]);
 
   const cardMat = useMemo(() => {

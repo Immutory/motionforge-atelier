@@ -105,6 +105,7 @@ def main() -> None:
     w_src = OUT / "warga" / "stills"
     r_src = OUT / "riglab" / "stills"
     u_src = OUT / "bangutoh" / "stills"
+    k_src = OUT / "kucingoyen" / "stills"
     s_src = OUT / "setlab" / "stills"
 
     global_items = [
@@ -308,6 +309,48 @@ def main() -> None:
             cell_h=675,
         )
 
+    kucing_items = [
+        (copy_if_exists(k_src / "f0000.jpg", FRAMES_DIR / "kucing_oyen_hero.jpg"), "Hero · Si Oyen (Tabby Oranye)"),
+        (copy_if_exists(k_src / "f0030.jpg", FRAMES_DIR / "kucing_oyen_turnaround.jpg"), "Turnaround 4 Sudut Pandang"),
+        (copy_if_exists(k_src / "f0060.jpg", FRAMES_DIR / "kucing_oyen_moods.jpg"), "4 Mood & Pose Ekspresif"),
+        (copy_if_exists(k_src / "f0090.jpg", FRAMES_DIR / "kucing_oyen_warkop.jpg"), "Warkop 24 Jam + Bang Utoh + Cast Kucing"),
+    ]
+    kucing_anim = [
+        (k_src / "f0150.jpg", "f150 · Walk Masuk Warkop"),
+        (k_src / "f0160.jpg", "f160 · Walk Step 1"),
+        (k_src / "f0170.jpg", "f170 · Walk Step 2"),
+        (k_src / "f0180.jpg", "f180 · Duduk Manis"),
+        (k_src / "f0192.jpg", "f192 · Meong & Angkat Cakar 1"),
+        (k_src / "f0204.jpg", "f204 · Meong & Angkat Cakar 2"),
+        (k_src / "f0217.jpg", "f217 · Shock Jump Ekor Mekar!"),
+        (k_src / "f0232.jpg", "f232 · Golden Shock Hold"),
+    ]
+    for src, _ in kucing_anim:
+        if src.exists():
+            copy_if_exists(src, FRAMES_DIR / f"kucing_anim_{src.name}")
+
+    if any(p.exists() for p, _ in kucing_items):
+        build_grid_sheet(
+            kucing_items,
+            cols=4,
+            title="MOTIONFORGE ATELIER — KARAKTER KUCING 2D: SI OYEN (TABBY ORANYE)",
+            subtitle="Referensi Tabby Oren (12221_Cat_v1_l3) · 4 Sudut · 5 Stance · 12 Ekspresi · Lip-Sync Meong · Resmi di engine/cast/",
+            dest=SHEETS_DIR / "sheet_kucing_oyen_main.jpg",
+            cell_w=420,
+            cell_h=746,
+        )
+
+    if any(p.exists() for p, _ in kucing_anim):
+        build_grid_sheet(
+            kucing_anim,
+            cols=4,
+            title="SI OYEN ANIMATION STRIP — 30 FPS LIVE ACTION DI WARKOP 24 JAM",
+            subtitle="Karakter Kucing 2D <CatBillboard />: Jalan 4 Kaki -> Duduk & Meong ke Bang Utoh -> Plot-Twist Kaget Loncat!",
+            dest=SHEETS_DIR / "sheet_kucing_oyen_anim_strip.jpg",
+            cell_w=380,
+            cell_h=675,
+        )
+
     sets_dir = ROOT / "assets" / "sets"
     set_items = [
         (copy_if_exists(s_src / "f0000.jpg", sets_dir / "frames" / "set_01_warkop_siang.jpg"), "Warkop Ngoding (Siang)"),
@@ -328,6 +371,7 @@ def main() -> None:
 
     for src, dst_name in [
         (OUT / "bangutoh" / "previews" / "beat_150-240.mp4", "bang_utoh_anim_preview.mp4"),
+        (OUT / "kucingoyen" / "previews" / "beat_150-240.mp4", "kucing_oyen_anim_preview.mp4"),
         (OUT / "nusantara" / "previews" / "beat_150-240.mp4", "nusantara_anim_preview.mp4"),
         (OUT / "warga" / "previews" / "beat_150-240.mp4", "warga_anim_preview.mp4"),
     ]:
