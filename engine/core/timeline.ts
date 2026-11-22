@@ -1,4 +1,5 @@
-export type Word = { text: string; start: number; end: number }; // detik
+/** Satu kata narasi (detik). `speaker` opsional untuk produksi multi-suara, mis. "bangUtoh" | "tio". */
+export type Word = { text: string; start: number; end: number; speaker?: string };
 export type Shot = {
   id: string;
   from: number; // frame awal (inklusif)

@@ -64,6 +64,20 @@ import { ActorBillboard, blinkLidAt, talkAt } from '../../engine';
 | `mbakYuni` | **Mbak Yuni (Es Buah)** | Hijab, celemek pedagang | Gelas es buah · gerobak di `esBuahYuniVendor` | Pedagang kaki lima, minuman segar |
 | `oyen` (`<CatBillboard />`) | **Si Oyen (Kucing Warkop)** | Tabby oranye-jahe loreng coklat (tanda M dahi, mata emas pupil celah, moncong/dada/cakar krem, ekor cincin) | 5 stance (`sit`/`stand`/`walk`/`sleep`/`jump`), 4 sudut, angkat cakar (toe-beans), lip-sync meong, ekor mekar saat shock | Maskot Warkop 24 Jam, komedi kampung, sidekick Bang Utoh (plus varian `abu` & `belang`) |
 
+## Suara Karakter (casting terkunci)
+Supaya suara tiap tokoh konsisten di semua episode, pakai suara di bawah ini. Bang Utoh selalu memakai rekaman suara asli pemilik kanal.
+Suara pendukung dibuat dengan TTS ElevenLabs (model `eleven_v4`, bahasa Indonesia) dari pustaka suara; uji coba disetujui 22 Nov 2026.
+
+| Tokoh | Sumber suara | Voice ID | Ciri |
+|---|---|---|---|
+| `bangUtoh` | Rekaman asli pemilik kanal | – | Suara utama, narator |
+| `tio` | ElevenLabs: Genesius | `2lcxSPWqG78QhJnKPyMX` | Pria dewasa, santai, ekspresif |
+| `mbakYuni` | ElevenLabs: Damayanti | `DrldqYsaKOiBNak7yH5o` | Ceria, ekspresif, nyeletuk |
+| `pakUjang` | ElevenLabs: Arga Dahana | `CyYm0pDg8bfmn6QckQk4` | Paruh baya, logat Jawa, serius (straight man) |
+
+Catatan lisensi: pakai suara TTS di video yang dimonetisasi hanya bila paket akun ElevenLabs mengizinkan pemakaian komersial
+(umumnya paket berbayar). Tokoh lain belum punya suara terkunci; tambahkan barisnya di sini saat pertama kali dicasting.
+
 ## Perintah Regenerasi Sheet & Preview
 ```bash
 npm run still -- charlab --frames 0,30,60,90 --scale 0.5

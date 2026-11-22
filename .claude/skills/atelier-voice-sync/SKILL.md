@@ -15,6 +15,12 @@ Every cut, kick and sound effect is timed to `words.json`, so an error here spre
 5. Hand-verify the first word, each beat boundary, and every punchline word by listening.
 6. Report total seconds and frames at 30 fps (`durationFromWords` in `engine/core/timeline.ts` adds a closing breath).
 
+## Multi-voice (Bang Utoh + supporting cast)
+- Bang Utoh is always the channel owner's own recording. Supporting characters use the locked TTS voices in `assets/characters/README.md` (section "Suara Karakter"); never swap a voice without updating that table.
+- Generate each supporting line as its own clip (`eleven_v4`, Indonesian, audio tags like `[sarcastic]`, `[laughs]` for delivery), save as `productions/<slug>/voice/<character>_<nn>.wav` (48 kHz mono after ffmpeg), and note the take used in `PRODUCTION_LOG.md`.
+- Assemble all clips on one timeline into `voice.wav` with 0.15–0.35 s gaps between speakers (tighter for comedic interruptions), then build one `words.json` with a `"speaker"` field per word (e.g. `"tio"`). `talkAt` itself has no speaker filter, so pass each character only its own words: `talkAt(WORDS.filter((w) => w.speaker === 'tio'), frame, FPS)`.
+- Confirm the account plan allows commercial use before a TTS line goes into a monetized upload.
+
 ## Rules
 - Do not edit script wording here. Wording changes go back to `story-architect`.
 - If words.json changes after shots are locked, tell `cinematographer` and `sound-designer`, because both re-time.
