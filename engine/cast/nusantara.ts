@@ -28,6 +28,7 @@ export type ShoeStyle = 'loafer' | 'sneaker' | 'sandal' | 'boot';
 export type ArmPose = 'rest' | 'hip' | 'point' | 'raise' | 'hold' | 'wave' | 'cross';
 export type ActorStance = 'stand' | 'walk' | 'sit' | 'sitCross' | 'squat' | 'jump';
 export type ActorView = 'front' | 'threeQuarter' | 'side' | 'back';
+export type BodyBuild = 'slim' | 'regular' | 'big';
 
 export type CharacterSpec = {
   id: string;
@@ -42,15 +43,30 @@ export type CharacterSpec = {
   hairStyle: HairStyle;
   hairColor: string;
   hairHighlight?: string;
+  /** Detail sisiran rapi (garis belahan + helai sisir) untuk `hairStyle: 'parted'` tanpa topi. Default false. */
+  hairCombed?: boolean;
   headgear: Headgear;
   headgearColor?: string;
   headgearAccent?: string;
   glasses?: boolean;
-  glassesStyle?: 'round' | 'tech';
+  /** 'round' = bingkai emas tipis, 'tech' = kotak tipis, 'thick' = bingkai gelap tebal (pedagang). */
+  glassesStyle?: 'round' | 'tech' | 'thick';
   mustache?: boolean;
   earrings?: boolean;
   nose?: boolean;
   browThick?: number;
+  /** Warna rongga mulut saat terbuka (default '#5c222d'). Gelapkan untuk kulit gelap agar tetap kontras. */
+  mouthColor?: string;
+  /** Warna lidah di dalam mulut (default '#e57373'). */
+  tongueColor?: string;
+  /** Pita bibir tipis di bawah garis mulut tertutup (default: tidak digambar). */
+  lipColor?: string;
+  /** Rona pipi lembut (default: tidak digambar). */
+  blushColor?: string;
+  /** Titik kilau putih di pupil agar mata tetap terbaca di kulit gelap / adegan malam (default false). */
+  eyeShine?: boolean;
+  /** Postur badan: 'regular' (default, tampilan lama), 'slim', atau 'big' (badan, perut, lengan & celemek lebih lebar). */
+  build?: BodyBuild;
   outfit: OutfitStyle;
   outfitColor: string;
   outfitShade: string;
@@ -361,17 +377,26 @@ export const CAST_PRESETS: Record<CastPresetId, CharacterSpec> = {
     role: 'Pedagang Bakmie Ayam · Area Pedagang Rawa Sari',
     headShape: 'squircle',
     eyeStyle: 'classic',
-    skin: '#f6d8bc',
-    skinShadow: '#e1beae',
-    ink: '#211b2b',
+    // Sawo matang gelap / hitam kecokelatan. Ink hampir hitam + kilau mata + rongga mulut gelap & bibir
+    // rosewood agar mata, alis, mulut & bentuk lip-sync tetap terbaca di siang, golden hour, dan malam.
+    skin: '#8a5a3c',
+    skinShadow: '#6a4029',
+    ink: '#120c0e',
+    eyeShine: true,
+    mouthColor: '#2e0d12',
+    tongueColor: '#d8756f',
+    lipColor: '#a8574a',
+    blushColor: '#9c4436',
     hairStyle: 'parted',
-    hairColor: '#22202c',
-    hairHighlight: '#413e54',
-    headgear: 'cap',
-    headgearColor: '#a62828',
-    headgearAccent: '#fff4d6',
+    hairColor: '#17131a',
+    hairHighlight: '#4a4152',
+    hairCombed: true,
+    headgear: 'none',
+    glasses: true,
+    glassesStyle: 'thick',
     nose: true,
-    browThick: 9.5,
+    browThick: 11,
+    build: 'big',
     outfit: 'pedagangApron',
     outfitColor: '#fdf8ee',
     outfitShade: '#e8decb',
@@ -417,6 +442,25 @@ export function resolveActorSpec(actor: CastPresetId | CharacterSpec, overrides?
 type Ctx = CanvasRenderingContext2D;
 const TAU = Math.PI * 2;
 const CX = 350;
+
+/**
+ * Faktor postur badan. 'regular' wajib bernilai netral (1 / 0) agar karakter lama render identik per piksel.
+ * - torso: pengali lebar torso (tw) → bahu, perut, daster/sarung ikut melebar
+ * - limb: pengali tebal lengan/kaki/tangan
+ * - belly: 0..1 tonjolan perut bawah pada siluet torso
+ * - armOut: geser target tangan keluar (px) agar lengan tidak menembus badan yang lebih lebar
+ * - hipOut: geser pangkal paha & telapak keluar (px); telapak tetap di ACTOR_SOLE_Y
+ * - apron: pengali lebar celemek pedagang
+ */
+type BuildFactors = { torso: number; limb: number; belly: number; armOut: number; hipOut: number; apron: number };
+const BUILD_FACTORS: Record<BodyBuild, BuildFactors> = {
+  slim: { torso: 0.9, limb: 0.88, belly: 0, armOut: -10, hipOut: -4, apron: 0.9 },
+  regular: { torso: 1, limb: 1, belly: 0, armOut: 0, hipOut: 0, apron: 1 },
+  big: { torso: 1.17, limb: 1.2, belly: 1, armOut: 18, hipOut: 9, apron: 1.2 },
+};
+export function buildFactors(spec: Pick<CharacterSpec, 'build'>): BuildFactors {
+  return BUILD_FACTORS[spec.build ?? 'regular'];
+}
 
 function inked(
   ctx: Ctx,
@@ -536,6 +580,7 @@ function resolveArmTarget(
   swing: number,
   isWalk: boolean,
   isSide: boolean,
+  armOut = 0,
 ) {
   const sx = CX + (isSide ? side * 14 : side * tw * 0.44);
   const sy = torsoTop + 52;
@@ -572,6 +617,7 @@ function resolveArmTarget(
     hy = torsoTop + 116;
     bend = side * 46;
   }
+  if (armOut !== 0 && armPose !== 'cross') hx += side * (isSide ? armOut * 0.5 : armOut);
   return { sx, sy, hx, hy, bend };
 }
 
@@ -587,8 +633,10 @@ function drawArm(
   isSide: boolean,
   spec: CharacterSpec,
 ) {
-  const { sx, sy, hx, hy, bend } = resolveArmTarget(side, armPose, torsoTop, tw, swing, isWalk, isSide);
+  const bf = buildFactors(spec);
+  const { sx, sy, hx, hy, bend } = resolveArmTarget(side, armPose, torsoTop, tw, swing, isWalk, isSide, bf.armOut);
   const { ink, skin, outfit, outfitColor, outfitSecondary } = spec;
+  const lk = bf.limb;
   const isShortSleeve = outfit === 'kotakSarung' || outfit === 'dasterCelemek' || outfit === 'seragamSma';
   const sleeveColor =
     outfit === 'coach' || outfit === 'tenun' || outfit === 'ojol'
@@ -597,33 +645,33 @@ function drawArm(
 
   if (isShortSleeve) {
     ctx.strokeStyle = ink;
-    ctx.lineWidth = 25;
+    ctx.lineWidth = 25 * lk;
     ctx.beginPath();
     ctx.moveTo(sx, sy);
     ctx.quadraticCurveTo((sx + hx) / 2 + bend, (sy + hy) / 2, hx, hy);
     ctx.stroke();
     ctx.strokeStyle = skin;
-    ctx.lineWidth = 14;
+    ctx.lineWidth = 14 * lk;
     ctx.stroke();
 
     ctx.strokeStyle = ink;
-    ctx.lineWidth = 33;
+    ctx.lineWidth = 33 * lk;
     ctx.beginPath();
     ctx.moveTo(sx, sy);
     ctx.lineTo(sx + (hx - sx) * 0.36, sy + (hy - sy) * 0.36);
     ctx.stroke();
     ctx.strokeStyle = outfitColor;
-    ctx.lineWidth = 21;
+    ctx.lineWidth = 21 * lk;
     ctx.stroke();
   } else {
     ctx.strokeStyle = ink;
-    ctx.lineWidth = 30;
+    ctx.lineWidth = 30 * lk;
     ctx.beginPath();
     ctx.moveTo(sx, sy);
     ctx.quadraticCurveTo((sx + hx) / 2 + bend, (sy + hy) / 2, hx, hy);
     ctx.stroke();
     ctx.strokeStyle = sleeveColor;
-    ctx.lineWidth = 18;
+    ctx.lineWidth = 18 * lk;
     ctx.stroke();
   }
 
@@ -637,7 +685,7 @@ function drawArm(
       ctx,
       () => {
         ctx.beginPath();
-        ctx.arc(hx, hy, 16, 0, TAU);
+        ctx.arc(hx, hy, 16 * (1 + (lk - 1) * 0.5), 0, TAU);
       },
       skin,
       ink,
@@ -659,7 +707,7 @@ function drawArm(
       ctx,
       () => {
         ctx.beginPath();
-        ctx.arc(hx, hy, 17, 0, TAU);
+        ctx.arc(hx, hy, 17 * (1 + (lk - 1) * 0.5), 0, TAU);
       },
       skin,
       ink,
@@ -680,6 +728,7 @@ function drawTorsoAndSkirt(
   spec: CharacterSpec,
 ) {
   const { ink, outfit, outfitColor, outfitShade, outfitSecondary, accentColor } = spec;
+  const bf = buildFactors(spec);
   const w = isSide ? tw * 0.72 : tw;
 
   // Daster terusan (Bu Siti)
@@ -810,10 +859,15 @@ function drawTorsoAndSkirt(
   const bottomY = outfit === 'kotakSarung' ? sarungTop + 14 : torsoTop + th;
   const torsoPath = () => {
     ctx.beginPath();
+    // Perut (build 'big'): titik kontrol bawah melebar & turun, pinggul bawah lebih lebar → siluet buncit ringan.
+    const bl = bf.belly;
+    const bc = 0.56 + 0.12 * bl;
+    const be = 0.22 + 0.07 * bl;
+    const bcy = 12 - 10 * bl;
     ctx.moveTo(CX - w * 0.42, torsoTop + 8);
-    ctx.bezierCurveTo(CX - w * 0.62, torsoTop + th * 0.35, CX - w * 0.56, bottomY - 12, CX - w * 0.22, bottomY);
-    ctx.quadraticCurveTo(CX, bottomY + 12, CX + w * 0.22, bottomY);
-    ctx.bezierCurveTo(CX + w * 0.56, bottomY - 12, CX + w * 0.62, torsoTop + th * 0.35, CX + w * 0.42, torsoTop + 8);
+    ctx.bezierCurveTo(CX - w * 0.62, torsoTop + th * 0.35, CX - w * bc, bottomY - bcy, CX - w * be, bottomY);
+    ctx.quadraticCurveTo(CX, bottomY + 12 + 6 * bl, CX + w * be, bottomY);
+    ctx.bezierCurveTo(CX + w * bc, bottomY - bcy, CX + w * 0.62, torsoTop + th * 0.35, CX + w * 0.42, torsoTop + 8);
     ctx.closePath();
   };
   const tg = ctx.createLinearGradient(CX - w * 0.5, torsoTop, CX + w * 0.55, bottomY);
@@ -1161,18 +1215,19 @@ function drawTorsoAndSkirt(
     // Kemeja pedagang bersih + celemek masak full-bib (Tio Bakmie Ayam)
     const apronCol = outfitSecondary ?? '#a62828';
     if (!isBack) {
+      const ak = bf.apron;
       // Tali leher celemek
       ctx.strokeStyle = apronCol;
       ctx.lineWidth = 11;
       ctx.beginPath();
       ctx.moveTo(CX - 36, torsoTop + 4);
-      ctx.lineTo(CX - 48, torsoTop + 58);
+      ctx.lineTo(CX - 48 * ak, torsoTop + 58);
       ctx.moveTo(CX + 36, torsoTop + 4);
-      ctx.lineTo(CX + 48, torsoTop + 58);
+      ctx.lineTo(CX + 48 * ak, torsoTop + 58);
       ctx.stroke();
 
       // Badan celemek bib depan rapi
-      const aw = isSide ? 48 : 74;
+      const aw = (isSide ? 48 : 74) * ak;
       ctx.fillStyle = apronCol;
       ctx.beginPath();
       ctx.moveTo(CX - aw * 0.68, torsoTop + 52);
@@ -1190,7 +1245,7 @@ function drawTorsoAndSkirt(
       // List emas/krem di pinggir atas bib & kantong depan celemek
       ctx.fillStyle = accentColor;
       ctx.fillRect(CX - aw * 0.64, torsoTop + 58, aw * 1.28, 7);
-      const pw = isSide ? 32 : 52;
+      const pw = (isSide ? 32 : 52) * ak;
       ctx.fillStyle = '#fff5e0';
       ctx.beginPath();
       ctx.roundRect(CX - pw, torsoTop + 144, pw * 2, 54, 10);
@@ -1205,10 +1260,11 @@ function drawTorsoAndSkirt(
       ctx.strokeStyle = apronCol;
       ctx.lineWidth = 12;
       ctx.beginPath();
-      ctx.moveTo(CX - 42, torsoTop + 8);
-      ctx.lineTo(CX + 42, torsoTop + 130);
-      ctx.moveTo(CX + 42, torsoTop + 8);
-      ctx.lineTo(CX - 42, torsoTop + 130);
+      const ak = bf.apron;
+      ctx.moveTo(CX - 42 * ak, torsoTop + 8);
+      ctx.lineTo(CX + 42 * ak, torsoTop + 130);
+      ctx.moveTo(CX + 42 * ak, torsoTop + 8);
+      ctx.lineTo(CX - 42 * ak, torsoTop + 130);
       ctx.moveTo(CX - w * 0.52, torsoTop + 138);
       ctx.lineTo(CX + w * 0.52, torsoTop + 138);
       ctx.stroke();
@@ -1656,7 +1712,10 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
   const cy = headTop + H / 2;
   const chin = headTop + H;
   const torsoTop = chin - 6;
-  const tw = spec.headShape === 'squircle' ? 220 : spec.outfit === 'kotakSarung' ? 222 : 196;
+  const bf = buildFactors(spec);
+  const lk = bf.limb;
+  const ho = bf.hipOut;
+  const tw = (spec.headShape === 'squircle' ? 220 : spec.outfit === 'kotakSarung' ? 222 : 196) * bf.torso;
   const th = 228;
   const hipY = torsoTop + th - 12;
 
@@ -1671,33 +1730,33 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
   if (stance === 'sitCross') {
     // Duduk bersila santai di lantai (kaki kiri terlipat di bawah, kaki kanan menyilang di depan!)
     const drawCrossedLeg = (side: -1 | 1, inFront: boolean) => {
-      const hx = CX + side * 34;
+      const hx = CX + side * (34 + ho);
       const hy = hipY - 8;
-      const kx = CX + side * 144;
+      const kx = CX + side * (144 + ho);
       const ky = hipY + (inFront ? 48 : 38);
       const fx = CX - side * 78;
       const fy = ACTOR_SOLE_Y - (inFront ? 10 : 18);
 
       // Paha keluar ke lutut
       ctx.strokeStyle = ink;
-      ctx.lineWidth = 30;
+      ctx.lineWidth = 30 * lk;
       ctx.beginPath();
       ctx.moveTo(hx, hy);
-      ctx.quadraticCurveTo(CX + side * 112, hy + 8, kx, ky);
+      ctx.quadraticCurveTo(CX + side * (112 + ho), hy + 8, kx, ky);
       ctx.stroke();
       ctx.strokeStyle = pantsColor;
-      ctx.lineWidth = 18;
+      ctx.lineWidth = 18 * lk;
       ctx.stroke();
 
       // Betis melipat menyilang ke sisi berlawanan
       ctx.strokeStyle = ink;
-      ctx.lineWidth = 28;
+      ctx.lineWidth = 28 * lk;
       ctx.beginPath();
       ctx.moveTo(kx, ky);
       ctx.quadraticCurveTo(CX + side * 42, ACTOR_SOLE_Y - 14, fx, fy - 12);
       ctx.stroke();
       ctx.strokeStyle = pantsColor;
-      ctx.lineWidth = 17;
+      ctx.lineWidth = 17 * lk;
       ctx.stroke();
 
       drawShoe(ctx, fx, fy, -side, spec);
@@ -1707,24 +1766,24 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
   } else if (stance === 'squat') {
     // Gaya jongkok nongkrong khas warkop: lutut naik lebar di kiri-kanan, kaki menapak mantap!
     for (const side of legSides) {
-      const hx = CX + side * 34;
+      const hx = CX + side * (34 + ho);
       const hy = hipY - 6;
-      const kx = CX + side * 124;
+      const kx = CX + side * (124 + ho * 1.5);
       const ky = hipY - 42;
-      const fx = CX + side * 72;
+      const fx = CX + side * (72 + ho);
       const fy = ACTOR_SOLE_Y - 4;
 
       // Paha naik keluar ke lutut tinggi
       ctx.strokeStyle = ink;
-      ctx.lineWidth = 30;
+      ctx.lineWidth = 30 * lk;
       ctx.beginPath();
       ctx.moveTo(hx, hy);
-      ctx.quadraticCurveTo(CX + side * 96, hy - 34, kx, ky);
+      ctx.quadraticCurveTo(CX + side * (96 + ho * 1.5), hy - 34, kx, ky);
       // Betis turun menapak ke sepatu
       ctx.quadraticCurveTo(kx + side * 8, (ky + fy) * 0.52, fx, fy - 18);
       ctx.stroke();
       ctx.strokeStyle = pantsColor;
-      ctx.lineWidth = 18;
+      ctx.lineWidth = 18 * lk;
       ctx.stroke();
 
       drawShoe(ctx, fx, fy, side, spec);
@@ -1734,57 +1793,57 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
       const dir = isSide ? (facing >= 0 ? 1 : -1) : side;
       if (stance === 'sit') {
         // Duduk di bangku/kursi: paha maju/keluar, lutut menekuk turun
-        const hx = CX + (isSide ? side * 14 : side * 46);
-        const kx = CX + (isSide ? dir * 108 + side * 14 : side * 84);
+        const hx = CX + (isSide ? side * 14 : side * (46 + ho));
+        const kx = CX + (isSide ? dir * 108 + side * 14 : side * (84 + ho));
         const ky = hipY + 72;
-        const fx = CX + (isSide ? dir * 116 + side * 14 : side * 72);
+        const fx = CX + (isSide ? dir * 116 + side * 14 : side * (72 + ho));
         const fy = ACTOR_SOLE_Y - 12;
 
         ctx.strokeStyle = ink;
-        ctx.lineWidth = 28;
+        ctx.lineWidth = 28 * lk;
         ctx.beginPath();
         ctx.moveTo(hx, hipY);
         ctx.quadraticCurveTo(kx, hipY + 12, kx, ky);
         ctx.lineTo(fx, fy - 20);
         ctx.stroke();
         ctx.strokeStyle = pantsColor;
-        ctx.lineWidth = 17;
+        ctx.lineWidth = 17 * lk;
         ctx.stroke();
         drawShoe(ctx, fx, fy, dir, spec);
       } else if (stance === 'jump') {
-        const hx = CX + side * 38;
-        const kx = CX + side * 86;
+        const hx = CX + side * (38 + ho);
+        const kx = CX + side * (86 + ho);
         const ky = hipY + 110;
-        const fx = CX + side * 54;
+        const fx = CX + side * (54 + ho);
         const fy = hipY + 210;
         ctx.strokeStyle = ink;
-        ctx.lineWidth = 28;
+        ctx.lineWidth = 28 * lk;
         ctx.beginPath();
         ctx.moveTo(hx, hipY);
         ctx.quadraticCurveTo(kx, ky, fx, fy - 18);
         ctx.stroke();
         ctx.strokeStyle = pantsColor;
-        ctx.lineWidth = 17;
+        ctx.lineWidth = 17 * lk;
         ctx.stroke();
         drawShoe(ctx, fx, fy, dir, spec);
       } else {
         const stride = isSide ? 110 : isSkirted ? 56 : 72;
         const stepX = swing * side * stride;
         const liftY = isWalk ? Math.max(0, -swing * side) * 34 : 0;
-        const baseSpread = isSide ? side * 20 : side * (pose.face === 'shock' ? 74 : isSkirted ? 48 : 54);
+        const baseSpread = isSide ? side * 20 : side * ((pose.face === 'shock' ? 74 : isSkirted ? 48 : 54) + ho);
         const fx = CX + baseSpread + stepX;
         const fy = ACTOR_SOLE_Y - liftY;
-        const hx = CX + (isSide ? side * 8 : side * 36);
+        const hx = CX + (isSide ? side * 8 : side * (36 + ho));
         const startY = isSkirted ? hipY + 90 : hipY;
 
         ctx.strokeStyle = ink;
-        ctx.lineWidth = isSkirted ? 22 : 28;
+        ctx.lineWidth = (isSkirted ? 22 : 28) * lk;
         ctx.beginPath();
         ctx.moveTo(hx, startY);
         ctx.quadraticCurveTo((hx + fx) / 2 - side * 5, (startY + fy) / 2, fx, fy - 22);
         ctx.stroke();
         ctx.strokeStyle = pantsColor;
-        ctx.lineWidth = isSkirted ? 12 : 17;
+        ctx.lineWidth = (isSkirted ? 12 : 17) * lk;
         ctx.stroke();
         drawShoe(ctx, fx, fy, dir, spec);
       }
@@ -2002,6 +2061,11 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
       facing: isSide ? Math.sign(facing) * 0.65 : facing,
       browThick: spec.browThick,
       nose: spec.nose || isSide,
+      mouthColor: spec.mouthColor,
+      tongueColor: spec.tongueColor,
+      lipColor: spec.lipColor,
+      blushColor: spec.blushColor,
+      eyeShine: spec.eyeShine,
     });
 
     const shift = (isSide ? Math.sign(facing) * 0.65 : facing) * W * 0.085;
@@ -2039,6 +2103,53 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         ctx.moveTo(ex(-1) + gw / 2, eyeY - 4);
         ctx.lineTo(ex(1) - gw / 2, eyeY - 4);
         ctx.stroke();
+      } else if (spec.glassesStyle === 'thick') {
+        // Kacamata bingkai tebal gelap (pedagang): lensa kotak-bulat, bingkai bertepi ink + kilau tipis agar
+        // tetap terbaca di kulit gelap & adegan malam. Ikut terangkat (hatPop) saat kaget.
+        const gw = 62;
+        const gh = 48;
+        const frame = '#1d1719';
+        const lens = (s: number) => {
+          ctx.beginPath();
+          ctx.roundRect(ex(s) - gw / 2, eyeY - gh / 2, gw, gh, 16);
+        };
+        for (const s of [-1, 1]) {
+          ctx.fillStyle = 'rgba(225, 240, 255, 0.07)';
+          lens(s);
+          ctx.fill();
+        }
+        // Jembatan hidung & gagang samping
+        const bridge = () => {
+          ctx.beginPath();
+          ctx.moveTo(ex(-1) + gw / 2 - 2, eyeY - 8);
+          ctx.quadraticCurveTo(CX + shift, eyeY - 15, ex(1) - gw / 2 + 2, eyeY - 8);
+          const far = facing >= 0 ? -1 : 1;
+          ctx.moveTo(ex(far) + far * (gw / 2), eyeY - 10);
+          ctx.lineTo(CX + far * W * 0.47, eyeY - 14);
+        };
+        for (const [col, lw] of [[ink, 12], [frame, 8]] as const) {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = lw;
+          for (const s of [-1, 1]) {
+            lens(s);
+            ctx.stroke();
+          }
+          bridge();
+          ctx.stroke();
+        }
+        // Kilau bingkai atas + pantulan lensa
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.lineWidth = 3;
+        for (const s of [-1, 1]) {
+          const lx = ex(s) - gw / 2;
+          const ly = eyeY - gh / 2;
+          ctx.beginPath();
+          ctx.moveTo(lx + 12, ly - 1);
+          ctx.lineTo(lx + 28, ly - 1);
+          ctx.moveTo(lx + gw - 16, ly + 12);
+          ctx.lineTo(lx + gw - 24, ly + 22);
+          ctx.stroke();
+        }
       } else {
         ctx.strokeStyle = '#c58f38';
         ctx.lineWidth = 5;
@@ -2092,6 +2203,32 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         ctx.moveTo(CX - W * 0.46, cy - 16);
         ctx.lineTo(CX - W * 0.36, cy - 30);
         ctx.stroke();
+      }
+      if (spec.hairCombed) {
+        // Belahan samping rapi + helai sisiran melengkung ke kanan (rambut terbaca sebagai rambut, bukan kupluk)
+        ctx.save();
+        hp();
+        ctx.clip();
+        const lift = -hatPop * 6;
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(CX - W * 0.2, headTop + 30);
+        ctx.quadraticCurveTo(CX - W * 0.24, headTop - 6 + lift, CX - W * 0.16, headTop - 40 + lift);
+        ctx.stroke();
+        ctx.strokeStyle = hairHighlight ?? '#4a4152';
+        ctx.lineWidth = 4.5;
+        for (const [ox, oy, len] of [
+          [-0.1, -26, 0.5],
+          [-0.12, -8, 0.56],
+          [-0.15, 12, 0.5],
+        ]) {
+          ctx.beginPath();
+          ctx.moveTo(CX + W * ox, headTop + oy + lift);
+          ctx.quadraticCurveTo(CX + W * (ox + len * 0.5), headTop + oy - 16 + lift, CX + W * (ox + len), headTop + oy + 14 + lift);
+          ctx.stroke();
+        }
+        ctx.restore();
       }
     } else if (hairStyle === 'bun') {
       const hf = () => {

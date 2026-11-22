@@ -46,9 +46,11 @@ export type KampungSetProps = Omit<GlbSetProps, 'src'> & {
   lightId?: string;
 };
 
-/** Titik berdiri karakter (Vec3, Three.js Y-up) di Kampung Rawa Sari RT 04 (`<KampungSet />`, 160m × 140m):
- *  Menggabungkan Rumah Kos Bang Utoh (`x=-12.2m`), Warkop Ngoding 24 Jam (`x=0m`), Gedung Kampus S1 TI (`x=+12.6m`),
- *  Masjid Al-Khawarizmi (`x=-23.0m`), Gapura Kampung Rawa Sari RT 04 (`x=-17.5m`), Ruko, dan Lapangan Olahraga.
+/** Titik berdiri karakter (Vec3, Three.js Y-up) di Kampung Rawa Sari RT 04 v2 (`<KampungSet />`, 264m × 220m):
+ *  Rumah Kos Bang Utoh (`x=-12.2m`), Warkop Ngoding 24 Jam (`x=0m`), Gedung Kampus FIK 3 lantai (`x=7..22.8m`),
+ *  Masjid Al-Khawarizmi (`x=-23.0m`), Gapura (`x=-17.5m`), Ruko, Lapangan, Kompleks SD + SMA (`x=90..128m`),
+ *  serta sisi barat: kali, bengkel, warung kelontong, rumah warga, musala (`x<-86m`).
+ *  Denah lengkap: `assets/sets/ZONING_KAMPUNG_V2.md`. Lantai kampus: y = 0.15 / 4.15 / 8.15, sekolah: 0.15 / 3.75 / 7.35.
  */
 export const KAMPUNG_SPOTS = {
   /** Di tengah jalan aspal depan Warkop Ngoding 24 Jam */
@@ -77,8 +79,22 @@ export const KAMPUNG_SPOTS = {
   warkopCanopyRight: [2.14, 2.8, -0.3] as Vec3,
   /** Di halaman depan Gedung Kampus S1 Teknik Informatika (dekat tiang bendera) */
   kampusPlaza: [12.6, 0, 3.2] as Vec3,
-  /** Di dalam Lab Komputer Kampus S1 TI */
-  kampusLab: [12.6, 0, 0.5] as Vec3,
+  /** Di dalam Lab Komputer Gedung FIK (lantai 2, lorong tengah); sama dengan `kampusLab2` */
+  kampusLab: [19.4, 4.15, -9.0] as Vec3,
+  /** Lobi Gedung FIK lantai 1 (depan meja resepsionis) */
+  kampusLobby: [12.75, 0.15, -5.0] as Vec3,
+  /** Kelas 2A Gedung FIK (lantai 2, antara kursi kuliah dan papan tulis) */
+  kampusKelas2A: [12.75, 4.15, -6.8] as Vec3,
+  /** Lab Komputer Gedung FIK lantai 2 (lorong tengah) */
+  kampusLab2: [19.4, 4.15, -9.0] as Vec3,
+  /** Lab Jaringan/Server Gedung FIK lantai 3 */
+  kampusLab3: [19.4, 8.15, -8.5] as Vec3,
+  /** Ruang Dosen Gedung FIK lantai 3 */
+  kampusRuangDosen: [12.75, 8.15, -5.0] as Vec3,
+  /** Selasar terbuka depan Gedung FIK lantai 2 */
+  kampusSelasar2: [14.5, 4.15, -1.5] as Vec3,
+  /** Selasar terbuka depan Gedung FIK lantai 3 */
+  kampusSelasar3: [14.5, 8.15, -1.5] as Vec3,
   /** Di depan Booth ATM & Plaza Masjid / Minimarket 24 Jam (Ruko Barat) */
   atmMinimarket: [-28.15, 0, 3.2] as Vec3,
   /** Di Area Pedagang Rawa Sari (dekat Gerobak Bakmie Ayam Tio, Es Buah Mbak Yuni & Meja Payung) */
@@ -105,6 +121,36 @@ export const KAMPUNG_SPOTS = {
   halteKampus: [19.8, 0, 3.3] as Vec3,
   /** Di Pos Satpam & Palang Parkir Gerbang Kampus */
   posSatpam: [19.5, 0, 0.2] as Vec3,
+  /** Gerbang bersama Kompleks SD + SMA Rawa Sari */
+  sekolahGerbang: [109.0, 0, 2.5] as Vec3,
+  /** Tengah lapangan upacara sekolah (depan tiang bendera) */
+  lapanganUpacara: [109.0, 0.05, -7.0] as Vec3,
+  /** Kelas 1 SD (lantai 1, antara meja murid dan papan tulis) */
+  sdKelas1: [95.25, 0.15, -25.2] as Vec3,
+  /** Kelas X-1 SMA (lantai 1, antara meja murid dan papan tulis) */
+  smaKelas1: [111.9, 0.15, -25.2] as Vec3,
+  /** Lab IPA SMA (lantai 2) */
+  smaLabIpa: [117.3, 3.75, -26.0] as Vec3,
+  /** Kantin sekolah (belakang gedung, sisi SD) */
+  kantinSekolah: [94.2, 0.1, -29.6] as Vec3,
+  /** Pertigaan Jl. Rawa Sari Raya × Jl. Pendidikan (traffic light) */
+  pertigaanPendidikan: [86.8, 0, 6.5] as Vec3,
+  /** Tengah Jl. Kampung 2 (jalan sejajar di utara) */
+  jalanKampung2: [0.0, 0, -17.5] as Vec3,
+  /** Di atas jembatan kecil kali (Jl. Kampung 2) */
+  jembatanKali: [-98.5, 0, -17.5] as Vec3,
+  /** Gang Gapura (penghubung jalan utama ke Jl. Kampung 2) */
+  gangGapura: [-18.15, 0.03, -8.0] as Vec3,
+  /** Gang Timur (sisi timur Gedung FIK) */
+  gangTimur: [25.5, 0.03, -8.0] as Vec3,
+  /** Depan Bengkel Motor Jaya (trotoar utara) */
+  bengkelMotor: [-91.0, 0.1, 3.0] as Vec3,
+  /** Depan Warung Kelontong Bu Sri (trotoar selatan) */
+  warungKelontong: [-92.0, 0.1, 10.4] as Vec3,
+  /** Depan pagar rumah warga sisi barat kali (trotoar utara) */
+  rumahWargaBarat: [-118.0, 0.1, 2.8] as Vec3,
+  /** Jalan setapak taman depan Musala Al-Ikhlas */
+  musalaTaman: [-113.3, 0.08, -23.0] as Vec3,
 } as const;
 
 function resolveMode(mode?: KampungTimeMode, lightId?: string): KampungTimeMode {
@@ -171,6 +217,11 @@ export const KampungSet: React.FC<KampungSetProps> = ({
           {/* Lampu Hangat Gerobak Bakmie Ayam Tio & Es Buah Mbak Yuni di Area Pedagang Rawa Sari */}
           <pointLight position={[-13.45, 1.9, 17.55]} color="#ffd480" intensity={preset.warkopLightIntensity * 0.72} distance={8} decay={1.6} />
           <pointLight position={[-10.05, 1.9, 17.55]} color="#ffebc2" intensity={preset.warkopLightIntensity * 0.72} distance={8} decay={1.6} />
+          {/* v2: kanopi lobi Gedung FIK, gerbang sekolah, bengkel, dan warung kelontong */}
+          <pointLight position={[12.85, 3.0, 0.6]} color="#e8f1ff" intensity={preset.warkopLightIntensity * 0.6} distance={12} decay={1.6} />
+          <pointLight position={[109.0, 4.0, 3.2]} color="#ffd27d" intensity={preset.warkopLightIntensity * 0.6} distance={14} decay={1.6} />
+          <pointLight position={[-91.0, 3.6, 0.5]} color="#fff1d0" intensity={preset.warkopLightIntensity * 0.65} distance={12} decay={1.6} />
+          <pointLight position={[-92.0, 2.8, 12.6]} color="#ffd88c" intensity={preset.warkopLightIntensity * 0.6} distance={10} decay={1.6} />
         </>
       )}
     </group>

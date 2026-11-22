@@ -247,8 +247,8 @@ def build_tropical_grass() -> None:
     g = 128.0 + n_mid * 44.0 + (n_blade - 0.5) * 34.0
     b = 44.0 + n_mid * 22.0 + (n_blade - 0.5) * 18.0
     rgb = np.stack([r, g, b], axis=-1)
-    soil_mask = np.clip((0.32 - n_mid) * 4.2, 0.0, 1.0)[..., None]
-    soil_col = np.array([108, 82, 56], dtype=np.float32)[None, None, :] + (n_blade[..., None] - 0.5) * 20.0
+    soil_mask = np.clip((0.26 - n_mid) * 3.0, 0.0, 0.7)[..., None]
+    soil_col = np.array([118, 112, 64], dtype=np.float32)[None, None, :] + (n_blade[..., None] - 0.5) * 20.0
     rgb = rgb * (1.0 - soil_mask) + soil_col * soil_mask
     save_pbr_pair("tropical_grass", rgb, (0.4 + n_blade * 0.45 + n_mid * 0.15).astype(np.float32), 3.6)
 
@@ -309,6 +309,92 @@ def build_tinted_variants() -> None:
     save_pbr_pair("cardboard_kraft", k_arr, nk, 2.2)
 
 
+def _streaks(res: int, seed: int, count: int = 60) -> np.ndarray:
+    """Noda air hujan vertikal (0..1), turun dari tepi atas tile, makin tipis ke bawah."""
+    rng = np.random.default_rng(seed)
+    out = np.zeros((res, res), dtype=np.float32)
+    ys = np.linspace(0.0, 1.0, res, dtype=np.float32)[:, None]
+    for _ in range(count):
+        x = int(rng.integers(0, res))
+        w = int(rng.integers(2, 9))
+        length = float(rng.uniform(0.15, 0.6))
+        start = float(rng.uniform(0.0, 0.25))
+        fall = np.clip(1.0 - (ys - start) / length, 0.0, 1.0) * (ys >= start)
+        cols = np.arange(x - w, x + w) % res
+        prof = 1.0 - np.abs(np.linspace(-1, 1, 2 * w, dtype=np.float32))
+        out[:, cols] = np.maximum(out[:, cols], fall * prof[None, :] * float(rng.uniform(0.4, 1.0)))
+    return out
+
+
+def build_weathered_v2() -> None:
+    """21+. Varian lapuk untuk Kampung v2: cat kusam + noda hujan + kelupas, plester retak,
+    keramik teras, genteng berlumut, seng berkarat, aspal tambalan + bekas ban.
+    Satu normal map dipakai bersama oleh semua warna cat (hemat ukuran GLB)."""
+    n_big = fbm_seamless(S, 2101, (4, 8, 16), (0.5, 0.3, 0.2))
+    n_fine = fbm_seamless(S, 2102, (32, 64, 128), (0.3, 0.4, 0.3))
+    streak = _streaks(S, 2103)
+    peel = (fbm_seamless(S, 2104, (16, 32, 64), (0.5, 0.3, 0.2)) > 0.86).astype(np.float32)
+    ys = np.linspace(0.0, 1.0, S, dtype=np.float32)[:, None]
+    grime = np.clip((ys - 0.88) / 0.12, 0.0, 1.0) ** 1.6 * (0.6 + 0.4 * n_big) * 0.5
+    h_paint = 0.5 + (n_fine - 0.5) * 0.18 - peel * 0.22 + (n_big - 0.5) * 0.08
+    height_to_normal(h_paint, 2.4).save(OUT_DIR / "weathered_paint_norm.jpg", quality=90)
+    paints = {
+        "white": (232, 230, 222), "cream": (236, 219, 182), "mint": (170, 218, 196),
+        "sky": (166, 203, 232), "peach": (240, 190, 156), "sage": (176, 190, 150),
+    }
+    plaster = np.array([196, 188, 174], np.float32)
+    for name, col in paints.items():
+        c = np.array(col, np.float32)
+        rgb = np.broadcast_to(c, (S, S, 3)).copy()
+        rgb *= (0.90 + n_big[..., None] * 0.14) * (0.96 + (n_fine[..., None] - 0.5) * 0.08)
+        rgb = rgb * (1 - peel[..., None] * 0.55) + 0.55 * plaster * (0.9 + n_fine[..., None] * 0.15) * peel[..., None]
+        rgb *= 1.0 - streak[..., None] * 0.22
+        rgb = rgb * (1 - grime[..., None] * 0.35) + np.array([92, 98, 70], np.float32) * grime[..., None] * 0.35
+        Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8)).save(OUT_DIR / f"weathered_paint_{name}_diff.jpg", quality=90)
+
+    # Plester semen retak (dinding pagar, sisi gedung, saluran air)
+    cr = fbm_seamless(S, 2201, (16, 32, 64), (0.4, 0.35, 0.25))
+    crack = (np.abs(cr - 0.5) < 0.005).astype(np.float32)
+    base = 150 + n_big * 40 + (n_fine - 0.5) * 30
+    rgb = np.stack([base, base * 0.97, base * 0.92], -1) * (1 - crack[..., None] * 0.55)
+    rgb *= 1.0 - streak[..., None] * 0.18
+    save_pbr_pair("cracked_plaster", rgb, 0.5 + (n_fine - 0.5) * 0.35 - crack * 0.5, 3.4)
+
+    # Keramik teras 30x30 motif (teras rumah, selasar sekolah)
+    yy, xx = np.mgrid[0:S, 0:S]
+    cell = S // 4
+    gx, gy = xx % cell, yy % cell
+    grout = ((gx < 5) | (gy < 5)).astype(np.float32)
+    motif = (np.abs((gx - cell / 2)) + np.abs((gy - cell / 2)) < cell * 0.22).astype(np.float32)
+    base = np.stack([212 + n_fine * 20, 196 + n_fine * 18, 170 + n_fine * 14], -1)
+    base = base * (1 - motif[..., None] * 0.25) + np.array([150, 70, 52], np.float32) * motif[..., None] * 0.25
+    rgb = base * (1 - grout[..., None]) + np.array([120, 116, 108], np.float32) * grout[..., None]
+    rgb *= 0.94 + n_big[..., None] * 0.1
+    save_pbr_pair("terrace_tile", rgb, 0.55 - grout * 0.45 + (n_fine - 0.5) * 0.06, 3.0)
+
+    # Genteng berlumut: pakai normal terracotta_roof yang sudah ada
+    roof = np.array(Image.open(OUT_DIR / "terracotta_roof_diff.jpg").convert("RGB"), np.float32)
+    moss = np.clip((fbm_seamless(S, 2301, (8, 16, 32), (0.5, 0.3, 0.2)) - 0.55) * 3.0, 0, 1)
+    roof = roof * (1 - moss[..., None] * 0.7) + np.array([78, 96, 52], np.float32) * moss[..., None] * 0.7
+    roof *= 1.0 - streak[..., None] * 0.15
+    Image.fromarray(np.clip(roof, 0, 255).astype(np.uint8)).save(OUT_DIR / "mossy_roof_diff.jpg", quality=90)
+
+    # Seng berkarat: pakai normal corrugated_zinc yang sudah ada
+    zinc = np.array(Image.open(OUT_DIR / "corrugated_zinc_diff.jpg").convert("RGB"), np.float32)
+    rust = np.clip((fbm_seamless(S, 2401, (8, 16, 64), (0.4, 0.4, 0.2)) - 0.62) * 2.6, 0, 1)
+    rust = np.maximum(rust, streak * 0.8)
+    zinc = zinc * (1 - rust[..., None] * 0.75) + np.array([132, 70, 34], np.float32) * rust[..., None] * 0.75
+    Image.fromarray(np.clip(zinc, 0, 255).astype(np.uint8)).save(OUT_DIR / "rusty_zinc_diff.jpg", quality=90)
+
+    # Aspal tambalan + bekas ban: pakai normal asphalt_road yang sudah ada
+    asp = np.array(Image.open(OUT_DIR / "asphalt_road_diff.jpg").convert("RGB"), np.float32)
+    patch = (fbm_seamless(S, 2501, (4, 8, 16), (0.5, 0.3, 0.2)) > 0.7).astype(np.float32)
+    tire = (np.exp(-((xx % (S // 2) - S * 0.18) ** 2) / 900.0) + np.exp(-((xx % (S // 2) - S * 0.32) ** 2) / 900.0))
+    asp = asp * (1 - patch[..., None] * 0.35) + np.array([22, 22, 26], np.float32) * patch[..., None] * 0.35
+    asp *= 1.0 - np.clip(tire, 0, 1)[..., None] * 0.18 * (0.6 + 0.4 * n_big[..., None])
+    Image.fromarray(np.clip(asp, 0, 255).astype(np.uint8)).save(OUT_DIR / "patched_asphalt_diff.jpg", quality=90)
+
+
 def main() -> None:
     build_asphalt_road()
     build_paving_cobble()
@@ -323,6 +409,7 @@ def main() -> None:
     build_tropical_grass()
     build_foliage_canopy()
     build_tinted_variants()
+    build_weathered_v2()
     files = sorted(OUT_DIR.glob("*.jpg"))
     print(f"Generated {len(files)} high-contrast PBR texture maps in {OUT_DIR}")
 

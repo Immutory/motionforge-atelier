@@ -9,7 +9,18 @@ export { SetLabProduction } from './SetLabProduction';
 export { KucingOyenProduction } from './KucingOyenProduction';
 export { YoutubeBannerProduction } from './YoutubeBannerProduction';
 export { YoutubeProfileProduction } from './YoutubeProfileProduction';
+export { TiktokProfileProduction } from './TiktokProfileProduction';
 export { KampungUpgradeProduction } from './KampungUpgradeProduction';
+export { KampungV2Production, KAMPUNG_V2_SLIDES } from './KampungV2Production';
+
+export const kampungV2Meta: ProductionMeta = {
+  id: 'kampungv2',
+  title: 'QC Kampung Rawa Sari v2 — Gedung FIK 3 Lantai, SD + SMA, Sisi Barat, Tio Revisi',
+  width: 1920,
+  height: 1080,
+  fps: 30,
+  durationInFrames: 180,
+};
 
 export const charlabMeta: ProductionMeta = {
   id: 'charlab',
@@ -86,6 +97,15 @@ export const youtubeBannerMeta: ProductionMeta = {
 export const youtubeProfileMeta: ProductionMeta = {
   id: 'youtubeprofile',
   title: 'YouTube Profile Picture (2048x2048) — Bang Utoh + Atelier Indie + Squircle Plush + Ink-Pop Comic',
+  width: 2048,
+  height: 2048,
+  fps: 30,
+  durationInFrames: 2,
+};
+
+export const tiktokProfileMeta: ProductionMeta = {
+  id: 'tiktokprofile',
+  title: 'TikTok Profile Picture (2048x2048) — Seragam YouTube (Pop-Art 3-Slice TikTok Edition)',
   width: 2048,
   height: 2048,
   fps: 30,

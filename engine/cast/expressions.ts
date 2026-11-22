@@ -154,6 +154,16 @@ export type FaceRenderParams = {
   facing: number;
   browThick?: number;
   nose?: boolean;
+  /** Rongga mulut terbuka (default '#5c222d'). */
+  mouthColor?: string;
+  /** Lidah (default '#e57373'). */
+  tongueColor?: string;
+  /** Pita bibir di bawah garis mulut tertutup (opsional, default tidak digambar). */
+  lipColor?: string;
+  /** Rona pipi (opsional, default tidak digambar). */
+  blushColor?: string;
+  /** Titik kilau putih di pupil (opsional, default false). */
+  eyeShine?: boolean;
 };
 
 /** Gambar mata, alis, hidung opsional, dan mulut (terintegrasi penuh dengan lip-sync talkAt). */
@@ -166,6 +176,30 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
     typeof p.talk === 'number'
       ? { open: p.talk, shape: p.talk > 0.65 ? 'wide' : p.talk > 0.3 ? 'mid' : p.talk > 0.16 ? 'small' : 'closed' }
       : (p.talk ?? { open: 0, shape: 'closed' });
+  const mouthFill = p.mouthColor ?? '#5c222d';
+  const tongueFill = p.tongueColor ?? '#e57373';
+  const shine = (x: number, y: number, r: number) => {
+    if (!p.eyeShine) return;
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x + r * 0.9, y - r * 1.1, r, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  // --- 0. RONA PIPI (opsional) ---
+  if (p.blushColor && face !== 'shock') {
+    ctx.save();
+    ctx.globalAlpha = face === 'happy' || face === 'laugh' || face === 'nervous' ? 0.7 : 0.45;
+    ctx.fillStyle = p.blushColor;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(ex(s) + s * 14, eyeY + 38, 24, 11, 0, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 
   // --- 1. MATA ---
   for (const s of [-1, 1]) {
@@ -229,6 +263,7 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.beginPath();
       ctx.arc(x + lookX, eyeY + lookY, 8, 0, TAU);
       ctx.fill();
+      shine(x + lookX - 3, eyeY + lookY + 2, 2.5);
 
       if (face === 'neutral' || face === 'smug' || face === 'tired' || face === 'skeptical' || face === 'angry') {
         const lidH =
@@ -271,6 +306,7 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.beginPath();
       ctx.ellipse(x, eyeY - 2, w * 0.85, h, 0, 0, Math.PI);
       ctx.fill();
+      if (face !== 'tired') shine(x - 6, eyeY + 5, 2.8);
       if (face === 'tired') {
         ctx.strokeStyle = 'rgba(70,50,90,0.35)';
         ctx.lineWidth = 3.5;
@@ -283,11 +319,13 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.beginPath();
       ctx.roundRect(x - 12, eyeY - 19, 24, 38, 12);
       ctx.fill();
+      shine(x - 4, eyeY - 4, 3.5);
     } else {
       ctx.fillStyle = ink;
       ctx.beginPath();
       ctx.ellipse(x, eyeY, 11.5, face === 'idea' || face === 'happy' ? 17 : 15.5, 0, 0, TAU);
       ctx.fill();
+      shine(x - 4, eyeY - 2, 3.6);
       if (eyeStyle === 'lash') {
         ctx.strokeStyle = ink;
         ctx.lineWidth = 4;
@@ -362,13 +400,13 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
     const sh = talkSample.shape;
     if (sh === 'o') {
       const r = 10 + talkSample.open * 10;
-      ctx.fillStyle = '#5c222d';
+      ctx.fillStyle = mouthFill;
       ctx.beginPath();
       ctx.ellipse(mx, my + 2, r * 0.82, r, 0, 0, TAU);
       ctx.fill();
       ctx.stroke();
     } else if (sh === 'small') {
-      ctx.fillStyle = '#5c222d';
+      ctx.fillStyle = mouthFill;
       ctx.beginPath();
       ctx.ellipse(mx, my + 1, 14, 7, 0, 0, TAU);
       ctx.fill();
@@ -383,13 +421,13 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.quadraticCurveTo(mx + w * 0.9, my + h, mx, my + h);
       ctx.quadraticCurveTo(mx - w * 0.9, my + h, mx - w, my - 3 - frownCurve);
       ctx.closePath();
-      ctx.fillStyle = '#5c222d';
+      ctx.fillStyle = mouthFill;
       ctx.fill();
       ctx.save();
       ctx.clip();
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(mx - w, my - 8, w * 2, 11);
-      ctx.fillStyle = '#e57373';
+      ctx.fillStyle = tongueFill;
       ctx.beginPath();
       ctx.ellipse(mx, my + h - 2, w * 0.55, h * 0.36, 0, 0, TAU);
       ctx.fill();
@@ -399,9 +437,21 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
     return;
   }
 
+  // Pita bibir opsional: garis mulut tertutup digambar dulu dengan warna bibir tebal, lalu garis ink di atasnya.
+  const lipStroke = () => {
+    if (p.lipColor) {
+      ctx.save();
+      ctx.strokeStyle = p.lipColor;
+      ctx.lineWidth = 13;
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.stroke();
+  };
+
   switch (face) {
     case 'shock':
-      ctx.fillStyle = '#5c222d';
+      ctx.fillStyle = mouthFill;
       ctx.beginPath();
       ctx.ellipse(mx, my + 5, 16, 23, 0, 0, TAU);
       ctx.fill();
@@ -411,7 +461,7 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
     case 'idea':
       ctx.beginPath();
       ctx.arc(mx, my - 6, 20, 0.12 * Math.PI, 0.88 * Math.PI);
-      ctx.stroke();
+      lipStroke();
       break;
     case 'laugh':
       ctx.beginPath();
@@ -420,13 +470,13 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.quadraticCurveTo(mx + 24, my + 24, mx, my + 24);
       ctx.quadraticCurveTo(mx - 24, my + 24, mx - 26, my - 4);
       ctx.closePath();
-      ctx.fillStyle = '#5c222d';
+      ctx.fillStyle = mouthFill;
       ctx.fill();
       ctx.save();
       ctx.clip();
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(mx - 26, my - 6, 52, 10);
-      ctx.fillStyle = '#e57373';
+      ctx.fillStyle = tongueFill;
       ctx.beginPath();
       ctx.ellipse(mx, my + 20, 15, 9, 0, 0, TAU);
       ctx.fill();
@@ -436,43 +486,43 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
     case 'sad':
       ctx.beginPath();
       ctx.arc(mx, my + 22, 18, 1.15 * Math.PI, 1.85 * Math.PI);
-      ctx.stroke();
+      lipStroke();
       break;
     case 'angry':
       ctx.beginPath();
       ctx.moveTo(mx - 20, my + 8);
       ctx.quadraticCurveTo(mx, my - 6, mx + 20, my + 8);
-      ctx.stroke();
+      lipStroke();
       break;
     case 'nervous':
       ctx.beginPath();
       ctx.moveTo(mx - 20, my + 4);
       ctx.quadraticCurveTo(mx - 10, my - 4, mx, my + 4);
       ctx.quadraticCurveTo(mx + 10, my + 12, mx + 20, my + 4);
-      ctx.stroke();
+      lipStroke();
       break;
     case 'smug':
       ctx.beginPath();
       ctx.moveTo(mx - 16, my + 3);
       ctx.quadraticCurveTo(mx + 6, my + 12, mx + 24, my - 7);
-      ctx.stroke();
+      lipStroke();
       break;
     case 'skeptical':
     case 'focus':
       ctx.beginPath();
       ctx.moveTo(mx - 16, my + 2);
       ctx.lineTo(mx + 16, my - 2);
-      ctx.stroke();
+      lipStroke();
       break;
     case 'tired':
       ctx.beginPath();
       ctx.ellipse(mx, my + 5, 11, 7, 0, 0, TAU);
-      ctx.stroke();
+      lipStroke();
       break;
     default:
       ctx.beginPath();
       ctx.moveTo(mx - 17, my + 1);
       ctx.quadraticCurveTo(mx + 3, my + 10, mx + 19, my - 2);
-      ctx.stroke();
+      lipStroke();
   }
 }
