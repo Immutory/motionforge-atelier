@@ -9,6 +9,7 @@ export { SetLabProduction } from './SetLabProduction';
 export { KucingOyenProduction } from './KucingOyenProduction';
 export { YoutubeBannerProduction } from './YoutubeBannerProduction';
 export { YoutubeProfileProduction } from './YoutubeProfileProduction';
+export { KampungUpgradeProduction } from './KampungUpgradeProduction';
 
 export const charlabMeta: ProductionMeta = {
   id: 'charlab',
@@ -89,4 +90,13 @@ export const youtubeProfileMeta: ProductionMeta = {
   height: 2048,
   fps: 30,
   durationInFrames: 2,
+};
+
+export const kampungUpgradeMeta: ProductionMeta = {
+  id: 'kampungupgrade',
+  title: 'QC Kampung Rawa Sari — Pak Ujang, Bakmie Ayam Tio, Es Buah Mbak Yuni, Tiang & Traffic Light',
+  width: 1920,
+  height: 1080,
+  fps: 30,
+  durationInFrames: 150,
 };

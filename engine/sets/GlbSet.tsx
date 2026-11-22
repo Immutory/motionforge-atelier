@@ -31,6 +31,7 @@ function isTextMesh(name: string): boolean {
     name.includes('Title') ||
     name.includes('SignMain') ||
     name.includes('SignSub') ||
+    name.includes('FrontApronText') ||
     name.includes('MenuLine') ||
     name.includes('PosterCode') ||
     name.includes('PosterSub') ||
@@ -74,7 +75,9 @@ function isStreetLampMesh(name: string): boolean {
     name.includes('PosRonda_Lamp') ||
     name.includes('WK_LampShade') ||
     name.includes('WK_LampBulb') ||
-    name.includes('Kost_LampBulb')
+    name.includes('Kost_LampBulb') ||
+    name.includes('LampBulb') ||
+    name.includes('CaseLight')
   );
 }
 

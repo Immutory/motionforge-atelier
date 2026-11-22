@@ -40,22 +40,33 @@ test('talkAt menyinkronkan vokal bahasa Indonesia dengan leadFrames', () => {
   assert.deepEqual(talkWave(15, false), { open: 0, shape: 'closed' });
 });
 
-test('CAST_PRESETS memuat 9 karakter Indonesia (termasuk Pemeran #1 bangUtoh) dan resolveActorSpec tidak memutasi preset', () => {
+test('CAST_PRESETS memuat 12 karakter Indonesia (termasuk bangUtoh, pakUjang, tio, mbakYuni) dan resolveActorSpec tidak memutasi preset', () => {
   assert.deepEqual(Object.keys(CAST_PRESETS).sort(), [
     'arya',
     'bangUdin',
     'bangUtoh',
     'buSiti',
     'dimas',
+    'mbakYuni',
     'pakBudi',
+    'pakUjang',
     'raka',
     'rara',
     'saka',
+    'tio',
   ]);
   assert.equal(CAST_PRESETS.bangUtoh.name, 'Bolohoutoh (Bang Utoh)');
   assert.equal(CAST_PRESETS.bangUtoh.headgear, 'headphones');
   assert.equal(CAST_PRESETS.bangUtoh.outfit, 'hoodieTech');
   assert.equal(CAST_PRESETS.bangUtoh.defaultProp, 'laptop');
+
+  assert.equal(CAST_PRESETS.pakUjang.outfit, 'satpam');
+  assert.equal(CAST_PRESETS.pakUjang.headgear, 'satpamCap');
+  assert.equal(CAST_PRESETS.pakUjang.defaultProp, 'senter');
+  assert.equal(CAST_PRESETS.tio.outfit, 'pedagangApron');
+  assert.equal(CAST_PRESETS.tio.defaultProp, 'bakmie');
+  assert.equal(CAST_PRESETS.mbakYuni.outfit, 'dasterCelemek');
+  assert.equal(CAST_PRESETS.mbakYuni.defaultProp, 'esBuah');
 
   const custom = resolveActorSpec('bangUtoh', { headgear: 'none', outfitColor: '#b53b3b' });
   assert.equal(custom.name, 'Bolohoutoh (Bang Utoh)');
@@ -103,11 +114,14 @@ test('SET_PRESETS memuat 4 set Blender (warkop, kost, kampus, kampung) dan indoo
   assert.equal(LIGHTS.dusk.key.cameraRelative, true);
 });
 
-test('KAMPUNG_SPOTS memuat spot Kos Putra Rawa Sari 2 Lantai & atap kanopi Warkop 24 Jam, serta ActorStance mencakup sitCross dan squat', () => {
+test('KAMPUNG_SPOTS memuat spot Kos Putra Rawa Sari 2 Lantai, Area Pedagang (Tio & Mbak Yuni), Pak Ujang, & kanopi Warkop', () => {
   assert.ok(KAMPUNG_SPOTS.kostDoor01[1] > 0, 'teras Lantai 1 Kos berada di atas lantai dasar');
   assert.ok(KAMPUNG_SPOTS.kostBalcony2[1] > 3.2, 'balkon Lantai 2 Kos berada di ketinggian lantai 2');
   assert.equal(KAMPUNG_SPOTS.warkopCanopyLeft[1], 2.8);
   assert.equal(KAMPUNG_SPOTS.warkopCanopyRight[1], 2.8);
+  assert.equal(KAMPUNG_SPOTS.bakmieTioVendor[1], 0.04);
+  assert.equal(KAMPUNG_SPOTS.esBuahYuniVendor[1], 0.04);
+  assert.equal(KAMPUNG_SPOTS.pakUjangPatrol[1], 0);
 
   const stances: ActorStance[] = ['stand', 'walk', 'sit', 'sitCross', 'squat', 'jump'];
   assert.equal(stances.length, 6);

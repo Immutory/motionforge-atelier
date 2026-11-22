@@ -10,7 +10,7 @@ import { drawHandProp, type HandProp } from './props2d';
 
 export type HeadShape = 'sculpted' | 'squircle' | 'faceted' | 'round';
 export type HairStyle = 'short' | 'quiff' | 'hijab' | 'curtain' | 'bun' | 'parted' | 'spiky' | 'messy';
-export type Headgear = 'none' | 'peci' | 'cap' | 'iket' | 'helmet' | 'headphones';
+export type Headgear = 'none' | 'peci' | 'cap' | 'iket' | 'helmet' | 'headphones' | 'satpamCap';
 export type OutfitStyle =
   | 'batik'
   | 'denim'
@@ -21,6 +21,8 @@ export type OutfitStyle =
   | 'seragamSma'
   | 'ojol'
   | 'hoodieTech'
+  | 'satpam'
+  | 'pedagangApron'
   | 'casual';
 export type ShoeStyle = 'loafer' | 'sneaker' | 'sandal' | 'boot';
 export type ArmPose = 'rest' | 'hip' | 'point' | 'raise' | 'hold' | 'wave' | 'cross';
@@ -100,9 +102,12 @@ export type CastPresetId =
   | 'pakBudi'
   | 'buSiti'
   | 'raka'
-  | 'bangUdin';
+  | 'bangUdin'
+  | 'pakUjang'
+  | 'tio'
+  | 'mbakYuni';
 
-/** 9 Preset Karakter Orisinal Ala Indonesia siap pakai di produksi mana pun (Pemeran Utama #1: Bolohoutoh alias Bang Utoh). */
+/** 12 Preset Karakter Orisinal Ala Indonesia siap pakai di produksi mana pun (Pemeran Utama #1: Bolohoutoh alias Bang Utoh). */
 export const CAST_PRESETS: Record<CastPresetId, CharacterSpec> = {
   bangUtoh: {
     id: 'bangUtoh',
@@ -321,6 +326,86 @@ export const CAST_PRESETS: Record<CastPresetId, CharacterSpec> = {
     shoeStyle: 'sneaker',
     shoeColor: '#242736',
     defaultProp: 'phoneMap',
+  },
+  pakUjang: {
+    id: 'pakUjang',
+    name: 'Pak Ujang (Satpam Kampung)',
+    role: 'Petugas Keamanan Lingkungan · Pos Ronda RT 04 Rawa Sari',
+    headShape: 'sculpted',
+    eyeStyle: 'classic',
+    skin: '#dfae85',
+    skinShadow: '#c79385',
+    ink: '#221a24',
+    hairStyle: 'short',
+    hairColor: '#2a242c',
+    hairHighlight: '#aeb6c4',
+    headgear: 'satpamCap',
+    headgearColor: '#473426',
+    headgearAccent: '#f2c144',
+    mustache: true,
+    nose: true,
+    browThick: 12,
+    outfit: 'satpam',
+    outfitColor: '#e6d2a8',
+    outfitShade: '#ceb585',
+    outfitSecondary: '#473426',
+    accentColor: '#f2c144',
+    pantsColor: '#3d2e22',
+    shoeStyle: 'boot',
+    shoeColor: '#221d24',
+    defaultProp: 'senter',
+  },
+  tio: {
+    id: 'tio',
+    name: 'Tio (Bakmie Ayam)',
+    role: 'Pedagang Bakmie Ayam · Area Pedagang Rawa Sari',
+    headShape: 'squircle',
+    eyeStyle: 'classic',
+    skin: '#f6d8bc',
+    skinShadow: '#e1beae',
+    ink: '#211b2b',
+    hairStyle: 'parted',
+    hairColor: '#22202c',
+    hairHighlight: '#413e54',
+    headgear: 'cap',
+    headgearColor: '#a62828',
+    headgearAccent: '#fff4d6',
+    nose: true,
+    browThick: 9.5,
+    outfit: 'pedagangApron',
+    outfitColor: '#fdf8ee',
+    outfitShade: '#e8decb',
+    outfitSecondary: '#a62828',
+    accentColor: '#e8a832',
+    pantsColor: '#2d3345',
+    shoeStyle: 'sneaker',
+    shoeColor: '#2f3545',
+    defaultProp: 'bakmie',
+  },
+  mbakYuni: {
+    id: 'mbakYuni',
+    name: 'Mbak Yuni (Es Buah)',
+    role: 'Pedagang Es Buah & Es Campur · Area Pedagang Rawa Sari',
+    headShape: 'round',
+    eyeStyle: 'lash',
+    skin: '#f0c49e',
+    skinShadow: '#daa99d',
+    ink: '#24182a',
+    hairStyle: 'hijab',
+    hairColor: '#e0566f',
+    hairHighlight: '#b83c54',
+    headgear: 'none',
+    nose: true,
+    browThick: 8.5,
+    outfit: 'dasterCelemek',
+    outfitColor: '#fff4dc',
+    outfitShade: '#ebd8b5',
+    outfitSecondary: '#2aa88f',
+    accentColor: '#f6b73c',
+    pantsColor: '#4c4352',
+    shoeStyle: 'sandal',
+    shoeColor: '#d9536f',
+    defaultProp: 'esBuah',
   },
 };
 
@@ -986,11 +1071,153 @@ function drawTorsoAndSkirt(
         ctx.fillRect(CX + w * 0.35, torsoTop, 16, th - 48);
       }
     }
+  } else if (outfit === 'satpam') {
+    // Seragam Satpam Kampung warna krem/cokelat muda: epolet bahu, saku kembar, lencana, tali kur peluit & ikat pinggang!
+    const darkTrim = outfitSecondary ?? '#473426';
+    // Epolet bahu cokelat tua + kancing kuningan
+    ctx.fillStyle = darkTrim;
+    ctx.fillRect(CX - w * 0.56, torsoTop, w * 0.34, 24);
+    ctx.fillRect(CX + w * 0.22, torsoTop, w * 0.34, 24);
+    ctx.fillStyle = accentColor;
+    ctx.beginPath();
+    ctx.arc(CX - w * 0.27, torsoTop + 12, 5.5, 0, TAU);
+    ctx.arc(CX + w * 0.27, torsoTop + 12, 5.5, 0, TAU);
+    ctx.fill();
+
+    // Sabuk keamanan hitam-cokelat + kepala sabuk kuningan di pinggang
+    ctx.fillStyle = '#251e1c';
+    ctx.fillRect(CX - w, torsoTop + th - 48, w * 2, 24);
+    if (!isBack) {
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.roundRect(CX - 16, torsoTop + th - 45, 32, 18, 4);
+      ctx.fill();
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      // Garis kancing tengah kemeja satpam
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 3.8;
+      ctx.beginPath();
+      ctx.moveTo(CX + 4, torsoTop + 16);
+      ctx.lineTo(CX + 4, torsoTop + th - 48);
+      ctx.stroke();
+      ctx.fillStyle = darkTrim;
+      for (const by of [torsoTop + 56, torsoTop + 100, torsoTop + 144]) {
+        ctx.beginPath();
+        ctx.arc(CX + 4, by, 4.5, 0, TAU);
+        ctx.fill();
+      }
+
+      if (!isSide) {
+        // Saku dada kiri & kanan dengan penutup segitiga + name tag & lencana satpam
+        for (const px of [CX - 70, CX + 28]) {
+          ctx.fillStyle = outfitShade;
+          ctx.fillRect(px, torsoTop + 62, 42, 44);
+          ctx.strokeStyle = ink;
+          ctx.lineWidth = 3.5;
+          ctx.strokeRect(px, torsoTop + 62, 42, 44);
+          ctx.beginPath();
+          ctx.moveTo(px, torsoTop + 62);
+          ctx.lineTo(px + 21, torsoTop + 76);
+          ctx.lineTo(px + 42, torsoTop + 62);
+          ctx.stroke();
+        }
+        // Name tag hitam di atas saku kanan
+        ctx.fillStyle = '#1f232c';
+        ctx.fillRect(CX - 70, torsoTop + 46, 42, 11);
+        ctx.fillStyle = '#fff5df';
+        ctx.fillRect(CX - 64, torsoTop + 50, 30, 3);
+
+        // Lencana perisai emas keamanan di saku kiri
+        ctx.fillStyle = accentColor;
+        ctx.beginPath();
+        ctx.moveTo(CX + 49, torsoTop + 78);
+        ctx.lineTo(CX + 61, torsoTop + 83);
+        ctx.lineTo(CX + 58, torsoTop + 98);
+        ctx.lineTo(CX + 49, torsoTop + 104);
+        ctx.lineTo(CX + 40, torsoTop + 98);
+        ctx.lineTo(CX + 37, torsoTop + 83);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Tali kur peluit putih melengkung dari bahu kanan ke saku kanan
+        ctx.strokeStyle = '#f8f4e8';
+        ctx.lineWidth = 6.5;
+        ctx.beginPath();
+        ctx.moveTo(CX - w * 0.44, torsoTop + 20);
+        ctx.quadraticCurveTo(CX - 56, torsoTop + 92, CX - 48, torsoTop + 66);
+        ctx.stroke();
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+  } else if (outfit === 'pedagangApron') {
+    // Kemeja pedagang bersih + celemek masak full-bib (Tio Bakmie Ayam)
+    const apronCol = outfitSecondary ?? '#a62828';
+    if (!isBack) {
+      // Tali leher celemek
+      ctx.strokeStyle = apronCol;
+      ctx.lineWidth = 11;
+      ctx.beginPath();
+      ctx.moveTo(CX - 36, torsoTop + 4);
+      ctx.lineTo(CX - 48, torsoTop + 58);
+      ctx.moveTo(CX + 36, torsoTop + 4);
+      ctx.lineTo(CX + 48, torsoTop + 58);
+      ctx.stroke();
+
+      // Badan celemek bib depan rapi
+      const aw = isSide ? 48 : 74;
+      ctx.fillStyle = apronCol;
+      ctx.beginPath();
+      ctx.moveTo(CX - aw * 0.68, torsoTop + 52);
+      ctx.lineTo(CX + aw * 0.68, torsoTop + 52);
+      ctx.lineTo(CX + aw * 0.88, torsoTop + 128);
+      ctx.lineTo(CX + aw, torsoTop + th + 6);
+      ctx.lineTo(CX - aw, torsoTop + th + 6);
+      ctx.lineTo(CX - aw * 0.88, torsoTop + 128);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 4.2;
+      ctx.stroke();
+
+      // List emas/krem di pinggir atas bib & kantong depan celemek
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(CX - aw * 0.64, torsoTop + 58, aw * 1.28, 7);
+      const pw = isSide ? 32 : 52;
+      ctx.fillStyle = '#fff5e0';
+      ctx.beginPath();
+      ctx.roundRect(CX - pw, torsoTop + 144, pw * 2, 54, 10);
+      ctx.fill();
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 3.8;
+      ctx.stroke();
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(CX - pw + 4, torsoTop + 148, pw * 2 - 8, 9);
+    } else {
+      // Tali silang & ikatan celemek di punggung
+      ctx.strokeStyle = apronCol;
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.moveTo(CX - 42, torsoTop + 8);
+      ctx.lineTo(CX + 42, torsoTop + 130);
+      ctx.moveTo(CX + 42, torsoTop + 8);
+      ctx.lineTo(CX - 42, torsoTop + 130);
+      ctx.moveTo(CX - w * 0.52, torsoTop + 138);
+      ctx.lineTo(CX + w * 0.52, torsoTop + 138);
+      ctx.stroke();
+    }
   }
   ctx.restore();
 
   // Kerah depan / tudung hoodie
-  if (!isBack && (outfit === 'batik' || outfit === 'kotakSarung' || outfit === 'seragamSma')) {
+  if (!isBack && (outfit === 'batik' || outfit === 'kotakSarung' || outfit === 'seragamSma' || outfit === 'satpam' || outfit === 'pedagangApron')) {
     inked(
       ctx,
       () => {
@@ -1002,7 +1229,7 @@ function drawTorsoAndSkirt(
         ctx.lineTo(CX + 58, torsoTop + 2);
         ctx.closePath();
       },
-      outfit === 'batik' ? '#354f85' : '#ffffff',
+      outfit === 'batik' ? '#354f85' : outfit === 'satpam' ? outfitColor : '#ffffff',
       ink,
       4.5,
       2,
@@ -1120,7 +1347,8 @@ function drawHeadgear(ctx: Ctx, spec: CharacterSpec, W: number, headTop: number,
       ctx.quadraticCurveTo(brimDir * 148, 32, brimDir * 102, 18);
       ctx.closePath();
     };
-    inked(ctx, brim, '#19704c', ink, 5, 2.5, 3.5);
+    const brimColor = col === '#249464' ? '#19704c' : col;
+    inked(ctx, brim, brimColor, ink, 5, 2.5, 3.5);
     const crown = () => {
       ctx.beginPath();
       ctx.moveTo(-140, 10);
@@ -1302,6 +1530,75 @@ function drawHeadgear(ctx: Ctx, spec: CharacterSpec, W: number, headTop: number,
       ctx.fillStyle = '#f97316';
       ctx.beginPath();
       ctx.arc(ex + (s > 0 ? 14 : -14), ey + 18, 4.5, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  } else if (headgear === 'satpamCap') {
+    // Topi pet petugas keamanan / satpam kampung dengan visor hitam, pita emas & emblem perisai!
+    const col = headgearColor ?? '#473426';
+    const gold = headgearAccent ?? '#f2c144';
+    ctx.save();
+    ctx.translate(CX, headTop + 30 - pop * 46);
+    ctx.rotate(pop > 0.2 ? -0.12 * pop : -0.03);
+    // Mahkota topi pet melebar rapi di atas
+    const crown = () => {
+      ctx.beginPath();
+      ctx.moveTo(-124, 6);
+      ctx.lineTo(-148, -56);
+      ctx.quadraticCurveTo(0, -92, 148, -56);
+      ctx.lineTo(124, 6);
+      ctx.quadraticCurveTo(0, 22, -124, 6);
+      ctx.closePath();
+    };
+    inked(ctx, crown, col, ink, 5.5, 3, 4.5);
+    // Pita dasar topi cokelat gelap + tali emas
+    const band = () => {
+      ctx.beginPath();
+      ctx.moveTo(-126, 8);
+      ctx.quadraticCurveTo(0, 24, 126, 8);
+      ctx.lineTo(122, -20);
+      ctx.quadraticCurveTo(0, -8, -122, -20);
+      ctx.closePath();
+    };
+    inked(ctx, band, '#241b17', ink, 4.5, 2, 3);
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = 5.5;
+    ctx.beginPath();
+    ctx.moveTo(-118, -4);
+    ctx.quadraticCurveTo(0, 10, 118, -4);
+    ctx.stroke();
+    // Visor depan hitam mengkilap (mengarah ke depan bila bukan tampilan belakang)
+    if (!isBack) {
+      const visor = () => {
+        ctx.beginPath();
+        ctx.moveTo(-114, 10);
+        ctx.quadraticCurveTo(0, 44, 114, 10);
+        ctx.quadraticCurveTo(0, 24, -114, 10);
+        ctx.closePath();
+      };
+      inked(ctx, visor, '#1b1d24', ink, 4.5, 2, 3);
+      // Emblem perisai emas keamanan di tengah mahkota depan
+      inked(
+        ctx,
+        () => {
+          ctx.beginPath();
+          ctx.moveTo(0, -64);
+          ctx.lineTo(22, -52);
+          ctx.lineTo(16, -24);
+          ctx.lineTo(0, -14);
+          ctx.lineTo(-16, -24);
+          ctx.lineTo(-22, -52);
+          ctx.closePath();
+        },
+        gold,
+        ink,
+        4,
+        1.5,
+        2,
+      );
+      ctx.fillStyle = '#fff5d1';
+      ctx.beginPath();
+      ctx.arc(0, -40, 6.5, 0, TAU);
       ctx.fill();
     }
     ctx.restore();

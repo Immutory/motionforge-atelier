@@ -22,6 +22,8 @@ import {
   youtubeBannerMeta,
   YoutubeProfileProduction,
   youtubeProfileMeta,
+  KampungUpgradeProduction,
+  kampungUpgradeMeta,
 } from './charlab';
 // @forge:imports
 
@@ -35,6 +37,7 @@ export const PRODUCTIONS: RegisteredProduction[] = [
   { meta: kucingOyenMeta, Component: KucingOyenProduction },
   { meta: youtubeBannerMeta, Component: YoutubeBannerProduction },
   { meta: youtubeProfileMeta, Component: YoutubeProfileProduction },
+  { meta: kampungUpgradeMeta, Component: KampungUpgradeProduction },
   { meta: setLabMeta, Component: SetLabProduction },
   { meta: charlabMeta, Component: CharlabProduction },
   { meta: nusantaraMeta, Component: NusantaraProduction },

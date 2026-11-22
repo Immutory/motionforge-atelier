@@ -81,14 +81,24 @@ export const KAMPUNG_SPOTS = {
   kampusLab: [12.6, 0, 0.5] as Vec3,
   /** Di depan Booth ATM & Plaza Masjid / Minimarket 24 Jam (Ruko Barat) */
   atmMinimarket: [-28.15, 0, 3.2] as Vec3,
-  /** Di Area Pedagang Rawa Sari (dekat 2 Gerobak Kaki Lima & Meja Payung) */
-  areaPedagang: [-11.75, 0, 15.65] as Vec3,
-  /** Di dekat Gerobak Nasi Goreng Kaki Lima di Area Pedagang Rawa Sari */
-  gerobakNasgor: [-13.45, 0, 17.65] as Vec3,
+  /** Di Area Pedagang Rawa Sari (dekat Gerobak Bakmie Ayam Tio, Es Buah Mbak Yuni & Meja Payung) */
+  areaPedagang: [-11.75, 0.04, 15.65] as Vec3,
+  /** Di dekat Gerobak Bakmie Ayam Tio (alias kompatibilitas `gerobakNasgor`) */
+  gerobakNasgor: [-13.45, 0.04, 17.65] as Vec3,
+  /** Di belakang sisi kompor & dandang gerobak Bakmie Ayam Tio (posisi Tio memasak & melayani tanpa terhalang etalase) */
+  bakmieTioVendor: [-13.02, 0.04, 18.38] as Vec3,
+  /** Di depan gerobak Bakmie Ayam Tio (posisi pembeli memesan) */
+  bakmieTioCustomer: [-12.55, 0.04, 16.65] as Vec3,
+  /** Di belakang sisi mesin serut es gerobak Es Buah & Campur Mbak Yuni (posisi Mbak Yuni melayani tanpa terhalang etalase) */
+  esBuahYuniVendor: [-9.62, 0.04, 18.38] as Vec3,
+  /** Di depan gerobak Es Buah & Campur Mbak Yuni (posisi pembeli memesan) */
+  esBuahYuniCustomer: [-10.95, 0.04, 16.65] as Vec3,
   /** Di Tempat Khusus Parkir Motor berkanopi (10 Motor Bebek) */
   parkirMotor: [12.9, 0, 15.0] as Vec3,
   /** Di depan Pos Ronda RT 04 (Taman Seberang Jalan) */
   posRonda: [-12.8, 0, 11.0] as Vec3,
+  /** Titik jaga & patroli Pak Ujang (Satpam Kampung) di sisi timur Pos Ronda RT 04, jelas & tidak menghalangi jalan */
+  pakUjangPatrol: [-10.85, 0, 11.4] as Vec3,
   /** Di tengah Lapangan Basket / Futsal Mini Kampung (Taman Seberang Jalan) */
   lapanganBasket: [0.0, 0, 15.6] as Vec3,
   /** Di Halte Bus Kampus & Gerobak Bakso (Sisi Timur Kampus) */
@@ -158,6 +168,9 @@ export const KampungSet: React.FC<KampungSetProps> = ({
           <pointLight position={[-12.2, 5.8, 2.85]} color="#ffcf82" intensity={preset.warkopLightIntensity * 0.72} distance={12} decay={1.6} />
           <pointLight position={[-17.5, 4.4, 6.45]} color="#ffbe6a" intensity={preset.warkopLightIntensity * 0.7} distance={13} decay={1.6} />
           <pointLight position={[-12.8, 2.2, 12.4]} color="#ffd588" intensity={preset.warkopLightIntensity * 0.75} distance={11} decay={1.6} />
+          {/* Lampu Hangat Gerobak Bakmie Ayam Tio & Es Buah Mbak Yuni di Area Pedagang Rawa Sari */}
+          <pointLight position={[-13.45, 1.9, 17.55]} color="#ffd480" intensity={preset.warkopLightIntensity * 0.72} distance={8} decay={1.6} />
+          <pointLight position={[-10.05, 1.9, 17.55]} color="#ffebc2" intensity={preset.warkopLightIntensity * 0.72} distance={8} decay={1.6} />
         </>
       )}
     </group>
