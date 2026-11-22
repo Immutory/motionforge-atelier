@@ -13,10 +13,14 @@ from voice_utils import (  # noqa: E402
     STUDIO_SR,
     concat_wavs_with_gaps,
     load_dialogue_script,
+    normalize_indo_tts_text,
     read_wav_pcm,
     shift_words,
     summarize_words,
 )
+
+sys.path.insert(0, str(ROOT / "sound"))
+from mix import load_event_clip  # noqa: E402
 
 
 def _write_silence_wav(path: Path, dur_sec: float, sr: int = STUDIO_SR) -> None:
@@ -75,7 +79,41 @@ class VoicePipelineUtilsTest(unittest.TestCase):
             self.assertEqual(lines[0]["speaker"], "tio")
             self.assertIsNone(lines[0]["exaggeration"])
             self.assertIsNone(lines[0]["cfg"])
+            self.assertIsNone(lines[0]["audio"])
+            self.assertTrue(lines[0]["align"])
             self.assertAlmostEqual(lines[0]["gap"], 0.24)
+
+    def test_hybrid_script_audio_and_cat_align_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            sp = Path(td) / "hybrid.json"
+            sp.write_text(
+                json.dumps(
+                    [
+                        {"speaker": "bangUtoh", "audio": "raw/utoh.wav", "text": "Halo warga"},
+                        {"speaker": "oyen", "audio": "assets/voices/oyen.wav"},
+                        {"speaker": "pakUjang", "text": "Aman Mas!", "seed": 42},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            lines = load_dialogue_script(sp)
+            self.assertEqual(lines[0]["audio"], "raw/utoh.wav")
+            self.assertTrue(lines[0]["align"])
+            self.assertFalse(lines[1]["align"])
+            self.assertEqual(lines[2]["seed"], 42)
+
+    def test_normalize_indo_tts_text_expands_local_abbreviations(self) -> None:
+        s = normalize_indo_tts_text("Warga RT 04 & RW 02, WiFi Warkop 24 jam anak S1 TI lancar!!")
+        self.assertIn("er te nol empat", s)
+        self.assertIn("er we nol dua", s)
+        self.assertIn("waifai", s)
+        self.assertIn("dua puluh empat jam", s)
+        self.assertIn("es satu te i", s)
+        self.assertFalse("!!" in s)
+
+    def test_sound_mix_loads_external_cat_wav(self) -> None:
+        clip = load_event_clip({"at": 0.5, "file": "assets/voices/oyen.wav"}, ROOT / "productions" / "_starter")
+        self.assertGreater(len(clip), 1000)
 
 
 if __name__ == "__main__":

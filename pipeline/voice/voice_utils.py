@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import subprocess
 import wave
 from pathlib import Path
@@ -17,6 +18,64 @@ from typing import Any
 
 STUDIO_SR = 48000
 DEFAULT_GAP_SEC = 0.24
+
+_INDO_TTS_REPLACEMENTS: list[tuple[str, str]] = [
+    (r"\bS1\s+TI\b", "es satu te i"),
+    (r"\bS1\b", "es satu"),
+    (r"\bTI\b", "te i"),
+    (r"\bRT\s*0?(\d+)\b", lambda m: f"er te {_spell_short_num(m.group(1), leading_zero=m.group(0).split()[-1].startswith('0'))}"),  # type: ignore[list-item]
+    (r"\bRW\s*0?(\d+)\b", lambda m: f"er we {_spell_short_num(m.group(1), leading_zero=m.group(0).split()[-1].startswith('0'))}"),  # type: ignore[list-item]
+    (r"\bRT\b", "er te"),
+    (r"\bRW\b", "er we"),
+    (r"\bWi-?Fi\b", "waifai"),
+    (r"\bKTM\b", "ka te em"),
+    (r"\bATM\b", "a te em"),
+    (r"\bHP\b", "ha pe"),
+    (r"\bPC\b", "pi si"),
+    (r"\bAC\b", "a se"),
+    (r"\bSMA\b", "es em a"),
+    (r"\bSD\b", "es de"),
+    (r"\b24\s*jam\b", "dua puluh empat jam"),
+]
+
+_DIGITS_ID = {
+    "0": "nol",
+    "1": "satu",
+    "2": "dua",
+    "3": "tiga",
+    "4": "empat",
+    "5": "lima",
+    "6": "enam",
+    "7": "tujuh",
+    "8": "delapan",
+    "9": "sembilan",
+}
+
+
+def _spell_short_num(num_str: str, leading_zero: bool = False) -> str:
+    val = int(num_str)
+    if val < 10:
+        word = _DIGITS_ID[str(val)]
+        return f"nol {word}" if leading_zero else word
+    if val == 10:
+        return "sepuluh"
+    if val == 11:
+        return "sebelas"
+    if val < 20:
+        return f"{_DIGITS_ID[str(val - 10)]} belas"
+    tens, ones = divmod(val, 10)
+    return f"{_DIGITS_ID[str(tens)]} puluh" + (f" {_DIGITS_ID[str(ones)]}" if ones else "")
+
+
+def normalize_indo_tts_text(text: str) -> str:
+    """Rapikan singkatan & tanda baca agar pelafalan TTS Bahasa Indonesia terdengar alami."""
+    out = clean_word_token(text)
+    for pattern, repl in _INDO_TTS_REPLACEMENTS:
+        out = re.sub(pattern, repl, out, flags=re.IGNORECASE if pattern in (r"\bWi-?Fi\b", r"\b24\s*jam\b") else 0)
+    # Lunakkan tanda seru/tanya berulang agar TTS tidak melengking kaku
+    out = re.sub(r"!{2,}", "!", out)
+    out = re.sub(r"\?{2,}", "?", out)
+    return clean_word_token(out)
 
 
 def normalize_wav(src: str | Path, dst: str | Path, sr: int = STUDIO_SR) -> Path:
@@ -125,7 +184,7 @@ def shift_words(
 
 
 def load_dialogue_script(path: str | Path) -> list[dict[str, Any]]:
-    """Muat & validasi skrip dialog multi-karakter JSON untuk generator VO lokal."""
+    """Muat & validasi skrip dialog hybrid JSON (mendukung TTS `text` maupun rekaman asli `audio`)."""
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(raw, list) or not raw:
         raise ValueError("Skrip dialog harus berupa array JSON berisi minimal 1 baris dialog.")
@@ -135,16 +194,20 @@ def load_dialogue_script(path: str | Path) -> list[dict[str, Any]]:
             raise ValueError(f"Baris skrip ke-{i} harus berupa object JSON.")
         speaker = str(row.get("speaker", "narrator")).strip()
         text = clean_word_token(str(row.get("text", "")))
-        if not text:
-            raise ValueError(f"Baris skrip ke-{i} ({speaker}) memiliki teks kosong.")
+        audio = str(row["audio"]).strip() if row.get("audio") else None
+        if not text and not audio:
+            raise ValueError(f"Baris skrip ke-{i} ({speaker}) wajib memiliki `text` atau `audio`.")
         lines.append(
             {
                 "speaker": speaker,
                 "text": text,
+                "audio": audio,
                 "ref": row.get("ref"),
                 "exaggeration": float(row["exaggeration"]) if "exaggeration" in row else None,
                 "cfg": float(row["cfg"]) if "cfg" in row else None,
                 "temperature": float(row["temperature"]) if "temperature" in row else None,
+                "seed": int(row["seed"]) if "seed" in row and row["seed"] is not None else None,
+                "align": bool(row.get("align", speaker not in ("oyen", "abu", "belang"))),
                 "gap": float(row.get("gap", DEFAULT_GAP_SEC)),
             }
         )

@@ -31,12 +31,17 @@ def detect_device() -> tuple[str, str]:
 
 
 def load_whisper_model(model_size: str = "small", device: str | None = None, compute_type: str | None = None):
+    import os
     from faster_whisper import WhisperModel
 
     dev, comp = detect_device()
     dev = device or dev
     comp = compute_type or ("float16" if dev == "cuda" else "int8")
-    return WhisperModel(model_size, device=dev, compute_type=comp)
+    try:
+        return WhisperModel(model_size, device=dev, compute_type=comp)
+    except Exception:
+        os.environ["HF_HUB_OFFLINE"] = "1"
+        return WhisperModel(model_size, device=dev, compute_type=comp, local_files_only=True)
 
 
 def transcribe_words(

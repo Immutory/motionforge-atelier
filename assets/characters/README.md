@@ -64,16 +64,27 @@ import { ActorBillboard, blinkLidAt, talkAt } from '../../engine';
 | `mbakYuni` | **Mbak Yuni (Es Buah)** | Hijab, celemek pedagang | Gelas es buah · gerobak di `esBuahYuniVendor` | Pedagang kaki lima, minuman segar |
 | `oyen` (`<CatBillboard />`) | **Si Oyen (Kucing Warkop)** | Tabby oranye-jahe loreng coklat (tanda M dahi, mata emas pupil celah, moncong/dada/cakar krem, ekor cincin) | 5 stance (`sit`/`stand`/`walk`/`sleep`/`jump`), 4 sudut, angkat cakar (toe-beans), lip-sync meong, ekor mekar saat shock | Maskot Warkop 24 Jam, komedi kampung, sidekick Bang Utoh (plus varian `abu` & `belang`) |
 
-## Suara Karakter (casting terkunci)
-Supaya suara tiap tokoh konsisten di semua episode, pakai suara di bawah ini. Bang Utoh selalu memakai rekaman suara asli pemilik kanal (`npm run vo:align`).
-Suara pendukung dapat digenerate lokal di RTX 3060 memakai **Chatterbox-TTS-Indonesian (MIT/Apache-2.0)** via `npm run vo:gen` dengan klip referensi terkunci di `assets/voices/` (atau opsional ElevenLabs `eleven_v4` berbayar).
+## Suara Karakter (casting terkunci — 12/12 Manusia + Kucing 2D)
+Supaya suara tiap tokoh konsisten di semua episode, pakai suara terkunci yang diberikan pemilik kanal di bawah ini:
+- **Rekaman Asli Manusia**: `bangUtoh` (pemilik kanal) & `tio` (voice note teman) → normalkan & auto-align `words.json` dengan `npm run vo:align`.
+- **TTS Lokal (`Chatterbox-TTS-Indonesian`, MIT/Apache-2.0)**: 10 karakter pendukung terkunci memakai referensi suara yang diberikan di `assets/voices/<id>.wav` + `assets/voices/presets.json` → generate via `npm run vo:gen` di RTX 3060.
+- **Suara Kucing (`oyen`)**: memakai rekaman meong asli yang diberikan di `assets/voices/oyen.wav`.
 
 | Tokoh | Sumber Suara Terkunci | Pipeline | Ciri |
 |---|---|---|---|
-| `bangUtoh` | Rekaman asli pemilik kanal | `npm run vo:align` (48 kHz + auto `words.json`) | Suara utama, narator |
-| `tio` | Rekaman suara asli (voice note teman) · contoh: `assets/voices/tio.wav` | `npm run vo:align` (48 kHz + auto `words.json`) | Pria dewasa, santai, natural asli |
-| `pakUjang` | TTS lokal `Chatterbox-TTS-Indonesian` · ref: `assets/voices/pakUjang.wav` | `npm run vo:gen` (CUDA lokal, preset terkunci) | Paruh baya, logat Jawa, serius (straight man) |
-| `mbakYuni` | ElevenLabs: Damayanti (`DrldqYsaKOiBNak7yH5o`) / opsional ref lokal `assets/voices/mbakYuni.wav` | `npm run vo:gen` / ElevenLabs | Ceria, ekspresif, nyeletuk |
+| `bangUtoh` | Rekaman asli pemilik kanal | `npm run vo:align` | Suara utama, narator |
+| `tio` | Rekaman suara asli teman / TTS lokal Take B (`assets/voices/tio.wav`, `cfg=0.35, ex=0.52`) | `npm run vo:align` / `npm run vo:gen` | Pria dewasa, santai, natural |
+| `pakUjang` | TTS lokal · `assets/voices/pakUjang.wav` | `npm run vo:gen` | Paruh baya, logat Jawa, tegas (*straight man*) |
+| `mbakYuni` | TTS lokal · `assets/voices/mbakYuni.wav` | `npm run vo:gen` | Wanita muda ceria, ramah, nyeletuk |
+| `buSiti` | TTS lokal · `assets/voices/buSiti.wav` | `npm run vo:gen` | Ibu warung hangat & ceplas-ceplos |
+| `pakBudi` | TTS lokal · `assets/voices/pakBudi.wav` | `npm run vo:gen` | Bapak RT senior, berwibawa & santai |
+| `raka` | TTS lokal · `assets/voices/raka.wav` | `npm run vo:gen` | Remaja SMA ceria & penuh semangat |
+| `bangUdin` | TTS lokal · `assets/voices/bangUdin.wav` | `npm run vo:gen` | Abang ojol akrab, lincah, gaya jalanan |
+| `arya` | TTS lokal · `assets/voices/arya.wav` | `npm run vo:gen` | Host Nusantara tenang, dalam, informatif |
+| `rara` | TTS lokal · `assets/voices/rara.wav` | `npm run vo:gen` | Mahasiswi / host edukatif cerah & ekspresif |
+| `dimas` | TTS lokal · `assets/voices/dimas.wav` | `npm run vo:gen` | Sidekick komedi tongkrongan yang santai |
+| `saka` | TTS lokal · `assets/voices/saka.wav` | `npm run vo:gen` | Suara tegas & berkarakter untuk kisah petualangan |
+| `oyen` (kucing 2D) | Rekaman asli pemilik kanal (`assets/voices/oyen.wav`) | Langsung masuk `sound/mix.py` | Meong asli kucing |
 
 Catatan lisensi: pakai suara TTS di video yang dimonetisasi hanya bila paket akun ElevenLabs mengizinkan pemakaian komersial
 (umumnya paket berbayar). Tokoh lain belum punya suara terkunci; tambahkan barisnya di sini saat pertama kali dicasting.

@@ -1,7 +1,13 @@
 {
-  "pakUjang": {
-    "exaggeration": 0.48,
-    "cfg": 0.45,
-    "temperature": 0.75
-  }
+  "pakUjang": { "exaggeration": 0.48, "cfg": 0.45, "temperature": 0.75 },
+  "tio":      { "exaggeration": 0.52, "cfg": 0.35, "temperature": 0.76 },
+  "mbakYuni": { "exaggeration": 0.56, "cfg": 0.50, "temperature": 0.72 },
+  "buSiti":   { "exaggeration": 0.54, "cfg": 0.50, "temperature": 0.72 },
+  "pakBudi":  { "exaggeration": 0.46, "cfg": 0.48, "temperature": 0.74 },
+  "raka":     { "exaggeration": 0.58, "cfg": 0.50, "temperature": 0.72 },
+  "bangUdin": { "exaggeration": 0.56, "cfg": 0.48, "temperature": 0.72 },
+  "arya":     { "exaggeration": 0.44, "cfg": 0.50, "temperature": 0.72 },
+  "rara":     { "exaggeration": 0.55, "cfg": 0.50, "temperature": 0.72 },
+  "dimas":    { "exaggeration": 0.58, "cfg": 0.48, "temperature": 0.74 },
+  "saka":     { "exaggeration": 0.52, "cfg": 0.48, "temperature": 0.72 }
 }

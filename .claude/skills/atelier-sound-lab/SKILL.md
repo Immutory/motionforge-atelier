@@ -9,8 +9,16 @@ Sound sells the picture. Every visible action should have a sound at the frame o
 
 ## Workflow
 1. Lock picture timing first. Timing changes later mean re-running the mix.
-2. Write `productions/<slug>/audio/events.json`: `{ "events": [{ "at": 1.25, "sfx": "whoosh", "gain_db": -6 }] }`.
-3. Add new effects as functions in `sound/sfx.py` using `sound/dsp.py` primitives (sine, noise, envelope, filters, sweep).
+2. Write `productions/<slug>/audio/events.json` — supports both synthesized SFX (`"sfx"`) and external 48 kHz WAV clips (`"file"`, e.g. Si Oyen's real meow!):
+   ```json
+   {
+     "events": [
+       { "at": 1.25, "sfx": "whoosh", "gain_db": -6 },
+       { "at": 3.40, "file": "assets/voices/oyen.wav", "gain_db": -2 }
+     ]
+   }
+   ```
+3. Add new synthesized effects as functions in `sound/sfx.py` using `sound/dsp.py` primitives (sine, noise, envelope, filters, sweep).
 4. Run `npm run sound -- <slug>`. Output: `out/<slug>/mix.wav`, 48 kHz mono.
 5. Mux with `npm run mux -- <slug>`, which applies loudnorm.
 

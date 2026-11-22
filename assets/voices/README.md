@@ -1,18 +1,23 @@
-# Referensi Suara Karakter (`assets/voices/`)
+# Referensi Suara Karakter & Kucing (`assets/voices/`)
 
-Folder ini menyimpan klip audio referensi pendek (**5–10 detik, suara bersih tanpa musik latar**) untuk *zero-shot voice cloning* lokal menggunakan **`Chatterbox-TTS-Indonesian`** (lisensi komersial aman MIT / Apache 2.0).
+Seluruh file audio di folder ini adalah **rekaman/referensi suara yang diberikan langsung oleh pemilik kanal** (48 kHz mono PCM WAV — tanpa suara buatan sintetis).
 
-## Penamaan Otomatis
-Beri nama file persis seperti `CastPresetId` di `engine/cast/nusantara.ts`, maka `npm run vo:gen` akan otomatis memakainya saat mensintesis dialog karakter tersebut:
+## Karakter Manusia (Rekaman Asli → `npm run vo:align`)
+- `bangUtoh` — Rekaman suara asli pemilik kanal
+- `tio.wav` — Suara asli teman (**Tio** selalu memakai voice note asli teman via `npm run vo:align`)
 
-- `pakUjang.wav` — **Pak Ujang** (Satpam Kampung · **terkunci** untuk `npm run vo:gen`, parameter di `presets.json`)
-- `tio.wav` — **Tio** (contoh referensi **suara asli teman** — untuk produksi Tio selalu memakai voice note asli teman lewat `npm run vo:align`, bukan TTS!)
-- `mbakYuni.wav` — Mbak Yuni (Pedagang Es Buah & Campur)
-- `buSiti.wav` — Bu Siti (Warung / Warkop)
-- `rara.wav` — Rara (Mahasiswi)
-- `dimas.wav` — Bang Dimas
+## Karakter Manusia (Referensi TTS Lokal `Chatterbox-TTS-Indonesian` → `npm run vo:gen`)
+Semua 10 karakter berikut sudah punya klip referensi & preset terkunci di `presets.json`:
+- `pakUjang.wav` — Pak Ujang (Satpam Kampung)
+- `mbakYuni.wav` — Mbak Yuni (Es Buah & Campur)
+- `buSiti.wav` — Bu Siti (Warkop 24 Jam)
 - `pakBudi.wav` — Pak Budi (Pak RT)
-- `raka.wav` — Raka (SMA)
+- `raka.wav` — Raka (Pelajar SMA)
 - `bangUdin.wav` — Bang Udin (Ojol)
+- `arya.wav` — Mas Arya (Host Nusantara)
+- `rara.wav` — Mbak Rara (Host / Mahasiswi)
+- `dimas.wav` — Bang Dimas (Sidekick Komedi)
+- `saka.wav` — Saka Nusantara (Petualang)
 
-> **Catatan**: **Bang Utoh** (suara pemilik channel) dan **Tio** (suara voice note asli teman) selalu menggunakan rekaman suara manusia asli, lalu langsung di-normalisasi & dibuatkan `words.json` lip-sync otomatis dengan `npm run vo:align`.
+## Suara Kucing 2D
+- `oyen.wav` — Rekaman suara kucing asli yang diberikan pemilik kanal (langsung dipakai di `sound/mix.py`)

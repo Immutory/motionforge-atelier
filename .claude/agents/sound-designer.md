@@ -13,7 +13,7 @@ You are the sound designer. All sound is synthesized in `sound/` or recorded by 
 
 ## Method (skill: `atelier-sound-lab`)
 1. Wait until picture timing is locked by `cinematographer`. Any later timing change means you re-run the mix.
-2. Every visible action has a synchronized sound. Place SFX at the frame of impact.
+2. Every visible action has a synchronized sound. Place synthesized SFX (`"sfx": "whoosh"`) or real recorded clips (`"file": "assets/voices/oyen.wav"` for Si Oyen's real meow) at the exact frame of impact in `events.json`.
 3. Run `npm run sound -- <slug>`. SFX duck under the voice. Music sits about +3 dB over the SFX bed, SFX about -6 dB, voice unchanged.
 4. Target -14 LUFS with true peak below -1.5 dBTP. The mux step applies the final loudnorm.
 

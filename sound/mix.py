@@ -40,6 +40,17 @@ def envelope(x: np.ndarray, win: float = 0.05) -> np.ndarray:
     return np.convolve(np.abs(x), np.ones(k) / k, mode="same")
 
 
+def load_event_clip(ev: dict, prod: Path) -> np.ndarray:
+    """Muat klip SFX sintetis (`ev['sfx']`) atau file WAV 48 kHz eksternal (`ev['file']`, mis. `assets/voices/oyen.wav`)."""
+    if "file" in ev and ev["file"]:
+        rel = Path(ev["file"])
+        cand = rel if rel.is_absolute() else (ROOT / rel if (ROOT / rel).exists() else prod / rel)
+        if not cand.exists():
+            raise FileNotFoundError(f"File audio event tidak ditemukan: {ev['file']}")
+        return read_wav(cand)
+    return LIBRARY[ev["sfx"]]()
+
+
 def main(slug: str, seconds: float | None) -> None:
     prod = ROOT / "productions" / slug
     if not prod.exists():  # slug "starter" tersimpan di folder _starter
@@ -54,7 +65,7 @@ def main(slug: str, seconds: float | None) -> None:
     n = int(total * SR)
     sfx_bus = np.zeros(n, dtype=np.float32)
     for ev in events:
-        clip = LIBRARY[ev["sfx"]]() * (10 ** (ev.get("gain_db", -6) / 20))
+        clip = load_event_clip(ev, prod) * (10 ** (ev.get("gain_db", -6) / 20))
         i = int(ev["at"] * SR)
         j = min(n, i + len(clip))
         if i < n:

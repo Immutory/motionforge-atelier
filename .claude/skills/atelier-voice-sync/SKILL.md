@@ -16,16 +16,17 @@ Every cut, kick and sound effect is timed to `words.json`, so an error here spre
 4. Hand-verify the first word, each beat boundary, and every punchline word by listening.
 5. Report total seconds and frames at 30 fps (`durationFromWords` in `engine/core/timeline.ts` adds a closing breath).
 
-## Multi-voice (Bang Utoh + Tio + supporting cast)
-- **Bang Utoh** (pemilik kanal) dan **Tio** (rekaman voice note asli teman) **selalu memakai rekaman suara asli** — jangan diganti TTS! Cukup normalkan & sinkronkan otomatis dengan `npm run vo:align -- <vn.ogg> <words.json> --speaker tio --normalize-wav <tio.wav>`.
-- **Pak Ujang** & NPC pendukung lainnya menggunakan **Local Commercial-Safe TTS (`Chatterbox-TTS-Indonesian`, MIT/Apache-2.0)** via `npm run vo:gen`:
-  - Referensi suara terkunci di `assets/voices/<character>.wav` (mis. `pakUjang.wav`) dengan parameter di `assets/voices/presets.json`.
-  - Write `productions/<slug>/voice/script.json` (`[{"speaker":"pakUjang","text":"...","gap":0.24}]`) and run:
-    `npm run vo:gen -- --script productions/<slug>/voice/script.json --out-dir productions/<slug>/voice`
-  - This automatically generates 48 kHz mono per-line clips (`01_pakUjang.wav`, ...), concatenates `voice.wav` with natural gaps, and builds speaker-tagged `words.json` via `faster-whisper` CUDA!
-  - *(Optional cloud alternative: ElevenLabs `eleven_v4` on a commercial plan for flagship takes, documented in `assets/characters/README.md`.)*
+## Multi-voice (Hybrid: Rekaman Asli + TTS Lokal 11 Karakter + Kucing Asli)
+- **Semua 12 karakter manusia + kucing 2D sudah terkunci** di `assets/voices/` (`assets/voices/presets.json` menyimpan setelan optimal per karakter, termasuk `pakUjang` & `tio` Take B `cfg=0.35, ex=0.52`).
+- **Bang Utoh** (pemilik kanal) selalu memakai rekaman suara asli (`npm run vo:align`). **Tio** bisa memakai voice note asli teman (`"audio": "..."`) maupun TTS lokal (`presets.json` Take B).
+- **Mode Hybrid `script.json`**: gabungkan rekaman asli (`"audio"`), TTS lokal (`"text"` — singkatan Indonesia seperti `RT 04`, `WiFi`, `S1 TI`, `24 jam` dinormalisasi otomatis!), dan suara kucing (`{"speaker":"oyen","audio":"assets/voices/oyen.wav"}`) dalam 1 file:
+  ```bash
+  npm run vo:gen -- --script productions/<slug>/voice/script.json --out-dir productions/<slug>/voice --seed 42
+  ```
+  Otomatis merender 48 kHz mono per baris, menggabungkan `voice.wav` dengan jeda natural, dan menghasilkan `words.json` ber-`"speaker"` via `faster-whisper` CUDA (dengan *auto-offline cache fallback*).
+- Verifikasi kesiapan GPU/engine kapan saja dengan `npm run vo:doctor`.
 - `talkAt` itself has no speaker filter, so pass each character only its own words: `talkAt(WORDS.filter((w) => w.speaker === 'tio'), frame, FPS)`.
-- Confirm commercial licensing before a TTS line goes into a monetized upload (avoid `CC-BY-NC` weights such as Fish Speech 1.5 for monetized uploads).
+- Confirm commercial licensing before a TTS line goes into a monetized upload (Chatterbox-TTS-Indonesian is MIT/Apache-2.0 safe; avoid `CC-BY-NC` weights such as Fish Speech 1.5 for monetized uploads).
 
 ## Rules
 - Do not edit script wording here. Wording changes go back to `story-architect`.
