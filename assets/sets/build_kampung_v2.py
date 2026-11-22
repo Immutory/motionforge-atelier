@@ -197,6 +197,8 @@ def setup_materials():
     M["win_warm"] = existing("KG_WinWarm")
     M["win_cool"] = existing("KG_WinGlow")
     M["white"] = col_mat("KG2_WhitePaint", (0.9, 0.9, 0.87), rough=0.8)
+    M["in_white"] = col_mat("KG2_InteriorWhite", (0.86, 0.85, 0.8), rough=0.85)
+    M["in_mint"] = col_mat("KG2_InteriorMint", (0.62, 0.82, 0.74), rough=0.85)
     M["concrete"] = col_mat("KG2_Concrete", (0.58, 0.57, 0.54), rough=0.95)
     M["fik_blue"] = col_mat("KG2_FIKBlue", (0.07, 0.17, 0.42), rough=0.6)
     M["fik_accent"] = col_mat("KG2_FIKCyan", (0.1, 0.62, 0.86), rough=0.5)
@@ -382,6 +384,7 @@ def text_mesh(name, body, loc, size, mat, rot=(math.pi / 2, 0, 0), extrude=0.02,
     cu = bpy.data.curves.new(name + "_Font", "FONT")
     cu.body = body
     cu.size = size
+    cu.resolution_u = 3  # huruf cukup halus untuk kamera, jauh lebih hemat face
     cu.extrude = extrude
     cu.align_x = align
     cu.align_y = "CENTER"
@@ -767,6 +770,14 @@ def build_ground_roads():
     g.box(-132, -100, z - 0.05, -100.2, 120, z, M["grass"])
     g.box(-96.8, -100, z - 0.05, 132, 120, z, M["grass"])
     g.finish("KG2_Ground_Grass")
+    # Cincin tanah luar (sampai ±600 m) supaya tepi dunia tidak pernah terlihat langit kosong
+    ring = MB()
+    zr = z - 0.02
+    ring.box(-600, 120, zr - 0.05, 600, 600, zr, M["grass"])
+    ring.box(-600, -600, zr - 0.05, 600, -100, zr, M["grass"])
+    ring.box(-600, -100, zr - 0.05, -132, 120, zr, M["grass"])
+    ring.box(132, -100, zr - 0.05, 600, 120, zr, M["grass"])
+    ring.finish("KG2_Ground_OuterRing")
 
     r = MB()
     # Jalan utama: perpanjangan barat & timur (tetap menyambung di atas kali sebagai jembatan)
@@ -843,7 +854,7 @@ def build_ground_roads():
 
 # ----------------------------------------------------------------------------- gedung bertingkat generik
 def multistorey(prefix, x0, y0, x1, y1, floors, fh, wall_mat, base_mat, rooms, stair, front_corridor, sign,
-                win_mat_lower, win_mat_upper, roof="flat", accent=None):
+                win_mat_lower, win_mat_upper, roof="flat", accent=None, interior=None):
     """Gedung bertingkat dengan selasar depan (sisi selatan, y0), ruangan di belakang selasar.
 
     rooms: list per lantai -> list of (rx0, rx1, ry0, ry1, label, kind)
@@ -853,6 +864,7 @@ def multistorey(prefix, x0, y0, x1, y1, floors, fh, wall_mat, base_mat, rooms, s
     t = 0.2
     slab = 0.25
     ry0 = y0 + front_corridor
+    inner = interior or M["white"]  # cat dalam ruangan bersih (tanpa noda hujan)
     for f in range(floors):
         z = 0.15 + f * fh
         shell = MB()
@@ -905,17 +917,25 @@ def multistorey(prefix, x0, y0, x1, y1, floors, fh, wall_mat, base_mat, rooms, s
                 window_x(frame, glass, ry0 + t / 2, xa, xb, zb, ztt, M, bars=False)
         for da, db in doors:
             door_x(frame, ry0 + t / 2, da, db, z, M, open_into=1)
+        # kulit cat dalam ruangan (1,2 cm) di sisi dalam dinding luar, mengikuti bukaan jendela/pintu
+        skin = MB()
+        sk = 0.012
+        wall_x(skin, y1 - t - sk, y1 - t, x0 + t, x1 - t, z, zt, inner, back_ops)
+        wall_y(skin, x0 + t, x0 + t + sk, ry0 + t, y1 - t, z, zt, inner, side_ops)
+        wall_y(skin, x1 - t - sk, x1 - t, ry0 + t, y1 - t, z, zt, inner, side_ops)
+        wall_x(skin, ry0 + t, ry0 + t + sk, x0 + t, x1 - t, z, zt, inner, [op for op in front_ops if op[1] > x0 + t])
+        skin.finish(f"{prefix}_F{f+1}_InteriorPaint")
         # sekat antar ruangan + dinding tangga
         part = MB()
         for (rx0, rx1, rr0, rr1, label, kind) in rooms[f]:
             if rx1 < x1 - 0.3:
-                part.box(rx1 - t / 2, rr0, z, rx1 + t / 2, rr1, zt, wall_mat)
+                part.box(rx1 - t / 2, rr0, z, rx1 + t / 2, rr1, zt, inner)
             if rr1 < y1 - 0.3:
-                part.box(rx0, rr1 - t / 2, z, rx1, rr1 + t / 2, zt, wall_mat)
+                part.box(rx0, rr1 - t / 2, z, rx1, rr1 + t / 2, zt, inner)
                 door_y_x = rx0 + 0.6
                 # bukaan pintu antar ruangan belakang dibiarkan sebagai lubang di sekat
         part.box(sx1 - t / 2 if sx0 <= x0 + 0.01 else sx0 - t / 2, ry0, z,
-                 sx1 + t / 2 if sx0 <= x0 + 0.01 else sx0 + t / 2, y1, zt, wall_mat)
+                 sx1 + t / 2 if sx0 <= x0 + 0.01 else sx0 + t / 2, y1, zt, inner)
         part.finish(f"{prefix}_F{f+1}_Partitions")
         # selasar: kolom, railing (lantai 2+), plafon selasar
         if front_corridor > 0:
@@ -986,7 +1006,15 @@ def multistorey(prefix, x0, y0, x1, y1, floors, fh, wall_mat, base_mat, rooms, s
     rf.finish(f"{prefix}_Roof", bevel=0.02)
     if sign:
         text, loc, size, face = sign
-        text_mesh(f"{prefix}_SignMain_Title", text, loc, size, MATS["white"] if accent is None else MATS["gold"], ROT_FACE[face])
+        # Papan latar solid di belakang huruf supaya terbaca dari jauh di siang, sore, dan malam
+        bw = len(text) * size * 0.66 + size * 1.2
+        bh = size * 1.55
+        bx, by, bz = loc
+        bd = MB()
+        bd.box(bx - bw / 2, by + 0.05, bz - bh / 2, bx + bw / 2, by + 0.11, bz + bh / 2, accent or MATS["green_sign"])
+        bd.box(bx - bw / 2 - 0.06, by + 0.08, bz - bh / 2 - 0.06, bx + bw / 2 + 0.06, by + 0.13, bz + bh / 2 + 0.06, MATS["white"])
+        bd.finish(f"{prefix}_SignBoard", bevel=0.01)
+        text_mesh(f"{prefix}_SignMain_Title", text, (bx, by, bz - size * 0.33), size, MATS["white"], ROT_FACE[face], 0.03)
 
 
 def furnish_room(prefix, rx0, rx1, ry0, ry1, z, fh, kind, idx):
@@ -1073,6 +1101,32 @@ def furnish_room(prefix, rx0, rx1, ry0, ry1, z, fh, kind, idx):
         for i in range(max(1, int((ry1 - ry0 - 3) / 2.0))):
             instance(b, f"{prefix}_Bench_{i}", (cx, ry0 + 1.5 + i * 2.0, z))
         instance(proto("Bookshelf", build_bookshelf), f"{prefix}_Shelf", (rx0 + 0.95, ry0 + 0.4, z), math.pi)
+        # Lemari alat & bahan kimia berpintu kaca di dinding timur, tabel periodik, rambu K3, wastafel cuci
+        lab = MB()
+        lx = rx1 - 0.45
+        for k in range(2):
+            ya, yb = ry0 + 2.2 + k * 1.7, ry0 + 3.7 + k * 1.7
+            lab.box(lx, ya, z, rx1 - 0.02, yb, z + 2.0, M["white"])
+            lab.box(lx - 0.01, ya + 0.05, z + 0.9, lx, yb - 0.05, z + 1.95, M["glass"])
+            for sh in range(3):
+                zz = z + 1.0 + sh * 0.32
+                lab.box(lx + 0.02, ya + 0.05, zz, rx1 - 0.05, yb - 0.05, zz + 0.02, M["white"])
+                for b in range(5):
+                    yb_ = ya + 0.2 + b * 0.26
+                    lab.cyl(lx + 0.2, yb_, zz + 0.02, zz + 0.16 + 0.05 * (b % 2), 0.05, M[("book1", "green_sign", "orange", "glass", "book4")[b]], 8, 0.035)
+        lab.box(rx0 + 0.12, ry0 + 3.2, z + 1.1, rx0 + 0.14, ry0 + 5.6, z + 2.3, M["paper"])  # tabel periodik
+        for i in range(18):
+            for j in range(6):
+                if j < 2 and 1 < i < 16:
+                    continue
+                col = ("book0", "book1", "book2", "book3", "book4")[(i + j) % 5]
+                lab.box(rx0 + 0.141, ry0 + 3.28 + i * 0.125, z + 1.2 + j * 0.17, rx0 + 0.146, ry0 + 3.39 + i * 0.125, z + 1.35 + j * 0.17, M[col])
+        lab.box(rx0 + 0.12, ry1 - 1.6, z + 1.5, rx0 + 0.14, ry1 - 1.0, z + 2.1, M["yellow"])  # rambu K3
+        lab.box(cx - 0.6, ry1 - 0.75, z, cx + 0.6, ry1 - 0.2, z + 0.86, M["white"])  # meja guru demo
+        lab.box(cx - 0.65, ry1 - 0.8, z + 0.86, cx + 0.65, ry1 - 0.15, z + 0.9, M["black"])
+        lab.finish(f"{prefix}_LabFurniture", bevel=0.006)
+        text_mesh(f"{prefix}_PosterSub_Periodik", "TABEL PERIODIK", (rx0 + 0.15, ry0 + 4.4, z + 2.42), 0.12, M["blue_sign"], ROT_FACE["E"], 0.002)
+        text_mesh(f"{prefix}_PosterSub_K3", "UTAMAKAN K3", (rx0 + 0.15, ry1 - 1.3, z + 1.8), 0.08, M["black"], ROT_FACE["E"], 0.002)
     elif kind in ("perpus",):
         s = proto("Bookshelf", build_bookshelf)
         for i in range(int((rx1 - rx0 - 1) / 1.7)):
@@ -1138,8 +1192,9 @@ def build_fik():
          (16.0, 22.8, 2.5, 14.5, "Lab Jaringan", "jaringan")],
     ]
     multistorey("KG2_FIK", x0, y0, x1, y1, 3, fh, M["paint_white"], M["stone"], R, stair, 2.0,
-                ("FAKULTAS ILMU KOMPUTER", (14.9, y0 - 0.32, 13.15), 0.62, "S"),
-                M["win_cool"], M["win_cool"], roof="flat", accent=M["fik_blue"])
+                ("FAKULTAS ILMU KOMPUTER", (14.9, y0 - 0.42, 12.6), 0.6, "S"),
+                M["win_cool"], M["win_cool"], roof="flat", accent=M["fik_blue"],
+                interior=M["in_white"])
     for f, rooms in enumerate(R):
         z = 0.15 + f * fh
         for i, (rx0, rx1, ry0, ry1, label, kind) in enumerate(rooms):
@@ -1183,7 +1238,7 @@ def build_school():
          (103.4, 108.8, 18.0, 28.0, "Perpustakaan", "perpus")],
     ]
     multistorey("KG2_SD", 90.0, 16.0, 108.8, 28.0, 3, fh, M["paint_mint"], M["sd_red"], sd_rooms, (90.0, 92.5), 2.0,
-                ("SD NEGERI RAWA SARI 04", (99.4, 15.55, 7.0), 0.5, "S"), M["win_warm"], M["win_warm"], roof="gable")
+                ("SD NEGERI RAWA SARI 04", (99.4, 15.62, 9.55), 0.62, "S"), M["win_warm"], M["win_warm"], roof="gable", interior=M["in_mint"])
     sma_rooms = [
         [(109.2, 114.6, 18.0, 28.0, "X-1", "kelas_sma"), (114.6, 120.0, 18.0, 28.0, "X-2", "kelas_sma"),
          (120.0, 125.5, 18.0, 28.0, "Ruang Guru", "guru")],
@@ -1193,8 +1248,8 @@ def build_school():
          (120.0, 125.5, 18.0, 28.0, "Perpustakaan", "perpus")],
     ]
     multistorey("KG2_SMA", 109.2, 16.0, 128.0, 28.0, 3, fh, M["paint_white"], M["sma_grey"], sma_rooms, (125.5, 128.0), 2.0,
-                ("SMA NEGERI RAWA SARI", (117.4, 15.55, 7.0), 0.5, "S"), M["win_cool"], M["win_cool"], roof="gable",
-                accent=M["blue_sign"])
+                ("SMA NEGERI RAWA SARI", (117.6, 15.62, 9.55), 0.62, "S"), M["win_cool"], M["win_cool"], roof="gable",
+                accent=M["blue_sign"], interior=M["in_white"])
     for wing, rooms_all in (("SD", sd_rooms), ("SMA", sma_rooms)):
         for f, rooms in enumerate(rooms_all):
             z = 0.15 + f * fh
@@ -1236,7 +1291,7 @@ def build_school():
     F.box(111.0, -2.6, 0.0, 111.6, -1.6, 4.2, M["stone"])
     F.box(106.2, -2.5, 3.6, 111.8, -1.7, 4.3, M["green_sign"])
     F.finish("KG2_School_Fence")
-    text_mesh("KG2_School_SignMain_Gate", "SD - SMA RAWA SARI", (109.0, -2.55, 3.95), 0.34, M["gold"], ROT_FACE["S"], 0.02)
+    text_mesh("KG2_School_SignMain_Gate", "SD - SMA RAWA SARI", (109.0, -2.55, 3.84), 0.42, M["gold"], ROT_FACE["S"], 0.02)
     # kantin
     k = MB()
     k.box(90.4, 29.0, 0.0, 98.0, 34.0, 0.1, M["terrace"])
@@ -1619,9 +1674,20 @@ def build_greenery_far():
     tr = proto("FarTree", build_far_tree)
     ban = PROTOS.get("Banana")
     k = 0
+    spots = []
     for _ in range(70):
-        x = rnd.uniform(-130, 130)
-        y = rnd.choice([rnd.uniform(-98, -40), rnd.uniform(70, 118)])
+        spots.append((rnd.uniform(-130, 130), rnd.choice([rnd.uniform(-98, -40), rnd.uniform(70, 118)])))
+    for _ in range(140):  # sabuk pohon di luar batas kampung (terlihat dari shot sekolah & sisi barat)
+        side = rnd.randrange(4)
+        if side == 0:
+            spots.append((rnd.uniform(136, 230), rnd.uniform(-110, 130)))
+        elif side == 1:
+            spots.append((rnd.uniform(-230, -136), rnd.uniform(-110, 130)))
+        elif side == 2:
+            spots.append((rnd.uniform(-230, 230), rnd.uniform(124, 220)))
+        else:
+            spots.append((rnd.uniform(-230, 230), rnd.uniform(-200, -104)))
+    for x, y in spots:
         if -101 < x < -96:
             continue
         p = tr if (tr and rnd.random() < 0.6) else ban

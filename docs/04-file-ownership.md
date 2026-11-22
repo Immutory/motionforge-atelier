@@ -19,6 +19,9 @@ Satu file, satu pemilik. Ini mencegah dua agent menimpa pekerjaan satu sama lain
 | `engine/cast` | character-animator | semua |
 | `engine/sets`, `engine/textures` | set-designer | cinematographer, light-colorist |
 | `assets/sets/*`, `public/sets/*.glb` | set-designer | semua |
+| `assets/sets/build_kampung_v2.py`, `export_kampung_glb.py`, `generate_pbr_textures.py`, `ZONING_KAMPUNG_V2.md` | set-designer | cinematographer, light-colorist |
+| `productions/charlab/KampungV2Production.tsx` (komposisi QC dunia) | set-designer | qa-inspector |
+| `productions/charlab/reports/*` | qa-inspector | showrunner |
 | `assets/characters/*` | character-animator | semua |
 | `engine/post` | post-compositor | semua |
 | `productions/charlab/*` | character-animator (karakter), set-designer (set lab) | semua |

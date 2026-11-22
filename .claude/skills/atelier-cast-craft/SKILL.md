@@ -9,9 +9,14 @@ Characters and animals are **2D Canvas2D vector drawings** placed on camera-faci
 
 ## Human Modular Rig (`engine/cast/nusantara.ts` + `ActorBillboard.tsx`)
 - Design canvas `700 × 1100`, soles at `y = 1040`, supersample `2x` (`1400 × 2200`).
-- **9 Official Indonesian Cast (`CAST_PRESETS`)**:
+- **12 Official Indonesian Cast (`CAST_PRESETS`)**:
   - Lead #1: `bangUtoh` (**Bolohoutoh / Bang Utoh** — Mahasiswa S1 Teknik Informatika: navy HMTI hoodie, lanyard KTM, `</>` badge, cyan LED headphones, tech glasses, messy ahoge hair).
-  - Supporting & Warga Kampung Rawa Sari RT 04: `arya` (Mas Arya), `rara` (Mbak Rara), `dimas` (Bang Dimas), `saka` (Saka Nusantara), `pakBudi` (Pak Budi / Pak RT), `buSiti` (Bu Siti / Warkop), `raka` (Raka SMA), `bangUdin` (Bang Udin Ojol).
+  - Supporting & Warga Kampung Rawa Sari RT 04: `arya` (Mas Arya), `rara` (Mbak Rara), `dimas` (Bang Dimas), `saka` (Saka Nusantara), `pakBudi` (Pak Budi / Pak RT), `buSiti` (Bu Siti / Warkop), `raka` (Raka SMA), `bangUdin` (Bang Udin Ojol), `pakUjang` (Pak Ujang, satpam kampung / Pos Ronda), `tio` (Tio, pedagang Bakmie Ayam: no hat, thick dark glasses, dark brown skin, `build: 'big'`), `mbakYuni` (Mbak Yuni, pedagang Es Buah).
+- **Optional `CharacterSpec` fields** (all default off, so existing presets render pixel-identical):
+  - `build: 'slim' | 'regular' | 'big'` scales torso, belly, limbs, hands and apron; head, torso height and `ACTOR_SOLE_Y` stay fixed so feet remain grounded. `buildFactors(spec)` is exported.
+  - `glassesStyle: 'round' | 'tech' | 'thick'` (thick = rounded-rect, near-black frame; lifts with `hatPop` like the others).
+  - `hairCombed` adds a side part + comb strands to `parted` hair (use when a character goes hatless).
+  - Face colours for readable dark skin: `mouthColor`, `tongueColor`, `lipColor`, `blushColor`, `eyeShine` (white catchlights). Check new skin tones under siang, sore and malam.
 - **12 Expressions** (`neutral`, `happy`, `laugh`, `shock`, `sad`, `angry`, `smug`, `skeptical`, `nervous`, `tired`, `idea`, `focus`) + automatic/override **Comic FX** (`shock`, `sweat`, `anger`, `sparkle`, `question`).
 - **6 Stances (`ActorStance`)**: `stand`, `walk`, `sit`, `sitCross` (duduk bersila), `squat` (jongkok nongkrong khas warkop), `jump`.
 - **4 Views (`ActorView`)**: `front`, `threeQuarter`, `side`, `back`.

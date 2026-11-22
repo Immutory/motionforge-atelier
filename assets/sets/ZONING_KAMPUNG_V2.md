@@ -51,33 +51,64 @@ Selasar menghadap lapangan (Y 16…18), dan setiap sayap punya 3 kelas per lanta
 - **SD:** kelas warna cerah, UKS, ruang guru SD.
 - **SMA:** kelas, lab IPA, lab komputer, perpustakaan, ruang guru SMA.
 
-## 4. Tabel spot (Three.js `[x, y, z]`)
+## 4. Tabel spot final (Three.js `[x, y, z]`)
 
-Spot lama — **tidak berubah**: semua 26 spot di `KAMPUNG_SPOTS` tetap di koordinat yang sama, **kecuali**:
+Disalin dari `engine/sets/KampungSet.tsx` (sumber kebenaran). Semua spot sudah dicek dengan raycast di Blender:
+tinggi lantai cocok dalam 6 cm dan tidak ada geometri dalam radius 0,25 m dari badan karakter.
+`kampusLab` sekarang menunjuk ke Lab Komputer lantai 2. Spot lama yang dikoreksi saat audit:
+`kostTerrace`, `areaPedagang`, `gerobakNasgor`, `posRonda` (sebelumnya menabrak benda), `posSatpam`, `sekolahGerbang` (sebelumnya tenggelam).
 
-| Spot | Lama | Baru | Alasan |
-|---|---|---|---|
-| `kampusLab` | `[12.6, 0, 0.5]` | `[18.5, 4.15, -10.0]` | Lab Komputer pindah ke lantai 2 (sama dengan `kampusLab2`). Tidak dipakai produksi mana pun saat ini. |
-
-`kampusPlaza` `[12.6, 0, 3.2]`, `posSatpam` `[19.5, 0, 0.2]`, dan `halteKampus` `[19.8, 0, 3.3]` tetap,
-karena ketiganya jatuh di plaza depan gedung baru.
-Produksi saat ini hanya memakai `bakmieTioVendor`, `esBuahYuniVendor`, dan `pakUjangPatrol`, dan ketiganya tidak berubah.
-
-Spot baru:
-
-| Spot | Koordinat | Spot | Koordinat |
-|---|---|---|---|
-| `kampusLobby` | `[14.5, 0.15, -4.0]` | `sekolahGerbang` | `[109.0, 0, 2.5]` |
-| `kampusKelas2A` | `[10.5, 4.15, -10.0]` | `lapanganUpacara` | `[109.0, 0, -7.0]` |
-| `kampusLab2` | `[18.5, 4.15, -10.0]` | `sdKelas1` | `[95.0, 0.15, -24.0]` |
-| `kampusLab3` | `[18.5, 8.15, -10.0]` | `smaKelas1` | `[123.0, 0.15, -24.0]` |
-| `kampusRuangDosen` | `[10.5, 8.15, -10.0]` | `smaLabIpa` | `[123.0, 3.75, -24.0]` |
-| `kampusSelasar2` | `[14.5, 4.15, -1.5]` | `kantinSekolah` | `[94.0, 0, -31.5]` |
-| `kampusSelasar3` | `[14.5, 8.15, -1.5]` | `pertigaanPendidikan` | `[86.8, 0, 6.5]` |
-| `jalanKampung2` | `[0.0, 0, -17.5]` | `jembatanKali` | `[-98.5, 0.3, -17.5]` |
-| `gangGapura` | `[-18.2, 0, -8.0]` | `gangTimur` | `[25.5, 0, -8.0]` |
-| `bengkelMotor` | `[-91.0, 0, 2.8]` | `warungKelontong` | `[-92.0, 0, 11.0]` |
-| `rumahWargaBarat` | `[-115.0, 0, 2.8]` | `musalaTaman` | `[-116.0, 0, -27.0]` |
+| Spot | Koordinat |
+|---|---|
+| `streetCenter` | `[0.0, 0, 6.5]` |
+| `gapuraEntrance` | `[-17.5, 0, 6.5]` |
+| `kostTerrace` | `[-12.43, 0.13, 2.65]` |
+| `kostDoor01` | `[-14.85, 0.14, 2.55]` |
+| `kostDoor02` | `[-11.05, 0.14, 2.55]` |
+| `kostGate` | `[-12.2, 0, 4.05]` |
+| `kostBalcony2` | `[-12.2, 3.48, 2.72]` |
+| `kostDesk` | `[-12.2, 0, -0.3]` |
+| `warkopFront` | `[-1.2, 0, 1.35]` |
+| `warkopCounter` | `[0.85, 0, 0.35]` |
+| `warkopCanopyLeft` | `[-2.14, 2.8, -0.3]` |
+| `warkopCanopyRight` | `[2.14, 2.8, -0.3]` |
+| `kampusPlaza` | `[12.6, 0, 3.2]` |
+| `kampusLab` | `[19.4, 4.15, -9.0]` |
+| `kampusLobby` | `[12.75, 0.15, -5.0]` |
+| `kampusKelas2A` | `[12.75, 4.15, -6.8]` |
+| `kampusLab2` | `[19.4, 4.15, -9.0]` |
+| `kampusLab3` | `[19.4, 8.15, -8.5]` |
+| `kampusRuangDosen` | `[12.75, 8.15, -5.0]` |
+| `kampusSelasar2` | `[14.5, 4.15, -1.5]` |
+| `kampusSelasar3` | `[14.5, 8.15, -1.5]` |
+| `atmMinimarket` | `[-28.15, 0, 3.2]` |
+| `areaPedagang` | `[-11.46, 0.04, 16.34]` |
+| `gerobakNasgor` | `[-13.16, 0.04, 18.34]` |
+| `bakmieTioVendor` | `[-13.02, 0.04, 18.38]` |
+| `bakmieTioCustomer` | `[-12.55, 0.04, 16.65]` |
+| `esBuahYuniVendor` | `[-9.62, 0.04, 18.38]` |
+| `esBuahYuniCustomer` | `[-10.95, 0.04, 16.65]` |
+| `parkirMotor` | `[12.9, 0, 15.0]` |
+| `posRonda` | `[-12.98, 0, 10.82]` |
+| `pakUjangPatrol` | `[-10.85, 0, 11.4]` |
+| `lapanganBasket` | `[0.0, 0, 15.6]` |
+| `halteKampus` | `[19.8, 0, 3.3]` |
+| `posSatpam` | `[19.5, 0.08, 0.2]` |
+| `sekolahGerbang` | `[109.0, 0.1, 2.5]` |
+| `lapanganUpacara` | `[109.0, 0.05, -7.0]` |
+| `sdKelas1` | `[95.25, 0.15, -25.2]` |
+| `smaKelas1` | `[111.9, 0.15, -25.2]` |
+| `smaLabIpa` | `[117.3, 3.75, -26.0]` |
+| `kantinSekolah` | `[94.2, 0.1, -29.6]` |
+| `pertigaanPendidikan` | `[86.8, 0, 6.5]` |
+| `jalanKampung2` | `[0.0, 0, -17.5]` |
+| `jembatanKali` | `[-98.5, 0, -17.5]` |
+| `gangGapura` | `[-18.15, 0.03, -8.0]` |
+| `gangTimur` | `[25.5, 0.03, -8.0]` |
+| `bengkelMotor` | `[-91.0, 0.1, 3.0]` |
+| `warungKelontong` | `[-92.0, 0.1, 10.4]` |
+| `rumahWargaBarat` | `[-118.0, 0.1, 2.8]` |
+| `musalaTaman` | `[-113.3, 0.08, -23.0]` |
 
 `streetLampPositions` di `KampungSet.tsx` (sekarang 6 titik di X −30…20) diganti dengan lampu jalan setiap 10 m
 di sepanjang X −130…130 sisi utara jalan utama, ditambah lampu di Jl. Kampung 2, Jl. Pendidikan, dan kedua gang.

@@ -14,7 +14,7 @@ Turn a brief into a finished 9:16 Short/Trailer, 16:9 YouTube Episode, or Channe
 
 ## Studio Quick-Reference
 - **Cast**: `<ActorBillboard />` (`bangUtoh` + 8 warga Indonesia), `<CatBillboard />` (`oyen`, `abu`, `belang` — always 2D, never 3D!), and `<CharCard />` (`A`/`B`/`C`). Default acting style: **tangan kosong (zero hand props)** with expressive stances (`stand`, `walk`, `sit`, `sitCross`, `squat`, `jump`).
-- **3D Sets**: `<KampungSet mode="siang" | "sore" | "malam" />` (Kos Putra Rawa Sari 2 Lantai + Warkop 24 Jam + Kampus S1 TI + Kampung Rawa Sari RT 04), `<WarkopSet />`, `<KostSet />`, `<KampusSet />`.
+- **3D Sets**: `<KampungSet mode="siang" | "sore" | "malam" />` (Kampung Rawa Sari RT 04 v2: Kos Putra Rawa Sari 2 Lantai, Warkop 24 Jam, Gedung Kampus FIK 3 lantai, SD + SMA Rawa Sari, kali + jembatan, bengkel, warung kelontong, musala; see `assets/sets/ZONING_KAMPUNG_V2.md`), `<WarkopSet />`, `<KostSet />`, `<KampusSet />`.
 - **Branding Compositions**: `youtubebanner` (4K `3840×2160` / `2560×1440`), `youtubeprofile` (`2048×2048` native vector PNG).
 
 ## You own

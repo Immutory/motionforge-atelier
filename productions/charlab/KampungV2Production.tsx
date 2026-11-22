@@ -26,6 +26,8 @@ type Slide = {
   mode: KampungTimeMode;
   pose: CamPose;
   title: string;
+  /** Override jarak kabut untuk shot udara (kabut jalanan terlalu pekat dari ketinggian 150 m). */
+  fog?: { near: number; far: number };
   actors?: { id: CastPresetId; at: Vec3; pose: Partial<ActorPose> }[];
 };
 
@@ -33,7 +35,7 @@ const P = (pos: Vec3, look: Vec3, fov = 50): CamPose => ({ pos, look, fov, roll:
 const S = KAMPUNG_SPOTS;
 
 export const KAMPUNG_V2_SLIDES: Slide[] = [
-  { mode: 'siang', pose: P([0, 120, 150], [0, 0, -10], 45), title: 'OVERVIEW UDARA — KAMPUNG RAWA SARI V2 (264 × 220 M)' },
+  { mode: 'siang', pose: P([0, 120, 150], [0, 0, -10], 45), title: 'OVERVIEW UDARA — KAMPUNG RAWA SARI V2 (264 × 220 M)', fog: { near: 160, far: 900 } },
   { mode: 'siang', pose: P([-4, 2.4, 7.6], [26, 3.5, 1], 55), title: 'JL. RAWA SARI RAYA — WARKOP, GEDUNG FIK, GANG TIMUR',
     actors: [{ id: 'bangUtoh', at: S.kampusPlaza, pose: { face: 'happy', rightProp: 'laptop', rightArm: 'hold' } }] },
   { mode: 'sore', pose: P([14.9, 2.0, 9.0], [14.9, 7.0, -2], 70), title: 'GEDUNG KAMPUS FIK 3 LANTAI — FASAD DEPAN (SORE)' },
@@ -50,7 +52,7 @@ export const KAMPUNG_V2_SLIDES: Slide[] = [
   { mode: 'malam', pose: P([109, 9, 30], [109, 5.5, -20], 50), title: 'KOMPLEKS SD + SMA RAWA SARI — MALAM' },
   { mode: 'siang', pose: P([95.25, 1.75, -18.7], [95.25, 1.4, -27.5], 72), title: 'SAYAP SD — KELAS 1 (PAPAN HITAM, VISI MISI, PIKET)',
     actors: [{ id: 'bangUtoh', at: S.sdKelas1, pose: { face: 'happy' } }] },
-  { mode: 'siang', pose: P([117.0, 5.5, -18.6], [117.6, 4.5, -26.5], 66), title: 'SAYAP SMA — LAB IPA LT 2',
+  { mode: 'siang', pose: P([119.4, 5.4, -18.5], [116.2, 4.4, -26.5], 68), title: 'SAYAP SMA — LAB IPA LT 2',
     actors: [{ id: 'bangUtoh', at: S.smaLabIpa, pose: { face: 'focus' } }] },
   { mode: 'sore', pose: P([-103, 6.5, 13], [-117, 2.2, -2], 55), title: 'SISI BARAT — RUMAH WARGA, PAGAR, MOTOR, JEMURAN (SORE)',
     actors: [{ id: 'bangUtoh', at: S.rumahWargaBarat, pose: { face: 'happy', stance: 'walk' } }] },
@@ -61,9 +63,9 @@ export const KAMPUNG_V2_SLIDES: Slide[] = [
   { mode: 'malam', pose: P([-92, 1.9, 4.6], [-92, 1.7, 15], 60), title: 'WARUNG KELONTONG BU SRI (MALAM)',
     actors: [{ id: 'bangUtoh', at: S.warungKelontong, pose: { face: 'happy' } }] },
   { mode: 'sore', pose: P([-18.15, 1.8, 4.8], [-18.15, 1.6, -18], 55), title: 'GANG GAPURA → JL. KAMPUNG 2 (SORE)' },
-  { mode: 'siang', pose: P([-9.1, 2.25, 14.1], [-12.15, 1.28, 17.9], 54), title: 'AREA PEDAGANG — TIO (REVISI) DI GEROBAK BAKMIE',
+  { mode: 'siang', pose: P([-10.4, 1.9, 22.2], [-13.2, 1.35, 18.1], 50), title: 'AREA PEDAGANG — TIO (REVISI) DI GEROBAK BAKMIE',
     actors: [{ id: 'tio', at: S.bakmieTioVendor, pose: { face: 'happy', leftArm: 'hold', leftProp: 'sodet', rightArm: 'hold', rightProp: 'bakmie' } }] },
-  { mode: 'malam', pose: P([-9.1, 2.25, 14.1], [-12.15, 1.28, 17.9], 54), title: 'AREA PEDAGANG — TIO (MALAM)',
+  { mode: 'malam', pose: P([-10.4, 1.9, 22.2], [-13.2, 1.35, 18.1], 50), title: 'AREA PEDAGANG — TIO (MALAM)',
     actors: [{ id: 'tio', at: S.bakmieTioVendor, pose: { face: 'happy', talk: 0.6, leftArm: 'hold', leftProp: 'sodet', rightArm: 'hold', rightProp: 'bakmie' } }] },
 ];
 
@@ -83,7 +85,8 @@ export const KampungV2Production: React.FC = () => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const s = KAMPUNG_V2_SLIDES[Math.min(KAMPUNG_V2_SLIDES.length - 1, Math.floor(frame / 10))];
-  const light = KAMPUNG_MODES[s.mode].light;
+  const base = KAMPUNG_MODES[s.mode].light;
+  const light = s.fog ? { ...base, fog: { ...base.fog, ...s.fog } } : base;
   const post: PostParams = {
     ...DEFAULT_POST,
     ink: { ...DEFAULT_POST.ink, fogColor: light.fog.color, fogNear: light.fog.near, fogFar: light.fog.far },

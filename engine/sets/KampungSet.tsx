@@ -58,7 +58,7 @@ export const KAMPUNG_SPOTS = {
   /** Di bawah Gapura Kampung Rawa Sari RT 04 (sisi barat jalan) */
   gapuraEntrance: [-17.5, 0, 6.5] as Vec3,
   /** Di depan teras Kos Putra Rawa Sari 2 Lantai */
-  kostTerrace: [-12.2, 0.14, 2.75] as Vec3,
+  kostTerrace: [-12.43, 0.13, 2.65] as Vec3,
   /** Tepat di depan pintu Kamar 01 Bang Utoh (Lantai 1 Kos Putra Rawa Sari) */
   kostDoor01: [-14.85, 0.14, 2.55] as Vec3,
   /** Tepat di depan pintu Kamar 02 (Lantai 1 Kos Putra Rawa Sari) */
@@ -98,9 +98,9 @@ export const KAMPUNG_SPOTS = {
   /** Di depan Booth ATM & Plaza Masjid / Minimarket 24 Jam (Ruko Barat) */
   atmMinimarket: [-28.15, 0, 3.2] as Vec3,
   /** Di Area Pedagang Rawa Sari (dekat Gerobak Bakmie Ayam Tio, Es Buah Mbak Yuni & Meja Payung) */
-  areaPedagang: [-11.75, 0.04, 15.65] as Vec3,
+  areaPedagang: [-11.46, 0.04, 16.34] as Vec3,
   /** Di dekat Gerobak Bakmie Ayam Tio (alias kompatibilitas `gerobakNasgor`) */
-  gerobakNasgor: [-13.45, 0.04, 17.65] as Vec3,
+  gerobakNasgor: [-13.16, 0.04, 18.34] as Vec3,
   /** Di belakang sisi kompor & dandang gerobak Bakmie Ayam Tio (posisi Tio memasak & melayani tanpa terhalang etalase) */
   bakmieTioVendor: [-13.02, 0.04, 18.38] as Vec3,
   /** Di depan gerobak Bakmie Ayam Tio (posisi pembeli memesan) */
@@ -112,7 +112,7 @@ export const KAMPUNG_SPOTS = {
   /** Di Tempat Khusus Parkir Motor berkanopi (10 Motor Bebek) */
   parkirMotor: [12.9, 0, 15.0] as Vec3,
   /** Di depan Pos Ronda RT 04 (Taman Seberang Jalan) */
-  posRonda: [-12.8, 0, 11.0] as Vec3,
+  posRonda: [-12.98, 0, 10.82] as Vec3,
   /** Titik jaga & patroli Pak Ujang (Satpam Kampung) di sisi timur Pos Ronda RT 04, jelas & tidak menghalangi jalan */
   pakUjangPatrol: [-10.85, 0, 11.4] as Vec3,
   /** Di tengah Lapangan Basket / Futsal Mini Kampung (Taman Seberang Jalan) */
@@ -120,9 +120,9 @@ export const KAMPUNG_SPOTS = {
   /** Di Halte Bus Kampus & Gerobak Bakso (Sisi Timur Kampus) */
   halteKampus: [19.8, 0, 3.3] as Vec3,
   /** Di Pos Satpam & Palang Parkir Gerbang Kampus */
-  posSatpam: [19.5, 0, 0.2] as Vec3,
+  posSatpam: [19.5, 0.08, 0.2] as Vec3,
   /** Gerbang bersama Kompleks SD + SMA Rawa Sari */
-  sekolahGerbang: [109.0, 0, 2.5] as Vec3,
+  sekolahGerbang: [109.0, 0.1, 2.5] as Vec3,
   /** Tengah lapangan upacara sekolah (depan tiang bendera) */
   lapanganUpacara: [109.0, 0.05, -7.0] as Vec3,
   /** Kelas 1 SD (lantai 1, antara meja murid dan papan tulis) */

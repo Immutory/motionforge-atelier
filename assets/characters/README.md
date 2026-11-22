@@ -24,7 +24,7 @@ Seluruh karakter, sheet, dan preview animasi di folder ini adalah **karya prosed
   - `warga_anim_preview.mp4` (Pak Budi & Bang Udin Ojol)
 
 ## Cara Pakai Modular Rig (`engine/cast/`) di Produksi Baru
-Seluruh 9 karakter (dipimpin **Pemeran Utama #1: `bangUtoh`**) resmi terintegrasi di `engine/cast/` (`ActorBillboard`, `CAST_PRESETS`, `talkAt`, `blinkLidAt`) dan dipakai langsung di cetak biru `productions/_starter/`.
+Seluruh 12 karakter (dipimpin **Pemeran Utama #1: `bangUtoh`**) resmi terintegrasi di `engine/cast/` (`ActorBillboard`, `CAST_PRESETS`, `talkAt`, `blinkLidAt`) dan dipakai langsung di cetak biru `productions/_starter/`.
 
 ```tsx
 import { ActorBillboard, blinkLidAt, talkAt } from '../../engine';
@@ -47,18 +47,21 @@ import { ActorBillboard, blinkLidAt, talkAt } from '../../engine';
 />
 ```
 
-## Daftar Lengkap 9 Tokoh Ala Indonesia (`CAST_PRESETS`)
+## Daftar Lengkap 12 Tokoh Ala Indonesia (`CAST_PRESETS`)
 | Preset ID | Nama | Ciri Visual | Prop & Reaksi | Cocok untuk Konten |
 |---|---|---|---|---|
 | `bangUtoh` | **Bolohoutoh (Bang Utoh) — Pemeran Utama #1** | Mahasiswa S1 Teknik Informatika: Hoodie HMTI navy + lanyard KTM + badge `</>`, headphone over-ear LED cyan, kacamata kotak tech, rambut berjambul, ransel laptop | Laptop kode VS Code + cup es kopi susu · **headphone loncat** | **Pemeran Utama #1**, teknologi, kuliah IT, storytelling, komedi |
-| `ID1` | **Mas Arya** | Batik Kawung indigo-emas, peci beludru | Buku fakta · peci loncat | Host sejarah, fakta unik Nusantara |
-| `ID2` | **Mbak Rara** | Hijab sage-teal, jaket denim, kacamata emas | Mikrofon podcast · kacamata naik | Host kreator muda, edukasi |
-| `ID3` | **Bang Dimas** | Jaket coach hijau-krem, topi baseball miring | Gelas es teh manis sedotan · topi loncat | Komedi, tongkrongan, sidekick |
-| `ID4` | **Saka Nusantara** | Iket batik merah-emas, rompi tenun, mata melirik | Gulungan peta/lontar · iket naik | Kisah rakyat, legenda, petualangan |
-| `ID5` | **Pak Budi (Pak RT)** | Kemeja kotak + pulpen saku, sarung tenun, kumis tebal | Gelas belimbing kopi tubruk beruap | Bapak komplek, ronda, warga senior |
-| `ID6` | **Bu Siti (Warung)** | Cepol tinggi + jepit merah, daster bunga, celemek | Spatula / sodet warung | Emak-emak, pemilik warung, gosip gang |
-| `ID7` | **Raka (Pelajar SMA)** | Seragam putih-abu, dasi + badge OSIS, ransel merah | Smartphone | Cerita sekolah, pelajar, penanya muda |
-| `ID8` | **Bang Udin (Ojol)** | Jaket hijau-hitam strip reflektor, helm visor biru | HP peta rute · helm loncat | Abang ojol, kurir, cerita jalanan kota |
+| `arya` | **Mas Arya** | Batik Kawung indigo-emas, peci beludru | Buku fakta · peci loncat | Host sejarah, fakta unik Nusantara |
+| `rara` | **Mbak Rara** | Hijab sage-teal, jaket denim, kacamata emas | Mikrofon podcast · kacamata naik | Host kreator muda, edukasi |
+| `dimas` | **Bang Dimas** | Jaket coach hijau-krem, topi baseball miring | Gelas es teh manis sedotan · topi loncat | Komedi, tongkrongan, sidekick |
+| `saka` | **Saka Nusantara** | Iket batik merah-emas, rompi tenun, mata melirik | Gulungan peta/lontar · iket naik | Kisah rakyat, legenda, petualangan |
+| `pakBudi` | **Pak Budi (Pak RT)** | Kemeja kotak + pulpen saku, sarung tenun, kumis tebal | Gelas belimbing kopi tubruk beruap | Bapak komplek, ronda, warga senior |
+| `buSiti` | **Bu Siti (Warung)** | Cepol tinggi + jepit merah, daster bunga, celemek | Spatula / sodet warung | Emak-emak, pemilik warung, gosip gang |
+| `raka` | **Raka (Pelajar SMA)** | Seragam putih-abu, dasi + badge OSIS, ransel merah | Smartphone | Cerita sekolah, pelajar, penanya muda |
+| `bangUdin` | **Bang Udin (Ojol)** | Jaket hijau-hitam strip reflektor, helm visor biru | HP peta rute · helm loncat | Abang ojol, kurir, cerita jalanan kota |
+| `pakUjang` | **Pak Ujang (Satpam Kampung)** | Seragam satpam, topi, kumis | Senter · patroli Pos Ronda RT 04 | Keamanan lingkungan, komedi ronda |
+| `tio` | **Tio (Bakmie Ayam)** | Tanpa topi, rambut belah samping rapi, kacamata bingkai tebal gelap, kulit sawo matang gelap, badan agak besar (`build: 'big'`), kemeja + celemek | Sodet & mangkuk bakmie · gerobak di `bakmieTioVendor` | Pedagang kaki lima, kuliner kampung |
+| `mbakYuni` | **Mbak Yuni (Es Buah)** | Hijab, celemek pedagang | Gelas es buah · gerobak di `esBuahYuniVendor` | Pedagang kaki lima, minuman segar |
 | `oyen` (`<CatBillboard />`) | **Si Oyen (Kucing Warkop)** | Tabby oranye-jahe loreng coklat (tanda M dahi, mata emas pupil celah, moncong/dada/cakar krem, ekor cincin) | 5 stance (`sit`/`stand`/`walk`/`sleep`/`jump`), 4 sudut, angkat cakar (toe-beans), lip-sync meong, ekor mekar saat shock | Maskot Warkop 24 Jam, komedi kampung, sidekick Bang Utoh (plus varian `abu` & `belang`) |
 
 ## Perintah Regenerasi Sheet & Preview
