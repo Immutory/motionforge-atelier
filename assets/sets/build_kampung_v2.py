@@ -78,14 +78,72 @@ def remove_prefix(prefixes):
 def fix_existing():
     # Lab kampus lama + atribut gedungnya
     remove_prefix(("KG_KP_", "KG_KampusFlag", "KG_KampusParapet", "KG_KampusRoofCrown"))
-    # Rumah yang terkena tapak gedung FIK (HouseRow1_10 juga menimpa Gang Timur)
-    remove_prefix(("KG_HouseRow1_08_", "KG_HouseRow1_09_", "KG_HouseRow1_10_"))
+    # Rumah yang terkena tapak gedung FIK (HouseRow1_10 juga menimpa Gang Timur).
+    # HouseRow1_05 (X -18,7..-13,3) menimpa Gang Gapura (X -19,8..-16,5): ikut dibongkar.
+    remove_prefix(("KG_HouseRow1_05_", "KG_HouseRow1_08_", "KG_HouseRow1_09_", "KG_HouseRow1_10_"))
     demolish_region(6.6, -3.0, 23.2, 14.9, "tapak FIK")
-    # SideBuilding W2/E2 memotong badan jalan utama: geser ke selatan
-    for o in COL.all_objects:
-        if o.name.startswith(("KG_SideBuildingW2", "KG_SideBuildingE2")):
-            if world_bb(o)[4] > -9.6:  # belum digeser
+    # SideBuilding W2/E2 memotong badan jalan utama: geser ke selatan. Keputusan per gedung (dari `_Tower`),
+    # lalu semua objek berawalan sama ikut. Kalau tower sudah tergeser (file lama yang tergeser sebagian),
+    # hanya objek yang masih terkubur di dalam tower (ledge/winband lama) yang digeser. Idempoten.
+    for pre in ("KG_SideBuildingW2_", "KG_SideBuildingE2_"):
+        tower = bpy.data.objects.get(pre + "Tower")
+        if tower is None:
+            continue
+        parts = [o for o in COL.all_objects if o.name.startswith(pre)]
+        tb = world_bb(tower)
+        tower_moved = tb[4] <= -9.6
+        n = 0
+        for o in parts:
+            b = world_bb(o)
+            buried = o is not tower and b[1] > tb[1] + 0.5 and b[4] < tb[4] - 0.5 and b[5] < tb[5]
+            if not tower_moved or buried:
                 o.location.y -= 7.4
+                n += 1
+        log(f"{pre}: {n} objek digeser ke selatan")
+    # SideBuilding W1/E1 (Y 8,5..20,5) memotong Jl. Kampung 2 (Y 15,6..19,4) dan deret tiang/lampu Y 20:
+    # geser ke selatan (Y 2,5..14,5) dan sedikit ke tengah agar tidak menabrak pisang barat (X <= -82,47).
+    for pre, dx in (("KG_SideBuildingW1_", 1.0), ("KG_SideBuildingE1_", -1.0)):
+        tower = bpy.data.objects.get(pre + "Tower")
+        if tower is None or world_bb(tower)[1] < 5.0:  # sudah digeser
+            continue
+        parts = [o for o in COL.all_objects if o.name.startswith(pre)]
+        for o in parts:
+            o.location.x += dx
+            o.location.y -= 6.0
+        log(f"{pre}: {len(parts)} objek digeser keluar dari Jl. Kampung 2")
+    # Pos satpam, palang, dan halte kampus lama berdiri di dalam selasar/dinding FIK dan di tepi beton plaza.
+    # Penempatan absolut (idempoten): halte di trotoar depan plaza (Y -3,62..-2,27), pos satpam di plaza timur
+    # (X 16,6..18,4 · Y -1,6..0,1, jendela menghadap jalan), palang di sudut timur plaza dengan lengan terangkat
+    # (terbuka) sehingga tidak menutup Gang Timur.
+    def move_group(prefix, anchor, target):
+        a = bpy.data.objects.get(anchor)
+        if a is None:
+            return
+        d = Vector(target) - a.location
+        for o in COL.all_objects:
+            if o.name.startswith(prefix):
+                o.location += d
+        log(f"{prefix}: geser {tuple(round(v, 2) for v in d)}")
+    move_group("KG_P5_Halte_", "KG_P5_Halte_Platform", (19.8, -2.95, 0.08))
+    move_group("KG_P5_Satpam_", "KG_P5_Satpam_Booth", (17.5, -0.75, 1.255))  # alas di atas paving plaza (Z 0,08)
+    base = bpy.data.objects.get("KG_P5_Portal_Base")
+    arm = bpy.data.objects.get("KG_P5_Portal_Arm")
+    if base is not None and arm is not None:
+        base.location = (22.45, -1.0, 0.625)
+        b = world_bb(arm)
+        if (b[3] - b[0]) > (b[5] - b[2]):  # masih mendatar: angkat (putar 90 derajat terhadap sumbu Y dunia)
+            arm.matrix_world = Matrix.Rotation(-math.pi / 2, 4, "Y") @ arm.matrix_world
+            bpy.context.view_layer.update()
+        b = world_bb(arm)
+        arm.location += Vector((22.45 + 0.22 - (b[0] + b[3]) / 2, -1.0 - (b[1] + b[4]) / 2, 1.02 - b[2]))
+        bpy.context.view_layer.update()
+        log("palang kampus:", tuple(round(v, 2) for v in world_bb(arm)))
+    # Poster & kursi interior Kost di kampung memakai material bertekstur dinding/seng: ganti ke material polos.
+    sys.path.insert(0, str(Path(bpy.path.abspath("//")).parent))
+    sys.dont_write_bytecode = True
+    import fix_kost_materials
+    log("material KG_KS:", fix_kost_materials.fix_objects([o for o in COL.all_objects if o.name.startswith("KG_KS_")]))
+    bpy.context.view_layer.update()
     # Gedung latar yang namanya bentrok dengan gedung kampus baru
     for o in COL.all_objects:
         if o.name.startswith("KG_GedungFakultasTI"):
@@ -1548,7 +1606,8 @@ def build_utilities():
     lines.append([(x, -2.4) for x in range(-130, -84, 22)] + [(-82.0, -2.4)])  # jalan utama barat
     lines.append([(x, -2.4) for x in range(90, 133, 21)])           # jalan utama timur
     lines.append([(89.4, y) for y in range(2, 37, 16)])              # Jl. Pendidikan
-    lines.append([(-16.0, y) for y in (-2.0, 6.0, 14.0)])            # Gang Gapura
+    # Gang Gapura: sisi barat gang (X -20,3), bebas dari Kos (X >= -16,74) dan sudut Masjid (Y >= -2,0)
+    lines.append([(-20.3, y) for y in (-2.8, 6.0, 14.0)])
     lines.append([(28.2, y) for y in (-2.0, 6.0, 14.0)])             # Gang Timur
     cab = MB()
     k = 0

@@ -24,7 +24,7 @@ Bagian dunia yang sudah ada (ruko, masjid, kos, warkop, area pedagang, rumah, di
 
 | Zona | Area (X · Y) | Isi |
 |---|---|---|
-| **Gedung Kampus FIK 3 lantai** | X 7,0…22,8 · Y 0,5…14,5 (15,8 × 14 m, tinggi sekitar 12,6 m) | Menggantikan `KG_KP_*` (lab 1 lantai) dan rumah `HouseRow1_08`, `_09`, `_10`. Plaza depan Y −3,7…0,5 dengan tiang bendera, pos satpam, dan palang parkir. |
+| **Gedung Kampus FIK 3 lantai** | X 7,0…22,8 · Y 0,5…14,5 (15,8 × 14 m, tinggi sekitar 12,6 m) | Menggantikan `KG_KP_*` (lab 1 lantai) dan rumah `HouseRow1_08`, `_09`, `_10`. Plaza depan Y −2,2…0,5 dengan tiang bendera, pos satpam, dan palang parkir (lengan terangkat); halte bus di trotoar depan plaza (Y −3,6…−2,3). |
 | **Kompleks Sekolah SD + SMA** | X 90…128 · Y 1…34 | Gedung Y 16…28. Sayap SD X 90…109, sayap SMA X 109…128, dipisah **dinding api penuh 3 lantai di X 109**, dengan tangga dan papan nama sendiri-sendiri. Lapangan upacara bersama Y 1…14, gerbang bersama di X 107…111 di tepi jalan utama, kantin X 90…98 · Y 29…34, parkir sepeda X 120…128 · Y 29…34. |
 | **Jl. Pendidikan + pertigaan** | X 85…88,6 · Y −3,9…36,2 | Jalan ke utara dari jalan utama sampai FarNorthRoad. Traffic light baru di (84,2; −9,6) dan (89,4; −3,6). |
 | **Kali + jembatan** | X −100…−97 (lebar 3 m, dalam sekitar 1,5 m) | Membelah sisi barat dari utara ke selatan. Ada jembatan jalan di jalan utama dan **jembatan kecil** kayu/beton di Jl. Kampung 2. |
@@ -92,8 +92,8 @@ tinggi lantai cocok dalam 6 cm dan tidak ada geometri dalam radius 0,25 m dari b
 | `posRonda` | `[-12.98, 0, 10.82]` |
 | `pakUjangPatrol` | `[-10.85, 0, 11.4]` |
 | `lapanganBasket` | `[0.0, 0, 15.6]` |
-| `halteKampus` | `[19.8, 0, 3.3]` |
-| `posSatpam` | `[19.5, 0.08, 0.2]` |
+| `halteKampus` | `[19.8, 0.16, 3.3]` |
+| `posSatpam` | `[19.15, 0.08, 0.75]` |
 | `sekolahGerbang` | `[109.0, 0.1, 2.5]` |
 | `lapanganUpacara` | `[109.0, 0.05, -7.0]` |
 | `sdKelas1` | `[95.25, 0.15, -25.2]` |
@@ -116,6 +116,22 @@ di sepanjang X −130…130 sisi utara jalan utama, ditambah lampu di Jl. Kampun
 ## 5. Masalah yang ditemukan di file sekarang (diperbaiki sekalian)
 - `HouseRow1_10` (X 21,3…26,7) menimpa `KG_AlleyRoad_East` (X 23,4…27,6). Rumah ini ikut dibongkar untuk gedung kampus.
 - `SideBuildingW2` dan `SideBuildingE2` (Y −15,4…−2,8) memotong badan jalan utama (Y −9,1…−3,9). Gedungnya akan digeser ke selatan jalan.
+- Audit dunia 3D (perbaikan temuan kritis, oleh `fix_existing()` di `build_kampung_v2.py`):
+  - `HouseRow1_05` (X −18,7…−13,3 · Y 6,9…11,5) menimpa Gang Gapura dan menelan spot `gangGapura` serta `KG2_LampPost_1`:
+    rumah **dibongkar** (lahan kosong di belakang Kos). `KG2_LampPost_1` (−18,2; 11) kini berdiri bebas di paving gang.
+  - `SideBuildingW1`/`E1` (X ∓83…∓73 · Y 8,5…20,5, tinggi 16 m) memotong Jl. Kampung 2 dan menelan `KG2_LampPost_7`,
+    `KG2_LampPost_17`, `KG2_P5_PowerPole_2`: seluruh objek berawalan sama digeser (±1,0; −6,0) ke **X −82…−72 / 72…82 · Y 2,5…14,5**,
+    di antara jalan utama dan Jl. Kampung 2.
+  - Pergeseran `SideBuildingW2`/`E2` kini diputuskan per gedung dari `_Tower`; `_Ledge_00..03` dan `_WinBand_00..03` yang tertinggal
+    di Y −15 (terkubur di tower) ikut digeser ke fasad selatan tower (Y −22,8…−22,4). Skrip idempoten.
+  - Pos satpam (`KG_P5_Satpam_*`) dari dalam selasar FIK (X 18,6…20,4 · Y 0,6…2,4) ke **plaza timur X 16,6…18,4 · Y −1,6…0,1**
+    (jendela menghadap jalan). Palang (`KG_P5_Portal_*`) dari dinding timur FIK (21,5; 1,2) ke **sudut timur plaza (22,45; −1,0)**
+    dengan lengan terangkat sehingga Gang Timur tidak tertutup. Halte (`KG_P5_Halte_*`) digeser 0,6 m ke selatan ke
+    **trotoar Y −3,62…−2,28**, bebas dari tepi beton plaza.
+  - Deret tiang listrik Gang Gapura (`KG2_P5_PowerPole_19..21`) dari X −16,0 (menembus dinding, tangga, dan atap Kos)
+    ke **sisi barat gang X −20,3** di Y −2,8 / 6,0 / 14,0; kabel `KG2_P5_Cable_All` ikut dibangun ulang dari deret yang sama.
+  - Poster dan kursi Kost (`KS_PosterBg`, `KS_Chair*` dan salinannya `KG_KS_*`) memakai material polos baru `KS_PosterPaper`
+    dan `KS_ChairMetal` (sebelumnya tekstur dinding bata dan seng). Skrip: `assets/sets/fix_kost_materials.py`.
 - Ada gedung latar low-poly bernama `GedungFakultasTI` di distrik kampus (Y 37…46). Gedung ini diganti nama menjadi `GedungPascasarjana` supaya tidak tertukar dengan gedung kampus baru.
 
 ## 6. Anggaran performa

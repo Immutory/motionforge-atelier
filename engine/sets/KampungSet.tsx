@@ -117,10 +117,10 @@ export const KAMPUNG_SPOTS = {
   pakUjangPatrol: [-10.85, 0, 11.4] as Vec3,
   /** Di tengah Lapangan Basket / Futsal Mini Kampung (Taman Seberang Jalan) */
   lapanganBasket: [0.0, 0, 15.6] as Vec3,
-  /** Di Halte Bus Kampus & Gerobak Bakso (Sisi Timur Kampus) */
-  halteKampus: [19.8, 0, 3.3] as Vec3,
-  /** Di Pos Satpam & Palang Parkir Gerbang Kampus */
-  posSatpam: [19.5, 0.08, 0.2] as Vec3,
+  /** Di atas peron Halte Bus Kampus (trotoar depan plaza FIK, sisi timur), di depan bangku */
+  halteKampus: [19.8, 0.16, 3.3] as Vec3,
+  /** Di sisi timur Pos Satpam kampus (plaza FIK), antara pos dan tiang bendera */
+  posSatpam: [19.15, 0.08, 0.75] as Vec3,
   /** Gerbang bersama Kompleks SD + SMA Rawa Sari */
   sekolahGerbang: [109.0, 0.1, 2.5] as Vec3,
   /** Tengah lapangan upacara sekolah (depan tiang bendera) */

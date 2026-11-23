@@ -46,6 +46,36 @@ test('spot lantai atas Gedung FIK dan sekolah berada di dalam tapak gedungnya', 
   }
 });
 
+/** Tapak bangunan di sekitar gang dan plaza FIK dalam koordinat Blender (X timur, Y utara): [x0, y0, x1, y1]. */
+const FOOTPRINTS: Record<string, readonly [number, number, number, number]> = {
+  'Gedung FIK': [7.0, 0.5, 22.8, 14.5],
+  'Pos Satpam FIK': [16.63, -1.63, 18.38, 0.13],
+  'Kos Putra': [-16.0, -2.3, -8.4, 2.85],
+  Masjid: [-25.8, -2.0, -20.2, 3.6],
+  HouseRow1_04: [-26.7, 6.9, -21.3, 11.5],
+  HouseRow1_06: [-10.7, 6.9, -5.3, 11.5],
+  'SideBuilding W1': [-82.0, 2.5, -72.0, 14.5],
+  'SideBuilding E1': [72.0, 2.5, 82.0, 14.5],
+};
+
+test('gangGapura, posSatpam, halteKampus tidak masuk tapak bangunan (jarak badan 0,25 m)', () => {
+  const r = 0.25;
+  for (const key of ['gangGapura', 'posSatpam', 'halteKampus'] as const) {
+    const [x, , z] = KAMPUNG_SPOTS[key];
+    const by = -z; // Three.js z = -Blender Y
+    for (const [fp, [x0, y0, x1, y1]] of Object.entries(FOOTPRINTS)) {
+      const inside = x > x0 - r && x < x1 + r && by > y0 - r && by < y1 + r;
+      assert.ok(!inside, `${key} (X ${x}, Y ${by}) masuk tapak ${fp}`);
+    }
+  }
+  const [gx, gy, gz] = KAMPUNG_SPOTS.gangGapura;
+  assert.ok(gx > -19.8 && gx < -16.5 && -gz > -3.6 && -gz < 15.35 && gy === 0.03, 'gangGapura harus di paving Gang Gapura');
+  const [hx, hy, hz] = KAMPUNG_SPOTS.halteKampus;
+  assert.ok(hx > 18.1 && hx < 21.5 && -hz > -3.62 && -hz < -2.28 && hy === 0.16, 'halteKampus harus di peron halte');
+  const [sx, sy, sz] = KAMPUNG_SPOTS.posSatpam;
+  assert.ok(sx > 7 && sx < 22.8 && -sz > -2.0 && -sz < 0.5 && sy === 0.08, 'posSatpam harus di paving plaza FIK');
+});
+
 test('spot yang dipakai produksi tidak berubah diam-diam', () => {
   assert.deepEqual([...KAMPUNG_SPOTS.bakmieTioVendor], [-13.02, 0.04, 18.38]);
   assert.deepEqual([...KAMPUNG_SPOTS.esBuahYuniVendor], [-9.62, 0.04, 18.38]);
