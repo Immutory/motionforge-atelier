@@ -1,6 +1,6 @@
 import type { TalkSample } from './lipsync';
 
-/** 12 ekspresi siap pakai untuk konten storytelling, edutainment, dan komedi YouTube. */
+/** 13 ekspresi siap pakai untuk konten storytelling, edutainment, dan komedi YouTube (v2.0: tambah 'strain'). */
 export type Expression =
   | 'neutral'
   | 'happy'
@@ -13,7 +13,8 @@ export type Expression =
   | 'nervous'
   | 'tired'
   | 'idea'
-  | 'focus';
+  | 'focus'
+  | 'strain';
 
 export type EyeStyle = 'classic' | 'pill' | 'sclera' | 'lash';
 export type ComicFx = 'none' | 'shock' | 'sweat' | 'anger' | 'sparkle' | 'question';
@@ -231,6 +232,18 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       continue;
     }
 
+    if (face === 'strain') {
+      // Mata memicing tajam `> <` (kontras tinggi terhadap deadpan berlapis saat tenaga/benturan/ngeri)
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 6.2;
+      ctx.beginPath();
+      ctx.moveTo(x - s * 16, eyeY - 12);
+      ctx.lineTo(x + s * 10, eyeY);
+      ctx.lineTo(x - s * 16, eyeY + 12);
+      ctx.stroke();
+      continue;
+    }
+
     if (face === 'shock' || face === 'nervous') {
       const rad = face === 'shock' ? 26 : 22;
       ctx.fillStyle = '#ffffff';
@@ -347,6 +360,7 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       drawBrow(ctx, ex(1), by - 14, blen, bt, 15, ink);
       break;
     case 'angry':
+    case 'strain':
       drawBrow(ctx, ex(-1), by + 4, blen + 4, bt + 2, 20, ink);
       drawBrow(ctx, ex(1), by + 4, blen + 4, bt + 2, -20, ink);
       break;
@@ -513,6 +527,24 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.moveTo(mx - 16, my + 2);
       ctx.lineTo(mx + 16, my - 2);
       lipStroke();
+      break;
+    case 'strain':
+      // Gigi terkatup menggeram / menahan tenaga (clenched teeth ala referensi)
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(mx - 24, my - 5, 48, 22, 7);
+      ctx.fill();
+      ctx.stroke();
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      ctx.moveTo(mx - 22, my + 6);
+      ctx.lineTo(mx + 22, my + 6);
+      for (const gx of [-11, 0, 11]) {
+        ctx.moveTo(mx + gx, my - 5);
+        ctx.lineTo(mx + gx, my + 17);
+      }
+      ctx.stroke();
+      ctx.lineWidth = 5.5;
       break;
     case 'tired':
       ctx.beginPath();

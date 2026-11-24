@@ -2,9 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blinkLidAt } from '../engine/cast/bean';
 import { talkAt, talkWave } from '../engine/cast/lipsync';
-import { CAST_PRESETS, resolveActorSpec, type ActorStance } from '../engine/cast/nusantara';
-import { CAT_PRESETS, resolveCatSpec } from '../engine/cast/cat';
-import { KAMPUNG_SPOTS, SET_PRESETS, indoorLight } from '../engine/sets';
+import {
+  CAST_PRESETS,
+  actorFaceAnchors,
+  actorHandPoint,
+  resolveActorSpec,
+  springPop,
+  strikeEnvelope,
+  type ActorPose,
+  type ActorStance,
+} from '../engine/cast/nusantara';
+import { actorPoseKey } from '../engine/cast/ActorBillboard';
+import { CAT_PRESETS, resolveCatSpec, type CatPose } from '../engine/cast/cat';
+import { catPoseKey } from '../engine/cast/CatBillboard';
+import { KAMPUNG_SPOTS, SET_PRESETS, WARKOP_SPOT_META, indoorLight } from '../engine/sets';
 import { LIGHTS, cameraRelativeSun } from '../engine/stage/lights';
 import { pxScale } from '../engine/post/scale';
 
@@ -125,4 +136,104 @@ test('KAMPUNG_SPOTS memuat spot Kos Putra Rawa Sari 2 Lantai, Area Pedagang (Tio
 
   const stances: ActorStance[] = ['stand', 'walk', 'sit', 'sitCross', 'squat', 'jump'];
   assert.equal(stances.length, 6);
+});
+
+test('Atelier v2.0 rig: headTilt, sitHeight, view back, strikeEnvelope, springPop, dan WARKOP_SPOT_META', () => {
+  // headTilt memutar jangkar mulut di sekitar pangkal leher secara independen dari lean
+  const baseFace = actorFaceAnchors('bangUtoh', { face: 'neutral' });
+  const tiltedFace = actorFaceAnchors('bangUtoh', { face: 'neutral', headTilt: 14 });
+  assert.notEqual(tiltedFace.mouthX, baseFace.mouthX);
+
+  // sitHeight mengatur elevasi duduk secara ergonomis (bangku rendah lebih turun dari bangku tinggi)
+  const sitLow = actorFaceAnchors('bangUtoh', { face: 'neutral', stance: 'sit', sitHeight: 0.36 });
+  const sitBench = actorFaceAnchors('bangUtoh', { face: 'neutral', stance: 'sit', sitHeight: 0.475 });
+  const sitHigh = actorFaceAnchors('bangUtoh', { face: 'neutral', stance: 'sit', sitHeight: 0.6 });
+  assert.ok(sitLow.torsoTop > sitBench.torsoTop && sitBench.torsoTop > sitHigh.torsoTop);
+  assert.equal(WARKOP_SPOT_META.leftTable?.seatY, 0.475);
+  assert.equal(WARKOP_SPOT_META.counterKeeper?.ergonomicBaseY, 0.44);
+
+  // view: 'back' dan ekspresi 'strain' bekerja penuh
+  const backHand = actorHandPoint('bangUtoh', { face: 'strain', view: 'back', rightArm: 'point' }, 1);
+  assert.ok(Number.isFinite(backHand.x) && Number.isFinite(backHand.y));
+
+  // Action Impact Grammar: 4f wind-up -> 6f hold -> 1f strike -> 8f follow-through
+  assert.equal(strikeEnvelope(89, 100).phase, 'idle');
+  assert.equal(strikeEnvelope(92, 100).phase, 'windup');
+  assert.ok(strikeEnvelope(92, 100).value < 0);
+  assert.equal(strikeEnvelope(96, 100).phase, 'hold');
+  assert.equal(strikeEnvelope(96, 100).value, -1);
+  const hit = strikeEnvelope(100, 100);
+  assert.equal(hit.phase, 'strike');
+  assert.equal(hit.impact, true);
+  assert.equal(hit.value, 1);
+  assert.equal(strikeEnvelope(103, 100).phase, 'follow');
+  assert.equal(strikeEnvelope(109, 100).phase, 'idle');
+
+  // Spring Overshoot: 0 sebelum trigger -> peak di trigger+1 -> duduk tepat di 1
+  assert.equal(springPop(49, 50, 1.25, 12), 0);
+  assert.equal(springPop(51, 50, 1.25, 12), 1.25);
+  assert.equal(springPop(62, 50, 1.25, 12), 1);
+});
+
+test('ActorBillboard & CatBillboard useMemo reactivity: setiap perubahan field pose mengubah poseKey', () => {
+  const baseActor: ActorPose = { face: 'neutral', stance: 'stand', view: 'threeQuarter' };
+  const baseActorKey = actorPoseKey(baseActor);
+  const actorMutations: Partial<ActorPose>[] = [
+    { face: 'strain' },
+    { blink: 0.5 },
+    { talk: 0.6 },
+    { stance: 'sit' },
+    { view: 'back' },
+    { leftArm: 'raise' },
+    { rightArm: 'point' },
+    { leftProp: 'laptop' },
+    { rightProp: 'kopi' },
+    { leftHand: { dx: 12 } },
+    { rightHand: { front: true } },
+    { hatPop: 0.8 },
+    { fx: 'sweat' },
+    { walkPhase: 0.25 },
+    { gait: 'planted' },
+    { stride: 1.5 },
+    { lean: 6 },
+    { headTilt: -10 },
+    { sitHeight: 0.475 },
+    { facing: -0.5 },
+    { lookBack: 0.7 },
+  ];
+  for (const patch of actorMutations) {
+    assert.notEqual(
+      actorPoseKey({ ...baseActor, ...patch }),
+      baseActorKey,
+      `actorPoseKey harus berubah saat ${Object.keys(patch).join(',')} diubah`,
+    );
+  }
+
+  const baseCat: CatPose = { face: 'neutral', stance: 'sit', view: 'threeQuarter' };
+  const baseCatKey = catPoseKey(baseCat);
+  const catMutations: Partial<CatPose>[] = [
+    { face: 'shock' },
+    { blink: 1 },
+    { talk: 0.5 },
+    { stance: 'walk' },
+    { view: 'side' },
+    { walkPhase: 0.3 },
+    { tailPhase: 1.2 },
+    { earTwitch: 0.4 },
+    { pawRaise: 'left' },
+    { pawAngle: 25 },
+    { pawReach: 1.35 },
+    { fx: 'sparkle' },
+    { lean: 4 },
+    { facing: -1 },
+    { breathPhase: 0.8 },
+    { stretch: 0.6 },
+  ];
+  for (const patch of catMutations) {
+    assert.notEqual(
+      catPoseKey({ ...baseCat, ...patch }),
+      baseCatKey,
+      `catPoseKey harus berubah saat ${Object.keys(patch).join(',')} diubah`,
+    );
+  }
 });

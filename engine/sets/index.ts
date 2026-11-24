@@ -1,12 +1,20 @@
 import type { LightPreset } from '../stage/lights';
 
 export { GlbSet, type GlbSetProps, type TimeOfDayMode } from './GlbSet';
-export { WarkopSet, WARKOP_SPOTS, type WorldSetProps } from './WarkopSet';
-export { KostSet, KOST_SPOTS, type KostSetProps } from './KostSet';
-export { KampusSet, KAMPUS_SPOTS, type KampusSetProps } from './KampusSet';
+export {
+  WarkopSet,
+  WARKOP_SPOTS,
+  WARKOP_SPOT_META,
+  WARKOP_LAMP_NODES,
+  type SpotMeta,
+  type WorldSetProps,
+} from './WarkopSet';
+export { KostSet, KOST_SPOTS, KOST_SPOT_META, type KostSetProps } from './KostSet';
+export { KampusSet, KAMPUS_SPOTS, KAMPUS_SPOT_META, type KampusSetProps } from './KampusSet';
 export {
   KampungSet,
   KAMPUNG_SPOTS,
+  KAMPUNG_SPOT_META,
   KAMPUNG_MODES,
   type KampungSetProps,
   type KampungTimeMode,

@@ -1,5 +1,5 @@
 /**
- * Pustaka 15 prop tangan 2D yang dapat dipasang di tangan kiri atau kanan karakter mana pun.
+ * Pustaka 22 prop tangan 2D yang dapat dipasang di tangan kiri atau kanan karakter mana pun.
  * Digambar pada sistem koordinat lokal tangan (0, 0).
  */
 
@@ -22,7 +22,57 @@ export type HandProp =
   | 'coffeeCup'
   | 'bakmie'
   | 'esBuah'
-  | 'senter';
+  | 'senter'
+  | 'pen'
+  | 'lap'
+  | 'phoneClock'
+  | 'glassEmpty';
+
+/**
+ * Jam bawaan di layar prop `phoneClock` bila pose tidak mengisi `HandPropOptions.text`
+ * (format `HH:MM`, sama dengan jam taskbar laptop diegetik). Produksi mengatur jam per frame lewat
+ * `ActorPose.leftHand/rightHand.propText`.
+ */
+export const PHONE_CLOCK_TEXT = '06:58';
+
+/** Opsi gambar prop per tangan (semua opsional; default = gambar lama identik). */
+export type HandPropOptions = {
+  /** Teks layar prop berteks (`phoneClock`). Default `PHONE_CLOCK_TEXT`. */
+  text?: string;
+  /** Pengali uap prop panas (`kopi`): 0 = tanpa uap, 1 = default, >1 = uap menguat (mis. saat dihirup). */
+  steam?: number;
+  /** Kemiringan prop di ruang layar (radian, + = searah jarum jam), mis. gelas dimiringkan saat menyesap. */
+  tilt?: number;
+};
+
+/** Geometri gelas `kopi` relatif titik tangan (tangan kanan, sebelum `tilt`): bibir gelas & dasar gelas. */
+export const KOPI_GLASS = { dx: 14, rimY: -58, baseY: 4, halfW: 24 } as const;
+
+/** Titik tengah bibir gelas `kopi` (px kanvas) untuk tangan di (x, y), arah `dir` (+1 kanan, -1 kiri), dan `tilt`. */
+export function kopiRimPoint(x: number, y: number, dir: 1 | -1 = 1, tilt = 0): { x: number; y: number } {
+  const lx = dir * KOPI_GLASS.dx;
+  const ly = KOPI_GLASS.rimY;
+  const c = Math.cos(tilt);
+  const s = Math.sin(tilt);
+  return { x: x + lx * c - ly * s, y: y + lx * s + ly * c };
+}
+
+/**
+ * Tulis teks yang SELALU tegak dan tidak ter-mirror, apa pun transform kanvas saat ini
+ * (prop di tangan kiri digambar dengan `scale(-1, 1)`, plus rotasi prop/lean badan).
+ * - determinan matriks < 0 (ter-mirror) -> dibalik lagi secara lokal pada sumbu X
+ * - sumbu Y lokal mengarah ke atas layar (terbalik) -> diputar 180°
+ */
+export function fillTextUpright(ctx: Ctx, text: string, x: number, y: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  const m = ctx.getTransform();
+  if (m.a * m.d - m.b * m.c < 0) ctx.scale(-1, 1);
+  const u = ctx.getTransform();
+  if (u.d < 0) ctx.rotate(Math.PI);
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
+}
 
 type Ctx = CanvasRenderingContext2D;
 const TAU = Math.PI * 2;
@@ -46,11 +96,15 @@ function inked(ctx: Ctx, path: () => void, fill: string, ink: string, thin = 4.5
   ctx.stroke();
 }
 
-/** Gambar prop tangan 2D pada posisi (x, y). `dir` = +1 untuk tangan kanan, -1 untuk tangan kiri. */
-export function drawHandProp(ctx: Ctx, prop: HandProp, x: number, y: number, ink: string, dir = 1) {
+/**
+ * Gambar prop tangan 2D pada posisi (x, y). `dir` = +1 untuk tangan kanan, -1 untuk tangan kiri
+ * (tangan kiri = gambar dicerminkan; teks prop tetap tegak lewat `fillTextUpright`).
+ */
+export function drawHandProp(ctx: Ctx, prop: HandProp, x: number, y: number, ink: string, dir = 1, opts: HandPropOptions = {}) {
   if (prop === 'none') return;
   ctx.save();
   ctx.translate(x, y);
+  if (opts.tilt) ctx.rotate(opts.tilt);
   ctx.scale(dir, 1);
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -118,13 +172,18 @@ export function drawHandProp(ctx: Ctx, prop: HandProp, x: number, y: number, ink
     }
     case 'kopi': {
       ctx.translate(14, -12);
-      ctx.strokeStyle = 'rgba(255,255,255,0.78)';
-      ctx.lineWidth = 4;
-      for (const sx of [-9, 6]) {
-        ctx.beginPath();
-        ctx.moveTo(sx, -56);
-        ctx.quadraticCurveTo(sx - 8, -72, sx + 4, -88);
-        ctx.stroke();
+      // Uap 2D: default 2 helai (identik gambar lama); `steam` > 1 = 3 helai lebih panjang & pekat.
+      const steam = Math.max(0, opts.steam ?? 1);
+      if (steam > 0) {
+        const len = 1 + 0.4 * Math.max(0, steam - 1);
+        ctx.strokeStyle = `rgba(255,255,255,${Math.min(0.95, 0.78 * Math.min(1, steam) + 0.12 * Math.max(0, steam - 1))})`;
+        ctx.lineWidth = 4 * (steam > 1 ? 1 + 0.15 * (steam - 1) : 1);
+        for (const sx of steam > 1.4 ? [-14, -2, 9] : [-9, 6]) {
+          ctx.beginPath();
+          ctx.moveTo(sx, -56);
+          ctx.quadraticCurveTo(sx - 8, -56 - 16 * len, sx + 4, -56 - 32 * len);
+          ctx.stroke();
+        }
       }
       const glassPath = () => {
         ctx.beginPath();
@@ -480,6 +539,78 @@ export function drawHandProp(ctx: Ctx, prop: HandProp, x: number, y: number, ink
       ctx.restore();
       // Bibir cup
       inked(ctx, () => { ctx.beginPath(); ctx.roundRect(-28, -58, 56, 9, 4); }, '#ffffff', ink, 3.5, 1, 2);
+      break;
+    }
+    case 'pen': {
+      // Pena tinta biru: badan ramping, ujung logam, klip.
+      ctx.rotate(0.6);
+      inked(ctx, () => { ctx.beginPath(); ctx.roundRect(-5, -70, 10, 74, 4); }, '#2f5fd0', ink, 3.5, 1, 1.5);
+      inked(ctx, () => { ctx.beginPath(); ctx.moveTo(-5, 4); ctx.lineTo(5, 4); ctx.lineTo(0, 18); ctx.closePath(); }, '#d9d4c7', ink, 3, 0.5, 1);
+      ctx.fillStyle = '#e8edf7';
+      ctx.fillRect(4, -64, 3, 26);
+      break;
+    }
+    case 'lap': {
+      // Lap kain kotak-kotak terlipat yang menjuntai dari kepalan.
+      ctx.translate(0, 8);
+      inked(
+        ctx,
+        () => {
+          ctx.beginPath();
+          ctx.moveTo(-22, -10);
+          ctx.quadraticCurveTo(0, -18, 22, -10);
+          ctx.lineTo(26, 46);
+          ctx.quadraticCurveTo(4, 54, -18, 48);
+          ctx.closePath();
+        },
+        '#e9eef2',
+        ink,
+        4,
+      );
+      ctx.strokeStyle = '#d24b4b';
+      ctx.lineWidth = 4;
+      for (const yy of [6, 22, 38]) {
+        ctx.beginPath();
+        ctx.moveTo(-20, yy);
+        ctx.lineTo(24, yy + 2);
+        ctx.stroke();
+      }
+      for (const xx of [-8, 8]) {
+        ctx.beginPath();
+        ctx.moveTo(xx, -12);
+        ctx.lineTo(xx + 2, 50);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'phoneClock': {
+      // HP dengan jam besar (alarm telat). Digit dibuat besar agar terbaca di insert close-up.
+      ctx.translate(10, -24);
+      ctx.rotate(0.12);
+      inked(ctx, () => { ctx.beginPath(); ctx.roundRect(-26, -54, 54, 88, 10); }, '#222638', ink, 4);
+      ctx.fillStyle = '#10131f';
+      ctx.beginPath();
+      ctx.roundRect(-20, -46, 42, 72, 5);
+      ctx.fill();
+      ctx.fillStyle = '#ff4d5e';
+      ctx.fillRect(-14, -40, 30, 5);
+      ctx.font = '900 17px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff';
+      fillTextUpright(ctx, opts.text ?? PHONE_CLOCK_TEXT, 1, -12);
+      ctx.fillStyle = '#ffd34d';
+      ctx.beginPath();
+      ctx.arc(1, 12, 6, 0, TAU);
+      ctx.fill();
+      break;
+    }
+    case 'glassEmpty': {
+      // Gelas kopi bening yang sudah habis (ampas di dasar).
+      ctx.translate(14, -10);
+      inked(ctx, () => { ctx.beginPath(); ctx.moveTo(-17, -34); ctx.lineTo(17, -34); ctx.lineTo(13, 18); ctx.lineTo(-13, 18); ctx.closePath(); }, '#e6f3f8', ink, 4);
+      ctx.fillStyle = '#5a3a24';
+      ctx.fillRect(-12, 9, 24, 8);
       break;
     }
     case 'senter': {

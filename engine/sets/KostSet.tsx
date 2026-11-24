@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Vec3 } from '../core/easing';
 import { GlbSet, type GlbSetProps } from './GlbSet';
+import type { SpotMeta } from './WarkopSet';
 
 /** Titik posisi siap pakai untuk menaruh karakter di KostSet (Three.js: Y=up, -Z=belakang). */
 export const KOST_SPOTS = {
@@ -12,6 +13,19 @@ export const KOST_SPOTS = {
   bedside: [-0.95, 0, 0.05] as Vec3,
   /** Sisi kanan dekat galon & kipas angin. */
   rightSide: [1.22, 0, 0.05] as Vec3,
+};
+
+/** Metadata spasial & ergonomi spot Kamar Kost (v2.0). */
+export const KOST_SPOT_META: Partial<Record<keyof typeof KOST_SPOTS, SpotMeta>> = {
+  desk: {
+    seatY: 0.46,
+    tableTopY: 0.75,
+    note: 'Depan meja dual-monitor (y=0,75 m) dan kursi gaming (seatY=0,46 m).',
+  },
+  bedside: {
+    seatY: 0.44,
+    note: 'Tepi kasur sisi kiri (tinggi kasur ≈ 0,44 m).',
+  },
 };
 
 export type KostSetProps = Omit<GlbSetProps, 'src'> & {

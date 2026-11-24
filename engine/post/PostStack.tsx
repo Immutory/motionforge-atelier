@@ -50,6 +50,11 @@ export type PostParams = {
   blur: number;
   /** Jari-jari blur maksimum di tak hingga (px pada 1080x1920). Opsional, lebih presisi daripada `blur`. */
   cInf?: number;
+  /**
+   * Pengali CoC sisi dekat (foreground di depan bidang fokus). Opsional, default 1.2.
+   * Naikkan (mis. 2.0) untuk shot OTS agar bahu/kepala dekat mencapai blur 15–24 px @1080x1920.
+   */
+  nearScale?: number;
   /** Jarak bidang fokus dari kamera sepanjang sumbu pandang (meter). */
   focus: number;
   bloom: { strength: number; radius: number; threshold: number };
@@ -226,6 +231,7 @@ export const PostStack: React.FC<{ params: PostParams; debugInk?: 0 | 1 | 2 }> =
     stack.lens.u.uFocus.value = Math.max(0.3, p.focus);
     stack.lens.u.uCInf.value = cInf1080 * s;
     stack.lens.u.uMaxCoC.value = 24 * s;
+    stack.lens.u.uNearScale.value = p.nearScale ?? 1.2;
     stack.lens.enabled = cInf1080 > 0.25 && dbg === 0;
 
     // Bloom (hanya sumber emissive HDR > threshold 1.0)

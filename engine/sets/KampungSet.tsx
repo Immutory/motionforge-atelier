@@ -2,6 +2,7 @@ import React from 'react';
 import type { Vec3 } from '../core/easing';
 import { LIGHTS, type LightPreset } from '../stage/lights';
 import { GlbSet, type GlbSetProps, type TimeOfDayMode } from './GlbSet';
+import type { SpotMeta } from './WarkopSet';
 
 export type KampungTimeMode = 'siang' | 'sore' | 'malam';
 
@@ -152,6 +153,29 @@ export const KAMPUNG_SPOTS = {
   /** Jalan setapak taman depan Musala Al-Ikhlas */
   musalaTaman: [-113.3, 0.08, -23.0] as Vec3,
 } as const;
+
+/** Metadata spasial & ergonomi spot kunci Kampung Rawa Sari RT 04 (v2.0). */
+export const KAMPUNG_SPOT_META: Partial<Record<keyof typeof KAMPUNG_SPOTS, SpotMeta>> = {
+  warkopCounter: {
+    counterTopY: 1.04,
+    ergonomicBaseY: 0.44,
+    note: 'Konter luar Warkop di dunia Kampung; gunakan ergonomicBaseY saat penjaga berdiri di balik konter.',
+  },
+  bakmieTioVendor: {
+    counterTopY: 0.92,
+    ergonomicBaseY: 0.34,
+    note: 'Sisi dandang gerobak Bakmie Tio (bebas etalase); cek checkCounterVisibility jika berdiri di balik gerobak.',
+  },
+  esBuahYuniVendor: {
+    counterTopY: 0.92,
+    ergonomicBaseY: 0.34,
+    note: 'Sisi mesin serut gerobak Es Buah Mbak Yuni.',
+  },
+  halteKampus: {
+    seatY: 0.45,
+    note: 'Peron halte bus kampus depan plaza FIK (bangku tunggu seatY ≈ 0,45 m).',
+  },
+};
 
 function resolveMode(mode?: KampungTimeMode, lightId?: string): KampungTimeMode {
   if (mode) return mode;

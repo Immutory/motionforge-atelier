@@ -50,6 +50,37 @@ export type CatBillboardProps = {
 };
 
 /**
+ * Serialisasi deterministik 100% properti `CatPose` agar `useMemo` CanvasTexture di `<CatBillboard>`
+ * tidak pernah melewatkan perubahan animasi (termasuk `pawRaise`, `pawAngle`, `pawReach`, `stretch`, `breathPhase`).
+ */
+export function catPoseKey(pose: CatPose): string {
+  const talkKey =
+    typeof pose.talk === 'number'
+      ? `n${pose.talk.toFixed(3)}`
+      : pose.talk
+        ? `${pose.talk.shape}_${pose.talk.open.toFixed(3)}`
+        : '0';
+  return JSON.stringify([
+    pose.face,
+    pose.blink ?? 0,
+    talkKey,
+    pose.stance ?? 'sit',
+    pose.view ?? 'threeQuarter',
+    pose.walkPhase ?? 0,
+    pose.tailPhase ?? 0,
+    pose.earTwitch ?? 0,
+    pose.pawRaise ?? 'none',
+    pose.pawAngle ?? '',
+    pose.pawReach ?? '',
+    pose.fx ?? '',
+    pose.lean ?? 0,
+    pose.facing ?? '',
+    pose.breathPhase ?? 0,
+    pose.stretch ?? 0,
+  ]);
+}
+
+/**
  * Komponen 3D siap pakai untuk Karakter Animasi Kucing 2D (`Si Oyen`, `Mpus Abu`, `Si Belang`):
  * - Supersample 2x Canvas2D, layer `NOINK` (tanpa outline ganda)
  * - `cardShade` + `alphaToCoverage` (selalu cerah & menyatu dengan cahaya dunia 3D)
@@ -68,12 +99,7 @@ export const CatBillboard: React.FC<CatBillboardProps> = ({
   stickerOutline,
 }) => {
   const spec = useMemo(() => resolveCatSpec(cat, overrides), [cat, overrides]);
-  const talkKey =
-    typeof pose.talk === 'number'
-      ? `n${pose.talk.toFixed(2)}`
-      : pose.talk
-        ? `${pose.talk.shape}_${pose.talk.open.toFixed(2)}`
-        : '0';
+  const poseKey = catPoseKey(pose);
   const stickerKey = stickerOutline
     ? `${stickerOutline.color ?? '#fff'}_${stickerOutline.width ?? 16}_${stickerOutline.outerColor ?? ''}`
     : '';
@@ -135,23 +161,7 @@ export const CatBillboard: React.FC<CatBillboardProps> = ({
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
     return t;
-  }, [
-    spec,
-    pose.face,
-    pose.blink,
-    talkKey,
-    pose.stance,
-    pose.view,
-    pose.walkPhase,
-    pose.tailPhase,
-    pose.earTwitch,
-    pose.pawRaise,
-    pose.fx,
-    pose.lean,
-    pose.facing,
-    pose.breathPhase,
-    stickerKey,
-  ]);
+  }, [spec, poseKey, stickerKey]);
 
   const cardMat = useMemo(() => {
     const m = cardShade(

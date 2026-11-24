@@ -55,8 +55,12 @@ export type CatPose = {
   tailPhase?: number;
   /** -1..1 gerak kuping / ear twitch halus. */
   earTwitch?: number;
-  /** Angkat kaki depan lucu (melambai / minta gorengan / mengais). */
+  /** Angkat kaki depan lucu (melambai / minta gorengan / mengais / menekan tombol). */
   pawRaise?: 'none' | 'left' | 'right';
+  /** Sudut arah uluran cakar saat `pawRaise !== 'none'` (derajat dari garis keluar horizontal; + ke bawah, - ke atas). */
+  pawAngle?: number;
+  /** Pengali jangkauan cakar saat `pawRaise !== 'none'` (default 1; 0.5..1.8). */
+  pawReach?: number;
   /** Efek komik 2D di sekitar kepala (otomatis mengikuti ekspresi jika tidak diisi). */
   fx?: ComicFx;
   /** Kemiringan badan (derajat). */
@@ -65,6 +69,11 @@ export type CatPose = {
   facing?: number;
   /** Fase napas halus (terutama terlihat saat `sleep` & `sit`). */
   breathPhase?: number;
+  /**
+   * 0..1 regang / membungkuk mengintip (hanya `stance: 'stand'`, tampak samping / 3-4). Dada dan kepala turun ke
+   * depan, pinggul tetap; keempat cakar tetap menapak di `CAT_SOLE_Y`. Default 0 (gambar lama tidak berubah).
+   */
+  stretch?: number;
 };
 
 export const CAT_W = 720;
@@ -190,8 +199,10 @@ function drawTabbyTail(
   puffed: boolean,
   curled: boolean,
 ) {
-  const sway = Math.sin(phase) * (puffed ? 10 : 28);
-  const swayTip = Math.sin(phase - 0.7) * (puffed ? 14 : 38);
+  // Propagasi gelombang 3-tahap (pangkal -> tengah -> ujung) agar ekor kucing melengkung cair
+  const swayBase = Math.sin(phase) * (puffed ? 6 : 16);
+  const sway = Math.sin(phase - 0.65) * (puffed ? 10 : 28);
+  const swayTip = Math.sin(phase - 1.35) * (puffed ? 14 : 40);
   const thick = puffed ? 34 : 23;
 
   const p0x = baseX;
@@ -205,7 +216,7 @@ function drawTabbyTail(
 
   if (curled) {
     // Ekor melingkar rapi menyapu samping badan saat tidur / duduk santai
-    c1x = baseX + dir * 72;
+    c1x = baseX + dir * 72 + swayBase * 0.15;
     c1y = baseY + 14;
     c2x = baseX + dir * 110;
     c2y = baseY - 22 + sway * 0.25;
@@ -213,7 +224,7 @@ function drawTabbyTail(
     p3y = baseY - 46 + swayTip * 0.2;
   } else if (puffed) {
     // Ekor mengembang tegak & kaku saat shock / marah!
-    c1x = baseX + dir * 52;
+    c1x = baseX + dir * 52 + swayBase * 0.3;
     c1y = baseY - 58;
     c2x = baseX + dir * 82 + sway;
     c2y = baseY - 148;
@@ -221,12 +232,12 @@ function drawTabbyTail(
     p3y = baseY - 208;
   } else {
     // Ekor berbentuk huruf S anggun bergoyang alami
-    c1x = baseX + dir * 64;
+    c1x = baseX + dir * 64 + swayBase * 0.45;
     c1y = baseY - 18;
     c2x = baseX + dir * 102 + sway;
     c2y = baseY - 115;
     p3x = baseX + dir * 70 + swayTip;
-    p3y = baseY - 178 + Math.cos(phase) * 14;
+    p3y = baseY - 178 + Math.cos(phase - 0.9) * 14;
   }
 
   // Hitung sampel titik di sepanjang kurva Bezier kubik untuk poligon ekor tebal + belang cincin
@@ -1211,16 +1222,28 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
       const leftUp = pawRaise === 'left';
       const rightUp = pawRaise === 'right';
 
+      const hasPawTarget = pose.pawAngle !== undefined || pose.pawReach !== undefined;
+      const pawReach = Math.max(0.5, Math.min(1.8, pose.pawReach ?? 1));
+      const pawRad = ((pose.pawAngle ?? -38) * Math.PI) / 180;
+
       // Kaki depan kiri
       if (leftUp) {
-        drawLeg(ctx, spec, baseFrontX - pawSpread, bodyTopY + 64, baseFrontX - pawSpread - 38, bodyTopY + 26, 21, 19, false, true, true);
+        const sx = baseFrontX - pawSpread;
+        const sy = bodyTopY + 64;
+        const tx = hasPawTarget ? sx - Math.cos(pawRad) * 56 * pawReach : sx - 38;
+        const ty = hasPawTarget ? sy + Math.sin(pawRad) * 56 * pawReach : bodyTopY + 26;
+        drawLeg(ctx, spec, sx, sy, tx, ty, 21, 19, false, true, true);
       } else {
         drawLeg(ctx, spec, baseFrontX - pawSpread, bodyTopY + 66, baseFrontX - pawSpread - 4, CAT_SOLE_Y - 18, 22, 18, isSide && dir > 0, false, true);
       }
 
       // Kaki depan kanan
       if (rightUp) {
-        drawLeg(ctx, spec, baseFrontX + pawSpread, bodyTopY + 64, baseFrontX + pawSpread + 42, bodyTopY + 22, 21, 19, false, true, true);
+        const sx = baseFrontX + pawSpread;
+        const sy = bodyTopY + 64;
+        const tx = hasPawTarget ? sx + Math.cos(pawRad) * 58 * pawReach : sx + 42;
+        const ty = hasPawTarget ? sy + Math.sin(pawRad) * 58 * pawReach : bodyTopY + 22;
+        drawLeg(ctx, spec, sx, sy, tx, ty, 21, 19, false, true, true);
       } else {
         drawLeg(ctx, spec, baseFrontX + pawSpread, bodyTopY + 66, baseFrontX + pawSpread + 4, CAT_SOLE_Y - 18, 22, 18, isSide && dir < 0, false, true);
       }
@@ -1265,6 +1288,21 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
     const frontShoulderX = isProfile ? torsoX + dir * 74 : torsoX + 42;
     const soleY = CAT_SOLE_Y - 18;
 
+    // Regang / membungkuk: badan & kepala berputar di sekitar pinggul belakang, cakar depan tetap di lantai.
+    const stretch = !isWalk && !isJump && isProfile ? Math.max(0, Math.min(1, pose.stretch ?? 0)) : 0;
+    const sAng = dir * stretch * 0.24;
+    const pivotX = torsoX - dir * torsoW * 0.7;
+    const pivotY = torsoY;
+    const rp = (x: number, y: number): [number, number] => {
+      if (stretch === 0) return [x, y];
+      const dx = x - pivotX;
+      const dy = y - pivotY;
+      const c = Math.cos(sAng);
+      const sn = Math.sin(sAng);
+      return [pivotX + dx * c - dy * sn, pivotY + dx * sn + dy * c];
+    };
+    const reach = dir * stretch * 36;
+
     if (isJump) {
       drawLeg(ctx, spec, backHipX - dir * 10, torsoY + 26, backHipX - dir * 68, soleY - 22, 24, 17, true, true);
       drawLeg(ctx, spec, frontShoulderX - dir * 8, torsoY + 22, frontShoulderX + dir * 62, soleY - 52, 22, 17, true, true);
@@ -1273,11 +1311,18 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
       drawLeg(ctx, spec, frontShoulderX, torsoY + 26, frontShoulderX + dir * p1 * 48, soleY - lift1, 22, 17, true, false);
     } else {
       drawLeg(ctx, spec, backHipX - dir * 12, torsoY + 26, backHipX - dir * 18, soleY, 24, 17, true, false);
-      drawLeg(ctx, spec, frontShoulderX - dir * 12, torsoY + 26, frontShoulderX - dir * 12, soleY, 22, 17, true, false);
+      const [fsx, fsy] = rp(frontShoulderX - dir * 12, torsoY + 26);
+      drawLeg(ctx, spec, fsx, fsy, frontShoulderX - dir * 12 + reach, soleY, 22, 17, true, false);
     }
 
     // Badan horizontal kucing (melengkung ke atas saat jump / shock!)
     const arch = isJump || isPuffed ? -26 : 0;
+    if (stretch > 0) {
+      ctx.save();
+      ctx.translate(pivotX, pivotY);
+      ctx.rotate(sAng);
+      ctx.translate(-pivotX, -pivotY);
+    }
     const bodyPath = () => {
       ctx.beginPath();
       ctx.moveTo(torsoX - torsoW, torsoY + 4);
@@ -1334,6 +1379,7 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
     ctx.strokeStyle = spec.ink;
     ctx.lineWidth = 5.5;
     ctx.stroke();
+    if (stretch > 0) ctx.restore();
 
     // Kaki sisi dekat (foreground)
     const nearHipX = isProfile ? torsoX - dir * 62 : torsoX - 30;
@@ -1348,18 +1394,31 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
     } else {
       drawLeg(ctx, spec, nearHipX, torsoY + 30, nearHipX - dir * 6, soleY, 25, 18, false, false, true);
       if (pawRaise !== 'none' && !isBack) {
-        drawLeg(ctx, spec, nearShoulderX, torsoY + 26, nearShoulderX + dir * 52, torsoY - 4, 22, 18, false, true, true);
+        const [nsx, nsy] = rp(nearShoulderX, torsoY + 26);
+        const hasPawTarget = pose.pawAngle !== undefined || pose.pawReach !== undefined;
+        const pawReach = Math.max(0.5, Math.min(1.8, pose.pawReach ?? 1));
+        const pawRad = ((pose.pawAngle ?? -30) * Math.PI) / 180;
+        const [npx, npy] = hasPawTarget
+          ? rp(nearShoulderX + dir * Math.cos(pawRad) * 60 * pawReach, torsoY + 26 + Math.sin(pawRad) * 60 * pawReach)
+          : rp(nearShoulderX + dir * 52, torsoY - 4);
+        drawLeg(ctx, spec, nsx, nsy, npx, npy, 22, 18, false, true, true);
       } else {
-        drawLeg(ctx, spec, nearShoulderX, torsoY + 28, nearShoulderX + dir * 4, soleY, 23, 18, false, false, true);
+        const [nsx, nsy] = rp(nearShoulderX, torsoY + 28);
+        drawLeg(ctx, spec, nsx, nsy, nearShoulderX + dir * 4 + reach, soleY, 23, 18, false, false, true);
       }
     }
 
     // Kalung opsional
-    drawCollar(ctx, spec, isProfile ? torsoX + dir * 102 : torsoX, torsoY - 22, 86, isBack);
+    const [colX, colY] = rp(isProfile ? torsoX + dir * 102 : torsoX, torsoY - 22);
+    drawCollar(ctx, spec, colX, colY, 86, isBack);
 
-    // Kepala
-    headX = isProfile ? torsoX + dir * 124 : torsoX + facing * 16;
-    headY = torsoY - 82 + (isWalk ? Math.sin(walkPhase * TAU * 2) * 5 : 0);
+    // Kepala (tetap tegak; saat regang ikut turun ke depan seperti mengintip)
+    const [hx0, hy0] = rp(
+      isProfile ? torsoX + dir * 124 : torsoX + facing * 16,
+      torsoY - 82 + (isWalk ? Math.sin(walkPhase * TAU * 2) * 5 : 0),
+    );
+    headX = hx0 + dir * stretch * 8;
+    headY = hy0;
     headTopY = headY - 98;
     drawCatHead(ctx, spec, headX, headY, pose, view, false);
 

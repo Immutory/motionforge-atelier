@@ -83,9 +83,12 @@ test('spot yang dipakai produksi tidak berubah diam-diam', () => {
   assert.deepEqual([...KAMPUNG_SPOTS.kampusLab], [...KAMPUNG_SPOTS.kampusLab2]);
 });
 
+/** Spot KAMPUS_SPOTS yang sengaja berada di permukaan furnitur, bukan di lantai (diuji di sets-spots.test.ts). */
+const KAMPUS_SURFACE_SPOTS = new Set(['catDesk']);
+
 test('KAMPUS_SPOTS berada di lantai Lab Komputer FIK dan di dalam ruangannya', () => {
   for (const [name, [x, y, z]] of Object.entries(KAMPUS_SPOTS) as [string, V3][]) {
-    assert.equal(y, 0, `${name} harus di lantai lab`);
+    if (!KAMPUS_SURFACE_SPOTS.has(name)) assert.equal(y, 0, `${name} harus di lantai lab`);
     assert.ok(Math.abs(x) < 4.2 && Math.abs(z) < 3.7, `${name} di luar ruangan lab (x=${x}, z=${z})`);
   }
 });

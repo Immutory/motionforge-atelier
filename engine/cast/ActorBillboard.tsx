@@ -31,7 +31,7 @@ void main() {
 }`;
 
 export type ActorBillboardProps = {
-  /** ID preset (`'arya'`, `'rara'`, `'dimas'`, `'saka'`, `'pakBudi'`, `'buSiti'`, `'raka'`, `'bangUdin'`) atau CharacterSpec kustom. */
+  /** ID preset (12 karakter `CAST_PRESETS`: `'bangUtoh'`, `'arya'`, `'rara'`, `'dimas'`, `'saka'`, `'pakBudi'`, `'buSiti'`, `'raka'`, `'bangUdin'`, `'pakUjang'`, `'tio'`, `'mbakYuni'`) atau `CharacterSpec` kustom. */
   actor: CastPresetId | CharacterSpec;
   /** Override cepat per karakter (mis. ganti warna baju, lepas peci, tambah kacamata). */
   overrides?: Partial<CharacterSpec>;
@@ -50,7 +50,43 @@ export type ActorBillboardProps = {
 };
 
 /**
- * Komponen 3D siap pakai untuk 8 karakter Ala Indonesia (dan NPC kustom hasil override):
+ * Serialisasi deterministik 100% properti `ActorPose` agar `useMemo` CanvasTexture di `<ActorBillboard>`
+ * tidak pernah melewatkan perubahan animasi (termasuk `headTilt`, `sitHeight`, `lookBack`, `leftHand`, `rightHand`, `gait`, `stride`).
+ */
+export function actorPoseKey(pose: ActorPose): string {
+  const talkKey =
+    typeof pose.talk === 'number'
+      ? `n${pose.talk.toFixed(3)}`
+      : pose.talk
+        ? `${pose.talk.shape}_${pose.talk.open.toFixed(3)}`
+        : '0';
+  const handKey = pose.leftHand || pose.rightHand ? JSON.stringify([pose.leftHand ?? null, pose.rightHand ?? null]) : '';
+  return JSON.stringify([
+    pose.face,
+    pose.blink ?? 0,
+    talkKey,
+    pose.stance ?? 'stand',
+    pose.view ?? 'threeQuarter',
+    pose.leftArm ?? '',
+    pose.rightArm ?? '',
+    pose.leftProp ?? 'none',
+    pose.rightProp ?? 'none',
+    handKey,
+    pose.hatPop ?? '',
+    pose.fx ?? '',
+    pose.walkPhase ?? 0,
+    pose.gait ?? 'swing',
+    pose.stride ?? 1,
+    pose.lean ?? '',
+    pose.headTilt ?? 0,
+    pose.sitHeight ?? '',
+    pose.facing ?? '',
+    pose.lookBack ?? 0,
+  ]);
+}
+
+/**
+ * Komponen 3D siap pakai untuk 12 karakter Ala Indonesia (dan NPC kustom hasil override):
  * - Supersample 2x Canvas2D, layer NOINK (tanpa outline ganda)
  * - cardShade + alphaToCoverage (wajah selalu cerah di siang maupun golden hour)
  * - customDepthMaterial (bayangan mengikuti siluet karakter)
@@ -68,7 +104,7 @@ export const ActorBillboard: React.FC<ActorBillboardProps> = ({
   stickerOutline,
 }) => {
   const spec = useMemo(() => resolveActorSpec(actor, overrides), [actor, overrides]);
-  const talkKey = typeof pose.talk === 'number' ? `n${pose.talk.toFixed(2)}` : pose.talk ? `${pose.talk.shape}_${pose.talk.open.toFixed(2)}` : '0';
+  const poseKey = actorPoseKey(pose);
   const stickerKey = stickerOutline ? `${stickerOutline.color ?? '#fff'}_${stickerOutline.width ?? 16}_${stickerOutline.outerColor ?? ''}` : '';
 
   const texture = useMemo(() => {
@@ -127,24 +163,7 @@ export const ActorBillboard: React.FC<ActorBillboardProps> = ({
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
     return t;
-  }, [
-    spec,
-    pose.face,
-    pose.blink,
-    talkKey,
-    pose.stance,
-    pose.view,
-    pose.leftArm,
-    pose.rightArm,
-    pose.leftProp,
-    pose.rightProp,
-    pose.hatPop,
-    pose.fx,
-    pose.walkPhase,
-    pose.lean,
-    pose.facing,
-    stickerKey,
-  ]);
+  }, [spec, poseKey, stickerKey]);
 
   const cardMat = useMemo(() => {
     const m = cardShade(

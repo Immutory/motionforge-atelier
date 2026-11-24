@@ -6,7 +6,7 @@ import {
   type EyeStyle,
 } from './expressions';
 import type { TalkSample } from './lipsync';
-import { drawHandProp, type HandProp } from './props2d';
+import { drawHandProp, type HandProp, type HandPropOptions } from './props2d';
 
 export type HeadShape = 'sculpted' | 'squircle' | 'faceted' | 'round';
 export type HairStyle = 'short' | 'quiff' | 'hijab' | 'curtain' | 'bun' | 'parted' | 'spiky' | 'messy';
@@ -25,7 +25,14 @@ export type OutfitStyle =
   | 'pedagangApron'
   | 'casual';
 export type ShoeStyle = 'loafer' | 'sneaker' | 'sandal' | 'boot';
-export type ArmPose = 'rest' | 'hip' | 'point' | 'raise' | 'hold' | 'wave' | 'cross';
+/** `pray` = kedua telapak menangkup di depan dada (memohon / berdoa). */
+export type ArmPose = 'rest' | 'hip' | 'point' | 'raise' | 'hold' | 'wave' | 'cross' | 'pray';
+/**
+ * `swing` (default) = siklus kartun lama (kaki berayun di tempat).
+ * `planted` = kaki menapak: selama fase tumpu sepatu bergerak mundur linear 2 × langkah per setengah siklus,
+ * jadi bila badan maju `actorWalkCycleMeters(...)` per siklus, sepatu tidak meluncur (tampak samping / 3-4).
+ */
+export type ActorGait = 'swing' | 'planted';
 export type ActorStance = 'stand' | 'walk' | 'sit' | 'sitCross' | 'squat' | 'jump';
 export type ActorView = 'front' | 'threeQuarter' | 'side' | 'back';
 export type BodyBuild = 'slim' | 'regular' | 'big';
@@ -81,6 +88,30 @@ export type CharacterSpec = {
   defaultProp?: HandProp;
 };
 
+/**
+ * Penyetelan halus satu tangan (opsional, default = gambar lama identik):
+ * breakdown kontinu antar pose lengan, raihan ke titik kanvas, tangan+prop di depan wajah, dan opsi prop.
+ */
+export type HandRig = {
+  /** Pose asal breakdown: target tangan = lerp(target(`from`), target(pose lengan), `t`). */
+  from?: ArmPose;
+  /** 0..1 progres dari `from` ke pose lengan (default 1). */
+  t?: number;
+  /** Raihan ke titik kanvas (px, sebelum rotasi `lean`) dengan bobot `t` 0..1 (mis. gelas ke hidung). */
+  reach?: { x: number; y: number; t: number };
+  /** Geser akhir target tangan (px kanvas). */
+  dx?: number;
+  dy?: number;
+  /** true = tangan + prop digambar DI DEPAN kepala/wajah (gelas di bibir/hidung). */
+  front?: boolean;
+  /** Kemiringan prop (radian, ruang layar). */
+  propTilt?: number;
+  /** Teks layar prop berteks (`phoneClock`), selalu tegak & tidak ter-mirror. */
+  propText?: string;
+  /** Pengali uap prop `kopi` (default 1). */
+  steam?: number;
+};
+
 export type ActorPose = {
   face: Expression;
   /** 0 = terbuka, 0.5 = setengah tertutup, 1/true = tertutup penuh (pakai blinkLidAt). */
@@ -93,21 +124,127 @@ export type ActorPose = {
   rightArm?: ArmPose;
   leftProp?: HandProp;
   rightProp?: HandProp;
+  /** Penyetelan halus tangan kiri/kanan (breakdown kontinu, raihan, depan wajah, teks/uap/kemiringan prop). */
+  leftHand?: HandRig;
+  rightHand?: HandRig;
   /** 0..1 angkat topi/peci/helm/kacamata. Otomatis 1 saat `face === 'shock'`. */
   hatPop?: number;
   /** Efek komik 2D di sekitar kepala. Otomatis mengikuti ekspresi jika tidak diisi. */
   fx?: ComicFx;
   /** 0..1 fase siklus langkah saat `stance === 'walk'`. */
   walkPhase?: number;
+  /** Jenis siklus kaki saat `walk` (default `swing`). Pakai `planted` untuk jalan/lari yang berpindah tempat. */
+  gait?: ActorGait;
+  /** Pengali panjang langkah saat `walk` (default 1; 1,6–1,9 untuk lari). */
+  stride?: number;
   /** Kemiringan badan (derajat). */
   lean?: number;
+  /** Kemiringan kepala independen dari `lean` badan (derajat; + miring kanan, - miring kiri). Default 0. */
+  headTilt?: number;
+  /**
+   * Tinggi permukaan dudukan bangku/kursi (meter, mis. 0.475 untuk WK_BenchL_Top) saat `stance: 'sit'`.
+   * Mengatur posisi pinggul & tekukan lutut agar benar-benar duduk di permukaan dudukan.
+   */
+  sitHeight?: number;
   /** -1..1 arah hadap wajah (+ kanan, - kiri). */
   facing?: number;
+  /**
+   * 0..1 menoleh ke belakang, kepala saja (badan, lengan, dan langkah tetap mengikuti `facing`).
+   * Tampak samping: >= 0,5 membalik arah kepala. Tampak lain: arah kepala bergeser halus `facing * (1 - 2 * lookBack)`.
+   * Default 0 (gambar lama tidak berubah).
+   */
+  lookBack?: number;
 };
+
+export type StrikeEnvelopeResult = {
+  phase: 'idle' | 'windup' | 'hold' | 'strike' | 'follow';
+  /** Nilai gerak bertanda: `-1` = puncak tarikan wind-up/hold, `+1` = puncak benturan 1-frame, meluruh ke `0`. */
+  value: number;
+  /** `true` tepat pada 1-frame benturan (`frame === impactFrame`). */
+  impact: boolean;
+  /** Progres lokal 0..1 di dalam fase aktif. */
+  progress: number;
+};
+
+/**
+ * Action Impact Grammar (`motion.md`): 4f wind-up -> 6f tense hold -> 1-frame strike -> 8f damped follow-through.
+ * Dipakai untuk pukulan, gebrak meja, hentakan kaki, atau reaksi kaget berenergi tinggi.
+ */
+export function strikeEnvelope(
+  frame: number,
+  impactFrame: number,
+  opts?: { windup?: number; hold?: number; follow?: number },
+): StrikeEnvelopeResult {
+  const windup = Math.max(1, Math.round(opts?.windup ?? 4));
+  const hold = Math.max(0, Math.round(opts?.hold ?? 6));
+  const follow = Math.max(1, Math.round(opts?.follow ?? 8));
+  const holdStart = impactFrame - hold;
+  const windupStart = holdStart - windup;
+
+  if (frame < windupStart || frame > impactFrame + follow) {
+    return { phase: 'idle', value: 0, impact: false, progress: 0 };
+  }
+  if (frame < holdStart) {
+    const p = (frame - windupStart) / windup;
+    const ease = p * p * (3 - 2 * p);
+    return { phase: 'windup', value: -ease, impact: false, progress: p };
+  }
+  if (frame < impactFrame) {
+    const p = hold > 0 ? (frame - holdStart) / hold : 1;
+    return { phase: 'hold', value: -1, impact: false, progress: p };
+  }
+  if (frame === impactFrame) {
+    return { phase: 'strike', value: 1, impact: true, progress: 1 };
+  }
+  const p = (frame - impactFrame) / follow;
+  const damped = Math.exp(-3.2 * p) * Math.cos(p * Math.PI * 1.5) * (1 - p);
+  return { phase: 'follow', value: damped, impact: false, progress: p };
+}
+
+/**
+ * Spring Overshoot: melesat dari 0 -> `peak` (default 1,25) lalu berayun teredam dan duduk tepat di 1
+ * pada `triggerFrame + duration`. Cocok untuk `hatPop`, reaksi kaget, atau pop prop.
+ */
+export function springPop(frame: number, triggerFrame: number, peak = 1.25, duration = 12): number {
+  const d = frame - triggerFrame;
+  if (d < 0) return 0;
+  const span = Math.max(2, Math.round(duration));
+  if (d >= span) return 1;
+  if (d === 0) return 0.65 * peak;
+  if (d === 1) return peak;
+  const t = (d - 1) / (span - 1);
+  return 1 + (peak - 1) * Math.exp(-3.8 * t) * Math.cos(t * Math.PI * 2) * (1 - t);
+}
 
 export const ACTOR_W = 700;
 export const ACTOR_H = 1100;
 export const ACTOR_SOLE_Y = 1040;
+
+/** Amplitudo langkah dasar (px desain) per tampak, dipakai gait `planted` dan `actorWalkCycleMeters`. */
+export function actorStridePx(view: ActorView = 'threeQuarter', strideMul = 1, skirted = false): number {
+  return (view === 'side' ? 110 : skirted ? 56 : 72) * strideMul;
+}
+
+/**
+ * Jarak tempuh dunia (meter) untuk satu siklus `walkPhase` 0→1 dengan gait `planted`:
+ * setiap setengah siklus satu kaki menapak dan menyapu 2 × amplitudo langkah, jadi satu siklus = 4 × amplitudo.
+ * `walkPhase = jarakTempuh / actorWalkCycleMeters(...)` membuat sepatu diam di tanah.
+ */
+export function actorWalkCycleMeters(height: number, view: ActorView = 'threeQuarter', strideMul = 1, skirted = false): number {
+  return (4 * actorStridePx(view, strideMul, skirted) * height) / ACTOR_H;
+}
+
+/**
+ * Posisi kaki (px relatif, arah gerak positif) dan tinggi angkat untuk gait `planted`.
+ * Fase tumpu u ∈ [0, 0,5): +amp → −amp linear. Fase ayun u ∈ [0,5, 1): −amp → +amp halus sambil terangkat.
+ */
+export function plantedFoot(walkPhase: number, side: -1 | 1, amp: number, liftAmp: number): { dx: number; lift: number } {
+  const u = (((walkPhase + (side === 1 ? 0 : 0.5)) % 1) + 1) % 1;
+  if (u < 0.5) return { dx: amp * (1 - 4 * u), lift: 0 };
+  const s = (u - 0.5) * 2;
+  const e = s * s * (3 - 2 * s);
+  return { dx: amp * (-1 + 2 * e), lift: Math.sin(Math.PI * s) * liftAmp };
+}
 
 export type CastPresetId =
   | 'bangUtoh'
@@ -616,67 +753,54 @@ function resolveArmTarget(
     hx = CX - side * 26;
     hy = torsoTop + 116;
     bend = side * 46;
+  } else if (armPose === 'pray') {
+    hx = CX + side * 12;
+    hy = torsoTop + 40;
+    bend = side * 58;
   }
-  if (armOut !== 0 && armPose !== 'cross') hx += side * (isSide ? armOut * 0.5 : armOut);
+  if (armOut !== 0 && armPose !== 'cross' && armPose !== 'pray') hx += side * (isSide ? armOut * 0.5 : armOut);
   return { sx, sy, hx, hy, bend };
 }
 
-function drawArm(
-  ctx: Ctx,
+/** Target tangan setelah `HandRig` (breakdown `from`/`t`, `reach`, `dx`/`dy`). Koordinat kanvas sebelum `lean`. */
+function resolveRiggedTarget(
   side: -1 | 1,
   armPose: ArmPose,
-  prop: HandProp,
+  rig: HandRig | undefined,
   torsoTop: number,
   tw: number,
   swing: number,
   isWalk: boolean,
   isSide: boolean,
-  spec: CharacterSpec,
+  armOut: number,
 ) {
-  const bf = buildFactors(spec);
-  const { sx, sy, hx, hy, bend } = resolveArmTarget(side, armPose, torsoTop, tw, swing, isWalk, isSide, bf.armOut);
-  const { ink, skin, outfit, outfitColor, outfitSecondary } = spec;
-  const lk = bf.limb;
-  const isShortSleeve = outfit === 'kotakSarung' || outfit === 'dasterCelemek' || outfit === 'seragamSma';
-  const sleeveColor =
-    outfit === 'coach' || outfit === 'tenun' || outfit === 'ojol'
-      ? (outfitSecondary ?? outfitColor)
-      : outfitColor;
-
-  if (isShortSleeve) {
-    ctx.strokeStyle = ink;
-    ctx.lineWidth = 25 * lk;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.quadraticCurveTo((sx + hx) / 2 + bend, (sy + hy) / 2, hx, hy);
-    ctx.stroke();
-    ctx.strokeStyle = skin;
-    ctx.lineWidth = 14 * lk;
-    ctx.stroke();
-
-    ctx.strokeStyle = ink;
-    ctx.lineWidth = 33 * lk;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + (hx - sx) * 0.36, sy + (hy - sy) * 0.36);
-    ctx.stroke();
-    ctx.strokeStyle = outfitColor;
-    ctx.lineWidth = 21 * lk;
-    ctx.stroke();
-  } else {
-    ctx.strokeStyle = ink;
-    ctx.lineWidth = 30 * lk;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.quadraticCurveTo((sx + hx) / 2 + bend, (sy + hy) / 2, hx, hy);
-    ctx.stroke();
-    ctx.strokeStyle = sleeveColor;
-    ctx.lineWidth = 18 * lk;
-    ctx.stroke();
+  const base = resolveArmTarget(side, armPose, torsoTop, tw, swing, isWalk, isSide, armOut);
+  if (!rig) return base;
+  let { hx, hy, bend } = base;
+  const t = rig.t === undefined ? 1 : Math.max(0, Math.min(1, rig.t));
+  if (rig.from && t < 1) {
+    const f = resolveArmTarget(side, rig.from, torsoTop, tw, swing, isWalk, isSide, armOut);
+    hx = f.hx + (hx - f.hx) * t;
+    hy = f.hy + (hy - f.hy) * t;
+    bend = f.bend + (bend - f.bend) * t;
   }
+  if (rig.reach && rig.reach.t > 0) {
+    const r = Math.max(0, Math.min(1, rig.reach.t));
+    hx += (rig.reach.x - hx) * r;
+    hy += (rig.reach.y - hy) * r;
+    bend += (side * 36 - bend) * r;
+  }
+  hx += rig.dx ?? 0;
+  hy += rig.dy ?? 0;
+  return { sx: base.sx, sy: base.sy, hx, hy, bend };
+}
 
+const propOptionsOf = (rig?: HandRig): HandPropOptions => ({ text: rig?.propText, steam: rig?.steam, tilt: rig?.propTilt });
+
+function drawHandAndProp(ctx: Ctx, side: -1 | 1, armPose: ArmPose, prop: HandProp, hx: number, hy: number, lk: number, spec: CharacterSpec, rig?: HandRig) {
+  const { ink, skin } = spec;
   if (prop !== 'none') {
-    drawHandProp(ctx, prop, hx, hy, ink, side);
+    drawHandProp(ctx, prop, hx, hy, ink, side, propOptionsOf(rig));
   }
 
   // Tangan (dengan jari telunjuk mini saat mode 'point'!)
@@ -716,6 +840,72 @@ function drawArm(
       3,
     );
   }
+}
+
+function drawArm(
+  ctx: Ctx,
+  side: -1 | 1,
+  armPose: ArmPose,
+  prop: HandProp,
+  torsoTop: number,
+  tw: number,
+  swing: number,
+  isWalk: boolean,
+  isSide: boolean,
+  spec: CharacterSpec,
+  rig?: HandRig,
+) {
+  const bf = buildFactors(spec);
+  const { sx, sy, hx, hy, bend } = resolveRiggedTarget(side, armPose, rig, torsoTop, tw, swing, isWalk, isSide, bf.armOut);
+  const { ink, skin, outfit, outfitColor, outfitSecondary } = spec;
+  const lk = bf.limb;
+  const isShortSleeve = outfit === 'kotakSarung' || outfit === 'dasterCelemek' || outfit === 'seragamSma';
+  const sleeveColor =
+    outfit === 'coach' || outfit === 'tenun' || outfit === 'ojol'
+      ? (outfitSecondary ?? outfitColor)
+      : outfitColor;
+
+  // Kurva Bezier 3-titik organik (shoulder -> organic elbow bend -> forearm -> hand)
+  const c1x = sx + (hx - sx) * 0.38 + bend * 0.85;
+  const c1y = sy + (hy - sy) * 0.42 + Math.abs(bend) * 0.14;
+  const c2x = sx + (hx - sx) * 0.72 + bend * 0.55;
+  const c2y = sy + (hy - sy) * 0.76 + Math.abs(bend) * 0.08;
+
+  if (isShortSleeve) {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 25 * lk;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.bezierCurveTo(c1x, c1y, c2x, c2y, hx, hy);
+    ctx.stroke();
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 14 * lk;
+    ctx.stroke();
+
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 33 * lk;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(sx + (c1x - sx) * 0.5, sy + (c1y - sy) * 0.5, sx + (hx - sx) * 0.36 + bend * 0.22, sy + (hy - sy) * 0.36);
+    ctx.stroke();
+    ctx.strokeStyle = outfitColor;
+    ctx.lineWidth = 21 * lk;
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 30 * lk;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.bezierCurveTo(c1x, c1y, c2x, c2y, hx, hy);
+    ctx.stroke();
+    ctx.strokeStyle = sleeveColor;
+    ctx.lineWidth = 18 * lk;
+    ctx.stroke();
+  }
+
+  // Tangan + prop di depan wajah digambar belakangan (setelah kepala) oleh drawActor.
+  if (!rig?.front) drawHandAndProp(ctx, side, armPose, prop, hx, hy, lk, spec, rig);
+  return { hx, hy };
 }
 
 function drawTorsoAndSkirt(
@@ -1661,12 +1851,8 @@ function drawHeadgear(ctx: Ctx, spec: CharacterSpec, W: number, headTop: number,
   }
 }
 
-/**
- * Gambar karakter Nusantara/Indonesia modular ke Canvas2D 700x1100 (telapak kaki di y = 1040).
- */
-export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: ActorPose, overrides?: Partial<CharacterSpec>) {
-  const spec = resolveActorSpec(actor, overrides);
-  const { ink, skin, skinShadow, hairStyle, hairColor, hairHighlight, pantsColor } = spec;
+/** Tata letak kanvas aktor (dipakai drawActor & helper verifikasi tangan/wajah agar selalu identik). */
+function actorLayout(spec: CharacterSpec, pose: ActorPose) {
   const view: ActorView = pose.view ?? 'threeQuarter';
   const stance: ActorStance = pose.stance ?? 'stand';
   const isBack = view === 'back';
@@ -1675,15 +1861,19 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
 
   const facing =
     view === 'front' ? 0 : isSide ? Math.sign(pose.facing ?? 1) * 0.85 : (pose.facing ?? (pose.face === 'shock' ? 0.08 : 0.34));
-  const blink = pose.blink === true ? 1 : pose.blink === false ? 0 : (pose.blink ?? 0);
-  const hatPop = pose.hatPop !== undefined ? pose.hatPop : pose.face === 'shock' ? 1 : 0;
 
   const ph = (pose.walkPhase ?? 0) * TAU;
   const swing = isWalk ? Math.sin(ph) : 0;
+  // Duduk ergonomis: jika `sitHeight` (m) diisi, pinggul tepat duduk di atas permukaan bangku/kursi.
+  const sitBob =
+    pose.sitHeight !== undefined
+      ? Math.max(20, Math.min(240, ACTOR_SOLE_Y - (Math.max(0.25, Math.min(0.72, pose.sitHeight)) / 1.8) * ACTOR_H - 638))
+      : 105;
+  // Walk body bob = ~4,2% tinggi tubuh (standar motion.md: 3-6%, terendah di kontak langkah).
   const bob = isWalk
     ? -Math.abs(Math.sin(ph)) * 36
     : stance === 'sit'
-      ? 105
+      ? sitBob
       : stance === 'sitCross'
         ? 268
         : stance === 'squat'
@@ -1691,20 +1881,16 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
           : stance === 'jump'
             ? -82
             : 0;
+  // Siklus torso lean saat walk = 1°–7° seirama langkah (motion.md).
   const lean =
     pose.lean !== undefined
       ? pose.lean
       : isWalk
-        ? 3.2 + 3.0 * Math.cos(ph * 2)
+        ? 4.0 + 3.0 * Math.cos(ph * 2)
         : pose.face === 'shock'
           ? -4.5
           : 1.2;
-
-  const leftArm: ArmPose = pose.leftArm ?? (pose.face === 'shock' ? 'raise' : pose.leftProp && pose.leftProp !== 'none' ? 'hold' : 'rest');
-  const rightArm: ArmPose =
-    pose.rightArm ?? (pose.face === 'shock' ? 'raise' : pose.rightProp && pose.rightProp !== 'none' ? 'hold' : 'rest');
-  const leftProp: HandProp = pose.leftProp ?? 'none';
-  const rightProp: HandProp = pose.rightProp ?? 'none';
+  const headTilt = pose.headTilt ?? 0;
 
   const W = spec.headShape === 'squircle' ? 276 : spec.hairStyle === 'hijab' ? 238 : 250;
   const H = spec.headShape === 'squircle' ? 240 : 236;
@@ -1713,11 +1899,104 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
   const chin = headTop + H;
   const torsoTop = chin - 6;
   const bf = buildFactors(spec);
-  const lk = bf.limb;
-  const ho = bf.hipOut;
   const tw = (spec.headShape === 'squircle' ? 220 : spec.outfit === 'kotakSarung' ? 222 : 196) * bf.torso;
   const th = 228;
   const hipY = torsoTop + th - 12;
+  return { view, stance, isBack, isSide, isWalk, facing, ph, swing, bob, lean, headTilt, W, H, headTop, cy, chin, torsoTop, tw, hipY };
+}
+
+/** Arah kepala efektif (memperhitungkan `lookBack`), sama seperti yang dipakai drawActor untuk wajah. */
+function headFacingOf(pose: ActorPose, isSide: boolean, facing: number) {
+  const lookBack = Math.max(0, Math.min(1, pose.lookBack ?? 0));
+  return isSide ? (lookBack >= 0.5 ? -facing : facing) : facing * (1 - 2 * lookBack);
+}
+
+/**
+ * Titik pusat tangan aktor di kanvas 700x1100 (px). `x`/`y` = setelah rotasi `lean` (posisi tampil),
+ * `rawX`/`rawY` = sebelum `lean` (ruang yang sama dengan `HandRig.reach` & `actorFaceAnchors`).
+ */
+export function actorHandPoint(
+  actor: CastPresetId | CharacterSpec,
+  pose: ActorPose,
+  side: -1 | 1,
+  overrides?: Partial<CharacterSpec>,
+): { x: number; y: number; rawX: number; rawY: number; arm: ArmPose } {
+  const spec = resolveActorSpec(actor, overrides);
+  const L = actorLayout(spec, pose);
+  const armPose: ArmPose =
+    (side < 0 ? pose.leftArm : pose.rightArm) ??
+    (pose.face === 'shock' ? 'raise' : (side < 0 ? pose.leftProp : pose.rightProp) && (side < 0 ? pose.leftProp : pose.rightProp) !== 'none' ? 'hold' : 'rest');
+  const rig = side < 0 ? pose.leftHand : pose.rightHand;
+  const { hx, hy } = resolveRiggedTarget(side, armPose, rig, L.torsoTop, L.tw, L.swing, L.isWalk, L.isSide, buildFactors(spec).armOut);
+  const a = (L.lean * Math.PI) / 180;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const dx = hx - CX;
+  const dy = hy - L.hipY;
+  return { x: CX + dx * c - dy * s, y: L.hipY + dx * s + dy * c, rawX: hx, rawY: hy, arm: armPose };
+}
+
+/** Jangkar wajah aktor (px kanvas, sebelum rotasi `lean`): mulut, hidung, mata, dagu. */
+export function actorFaceAnchors(
+  actor: CastPresetId | CharacterSpec,
+  pose: ActorPose,
+  overrides?: Partial<CharacterSpec>,
+): { mouthX: number; mouthY: number; noseY: number; eyeY: number; chinY: number; headTop: number; headW: number; torsoTop: number } {
+  const spec = resolveActorSpec(actor, overrides);
+  const L = actorLayout(spec, pose);
+  const hf = headFacingOf(pose, L.isSide, L.facing);
+  const shift = (L.isSide ? Math.sign(hf) * 0.65 : hf) * L.W * 0.085;
+  const eyeY = L.cy + 12;
+  const rawMouthX = CX + shift;
+  const rawMouthY = L.cy + 70;
+  let mouthX = rawMouthX;
+  let mouthY = rawMouthY;
+  if (L.headTilt !== 0) {
+    const a = (L.headTilt * Math.PI) / 180;
+    const pivotY = L.chin - 4;
+    const dx = rawMouthX - CX;
+    const dy = rawMouthY - pivotY;
+    mouthX = CX + dx * Math.cos(a) - dy * Math.sin(a);
+    mouthY = pivotY + dx * Math.sin(a) + dy * Math.cos(a);
+  }
+  return {
+    mouthX,
+    mouthY,
+    noseY: eyeY + 26,
+    eyeY,
+    chinY: L.chin,
+    headTop: L.headTop,
+    headW: L.W,
+    torsoTop: L.torsoTop,
+  };
+}
+
+/** Konversi y kanvas aktor (px) ke tinggi dunia (m) untuk billboard setinggi `height` m dengan telapak di `baseY`. */
+export function actorCanvasToWorldY(py: number, height: number, baseY = 0): number {
+  return baseY + ((ACTOR_SOLE_Y - py) * height) / ACTOR_H;
+}
+
+/**
+ * Gambar karakter Nusantara/Indonesia modular ke Canvas2D 700x1100 (telapak kaki di y = 1040).
+ */
+export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: ActorPose, overrides?: Partial<CharacterSpec>) {
+  const spec = resolveActorSpec(actor, overrides);
+  const { ink, skin, skinShadow, hairStyle, hairColor, hairHighlight, pantsColor } = spec;
+  const L = actorLayout(spec, pose);
+  const { view, stance, isBack, isSide, isWalk, facing, swing, lean, headTilt, W, H, headTop, cy, chin, torsoTop, tw, hipY } = L;
+  const blink = pose.blink === true ? 1 : pose.blink === false ? 0 : (pose.blink ?? 0);
+  const hatPop = pose.hatPop !== undefined ? pose.hatPop : pose.face === 'shock' ? 1 : 0;
+
+  const leftArm: ArmPose = pose.leftArm ?? (pose.face === 'shock' ? 'raise' : pose.leftProp && pose.leftProp !== 'none' ? 'hold' : 'rest');
+  const rightArm: ArmPose =
+    pose.rightArm ?? (pose.face === 'shock' ? 'raise' : pose.rightProp && pose.rightProp !== 'none' ? 'hold' : 'rest');
+  const leftProp: HandProp = pose.leftProp ?? 'none';
+  const rightProp: HandProp = pose.rightProp ?? 'none';
+
+  const bf = buildFactors(spec);
+  const lk = bf.limb;
+  const ho = bf.hipOut;
+  const th = 228;
 
   ctx.clearRect(0, 0, ACTOR_W, ACTOR_H);
   ctx.save();
@@ -1792,19 +2071,21 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
     for (const side of legSides) {
       const dir = isSide ? (facing >= 0 ? 1 : -1) : side;
       if (stance === 'sit') {
-        // Duduk di bangku/kursi: paha maju/keluar, lutut menekuk turun
+        // Duduk ergonomis di bangku/kursi: paha maju di atas dudukan, tekukan lutut organik Bezier, kaki menapak/menggantung wajar
         const hx = CX + (isSide ? side * 14 : side * (46 + ho));
-        const kx = CX + (isSide ? dir * 108 + side * 14 : side * (84 + ho));
-        const ky = hipY + 72;
-        const fx = CX + (isSide ? dir * 116 + side * 14 : side * (72 + ho));
-        const fy = ACTOR_SOLE_Y - 12;
+        const highSeatLift = pose.sitHeight !== undefined && pose.sitHeight > 0.54 ? (pose.sitHeight - 0.54) * 260 : 0;
+        const lowSeatKneeLift = pose.sitHeight !== undefined && pose.sitHeight < 0.44 ? (0.44 - pose.sitHeight) * 220 : 0;
+        const kx = CX + (isSide ? dir * 116 + side * 14 : side * (90 + ho));
+        const ky = hipY + 56 - lowSeatKneeLift;
+        const fx = CX + (isSide ? dir * 122 + side * 14 : side * (74 + ho));
+        const fy = ACTOR_SOLE_Y - 12 - highSeatLift;
 
         ctx.strokeStyle = ink;
         ctx.lineWidth = 28 * lk;
         ctx.beginPath();
         ctx.moveTo(hx, hipY);
-        ctx.quadraticCurveTo(kx, hipY + 12, kx, ky);
-        ctx.lineTo(fx, fy - 20);
+        ctx.bezierCurveTo(hx + (kx - hx) * 0.65, hipY + 4, kx + (isSide ? dir * 10 : side * 8), ky - 24, kx, ky);
+        ctx.quadraticCurveTo(kx + (fx - kx) * 0.4, (ky + fy) * 0.52, fx, fy - 20);
         ctx.stroke();
         ctx.strokeStyle = pantsColor;
         ctx.lineWidth = 17 * lk;
@@ -1827,20 +2108,35 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         ctx.stroke();
         drawShoe(ctx, fx, fy, dir, spec);
       } else {
-        const stride = isSide ? 110 : isSkirted ? 56 : 72;
-        const stepX = swing * side * stride;
-        const liftY = isWalk ? Math.max(0, -swing * side) * 34 : 0;
+        const strideMul = pose.stride ?? 1;
+        const stride = actorStridePx(view, strideMul, isSkirted);
+        const planted = isWalk && pose.gait === 'planted';
+        const travelDir = facing >= 0 ? 1 : -1;
+        const pf = planted
+          ? view === 'front' || isBack
+            ? { dx: 0, lift: plantedFoot(pose.walkPhase ?? 0, side, 1, 34).lift }
+            : plantedFoot(pose.walkPhase ?? 0, side, stride, 34 * Math.min(1.8, Math.sqrt(strideMul)))
+          : null;
+        const stepX = pf ? travelDir * pf.dx : swing * side * stride;
+        const liftY = pf ? pf.lift : isWalk ? Math.max(0, -swing * side) * 34 : 0;
         const baseSpread = isSide ? side * 20 : side * ((pose.face === 'shock' ? 74 : isSkirted ? 48 : 54) + ho);
         const fx = CX + baseSpread + stepX;
         const fy = ACTOR_SOLE_Y - liftY;
         const hx = CX + (isSide ? side * 8 : side * (36 + ho));
         const startY = isSkirted ? hipY + 90 : hipY;
 
+        // Kurva Bezier 3-titik organik (hip -> natural knee bend -> ankle/foot)
+        const kneeForward = isWalk ? travelDir * (14 + liftY * 0.35) : -side * 5;
+        const k1x = hx + (fx - hx) * 0.42 + kneeForward;
+        const k1y = startY + (fy - startY) * 0.42;
+        const k2x = hx + (fx - hx) * 0.72 + kneeForward * 0.45;
+        const k2y = startY + (fy - startY) * 0.74;
+
         ctx.strokeStyle = ink;
         ctx.lineWidth = (isSkirted ? 22 : 28) * lk;
         ctx.beginPath();
         ctx.moveTo(hx, startY);
-        ctx.quadraticCurveTo((hx + fx) / 2 - side * 5, (startY + fy) / 2, fx, fy - 22);
+        ctx.bezierCurveTo(k1x, k1y, k2x, k2y, fx, fy - 22);
         ctx.stroke();
         ctx.strokeStyle = pantsColor;
         ctx.lineWidth = (isSkirted ? 12 : 17) * lk;
@@ -1877,15 +2173,25 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
   }
 
   // --- 3. LENGAN KIRI (belakang) ---
-  drawArm(ctx, -1, leftArm, leftProp, torsoTop, tw, swing, isWalk, isSide, spec);
+  const leftHandPt = drawArm(ctx, -1, leftArm, leftProp, torsoTop, tw, swing, isWalk, isSide, spec, pose.leftHand);
 
   // --- 4. TORSO & BAWAHAN (Sarung / Daster / Batik / Denim / Ojol / SMA / Tenun) ---
   drawTorsoAndSkirt(ctx, torsoTop, tw, th, isBack, isSide, spec);
 
   // --- 5. LENGAN KANAN (depan) ---
-  drawArm(ctx, 1, rightArm, rightProp, torsoTop, tw, swing, isWalk, isSide, spec);
+  const rightHandPt = drawArm(ctx, 1, rightArm, rightProp, torsoTop, tw, swing, isWalk, isSide, spec, pose.rightHand);
+
+  // Menoleh ke belakang (kepala saja): badan, lengan & langkah tetap mengikuti `facing`.
+  const headFacing = headFacingOf(pose, isSide, facing);
 
   // --- 6. KEPALA, RAMBUT / HIJAB, WAJAH, KACAMATA, KUMIS, HEADGEAR ---
+  // Kemiringan kepala independen (`headTilt`, pivot di pangkal leher) untuk ekspresi bertanya/deadpan/heran.
+  if (headTilt !== 0) {
+    ctx.save();
+    ctx.translate(CX, chin - 4);
+    ctx.rotate((headTilt * Math.PI) / 180);
+    ctx.translate(-CX, -(chin - 4));
+  }
   if (hairStyle === 'hijab') {
     const hijabOuter = () => {
       ctx.beginPath();
@@ -1917,10 +2223,10 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
     ctx.restore();
 
     if (!isBack) {
-      const fx = CX + facing * 12;
+      const fx = CX + headFacing * 12;
       ctx.fillStyle = '#f7ead6';
       ctx.beginPath();
-      ctx.ellipse(CX + facing * 8, cy + 4, W * 0.47, H * 0.47, 0, 0, TAU);
+      ctx.ellipse(CX + headFacing * 8, cy + 4, W * 0.47, H * 0.47, 0, 0, TAU);
       ctx.fill();
       ctx.strokeStyle = ink;
       ctx.lineWidth = 4.5;
@@ -1941,7 +2247,7 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
   } else {
     // Telinga (tertutup helm atau earcup headphone saat dipakai normal)
     if (spec.headgear !== 'helmet' && !(spec.headgear === 'headphones' && hatPop < 0.25)) {
-      const earX = isBack ? CX - W * 0.48 : CX - (facing >= 0 ? 1 : -1) * W * 0.49;
+      const earX = isBack ? CX - W * 0.48 : CX - (headFacing >= 0 ? 1 : -1) * W * 0.49;
       inked(ctx, () => { ctx.beginPath(); ctx.ellipse(earX, cy + 13, 18, 23, -0.12, 0, TAU); }, skin, ink, 4.5, 2, 3);
       if (isBack) {
         inked(ctx, () => { ctx.beginPath(); ctx.ellipse(CX + W * 0.48, cy + 13, 18, 23, 0.12, 0, TAU); }, skin, ink, 4.5, 2, 3);
@@ -1957,7 +2263,7 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
       if (spec.headShape === 'faceted') {
         ctx.moveTo(CX - W * 0.46, cy - 28);
         ctx.bezierCurveTo(CX - W * 0.48, headTop - 10, CX + W * 0.48, headTop - 10, CX + W * 0.48, cy - 24);
-        ctx.bezierCurveTo(CX + W * 0.5, cy + 36, CX + W * 0.34, chin - 16, CX + facing * 22, chin);
+        ctx.bezierCurveTo(CX + W * 0.5, cy + 36, CX + W * 0.34, chin - 16, CX + headFacing * 22, chin);
         ctx.bezierCurveTo(CX - W * 0.28, chin - 12, CX - W * 0.46, cy + 40, CX - W * 0.46, cy - 28);
         ctx.closePath();
       } else {
@@ -1979,7 +2285,7 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
           let x = (W / 2) * Math.sign(c) * Math.pow(Math.abs(c), 2 / n);
           const y = (H / 2) * Math.sign(s) * Math.pow(Math.abs(s), 2 / n);
           if (spec.headShape === 'sculpted' && s > 0) x *= 1 - 0.1 * s;
-          if (!isBack && s > 0) x += facing * W * 0.035 * s;
+          if (!isBack && s > 0) x += headFacing * W * 0.035 * s;
           const px = CX + x;
           const py = cy + y;
           if (i === 0) ctx.moveTo(px, py);
@@ -2019,6 +2325,24 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
           ctx.closePath();
         };
         inked(ctx, ahoge, hairColor, ink, 4.5, 2, 3);
+      } else if (hairStyle === 'spiky' || hairStyle === 'quiff') {
+        const backSpike = () => {
+          ctx.beginPath();
+          ctx.moveTo(CX - 46, headTop + 14);
+          ctx.lineTo(CX - 12, headTop - 36);
+          ctx.lineTo(CX + 18, headTop - 22);
+          ctx.lineTo(CX + 46, headTop + 14);
+          ctx.closePath();
+        };
+        inked(ctx, backSpike, hairColor, ink, 4.5, 2, 3);
+      } else if (hairStyle === 'curtain' || hairStyle === 'parted') {
+        // Siluet rambut belakang dengan garis belahan/kilau halus agar tampak belakang kaya dimensi
+        ctx.strokeStyle = hairHighlight ?? 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(CX - W * 0.28, headTop + 34);
+        ctx.quadraticCurveTo(CX, headTop + 14, CX + W * 0.28, headTop + 34);
+        ctx.stroke();
       }
     } else if (hairStyle === 'short') {
       ctx.save();
@@ -2058,7 +2382,7 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
       face: pose.face,
       blink,
       talk: pose.talk,
-      facing: isSide ? Math.sign(facing) * 0.65 : facing,
+      facing: isSide ? Math.sign(headFacing) * 0.65 : headFacing,
       browThick: spec.browThick,
       nose: spec.nose || isSide,
       mouthColor: spec.mouthColor,
@@ -2068,7 +2392,7 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
       eyeShine: spec.eyeShine,
     });
 
-    const shift = (isSide ? Math.sign(facing) * 0.65 : facing) * W * 0.085;
+    const shift = (isSide ? Math.sign(headFacing) * 0.65 : headFacing) * W * 0.085;
     if (spec.glasses) {
       const ex = (s: number) => CX + shift + s * W * 0.148;
       const eyeY = cy + 12 - hatPop * 9;
@@ -2123,7 +2447,7 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
           ctx.beginPath();
           ctx.moveTo(ex(-1) + gw / 2 - 2, eyeY - 8);
           ctx.quadraticCurveTo(CX + shift, eyeY - 15, ex(1) - gw / 2 + 2, eyeY - 8);
-          const far = facing >= 0 ? -1 : 1;
+          const far = headFacing >= 0 ? -1 : 1;
           ctx.moveTo(ex(far) + far * (gw / 2), eyeY - 10);
           ctx.lineTo(CX + far * W * 0.47, eyeY - 14);
         };
@@ -2304,9 +2628,17 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
   // --- 8. HEADGEAR (Peci / Cap / Iket / Helmet) ---
   drawHeadgear(ctx, spec, W, headTop, cy, hatPop, isBack);
 
-  // --- 9. EFEK KOMIK 2D ---
+  // --- 9. EFEK KOMIK 2D (ikut kemiringan kepala) ---
   const fx = pose.fx !== undefined ? pose.fx : isBack ? 'none' : defaultFxFor(pose.face);
   drawComicFx(ctx, fx, CX, headTop - (spec.headgear !== 'none' ? 38 : 10), W, ink);
+
+  if (headTilt !== 0) {
+    ctx.restore();
+  }
+
+  // --- 8b. TANGAN + PROP DI DEPAN WAJAH (ruang torso, gelas di hidung/bibir) ---
+  if (pose.leftHand?.front) drawHandAndProp(ctx, -1, leftArm, leftProp, leftHandPt.hx, leftHandPt.hy, lk, spec, pose.leftHand);
+  if (pose.rightHand?.front) drawHandAndProp(ctx, 1, rightArm, rightProp, rightHandPt.hx, rightHandPt.hy, lk, spec, pose.rightHand);
 
   ctx.restore();
 }

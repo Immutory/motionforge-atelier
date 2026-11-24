@@ -1,5 +1,6 @@
 export * from './core/easing';
 export * from './core/camera';
+export * from './core/spatial';
 export * from './core/timeline';
 export * from './stage/lights';
 export * from './stage/shade';

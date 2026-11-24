@@ -1,11 +1,17 @@
 /** Satu kata narasi (detik). `speaker` opsional untuk produksi multi-suara, mis. "bangUtoh" | "tio". */
 export type Word = { text: string; start: number; end: number; speaker?: string };
+export type ShotTransition = 'cut' | 'flash' | 'dissolve' | 'wipe';
+
 export type Shot = {
   id: string;
   from: number; // frame awal (inklusif)
   to: number;   // frame akhir (eksklusif)
   light: string;
   note?: string;
+  /** Transisi masuk ke shot ini (default `'cut'`). Mendukung cross-dissolve (8-14f) & foreground wipe. */
+  transition?: ShotTransition;
+  /** Durasi transisi dalam frame (mis. 8-14 untuk `'dissolve'`/`'wipe'`, 4-6 untuk `'flash'`). */
+  transitionFrames?: number;
 };
 
 export const secToFrame = (sec: number, fps: number) => Math.round(sec * fps);

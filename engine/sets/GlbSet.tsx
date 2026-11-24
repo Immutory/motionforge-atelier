@@ -246,6 +246,10 @@ export type GlbSetProps = {
   errorAlert?: boolean;
   /** Daftar nama mesh yang disembunyikan sementara (mis. tiang lampu yang menghalangi kamera wide). */
   hideNames?: string[];
+  /** Callback ringan per-frame untuk memutasi transform anak GLB yang sudah terpasang tanpa re-clone. */
+  onUpdate?: (root: THREE.Group) => void;
+  /** Kunci perubahan untuk memicu `onUpdate` tanpa memicu reload GLB atau `delayRender`. */
+  updateKey?: string;
 };
 
 /**
@@ -263,8 +267,13 @@ export const GlbSet: React.FC<GlbSetProps> = ({
   timeOfDay = 'day',
   errorAlert = false,
   hideNames,
+  onUpdate,
+  updateKey,
 }) => {
   const mountRef = useRef<THREE.Group>(null);
+  const cloneRef = useRef<THREE.Group | null>(null);
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
   const { advance, invalidate } = useThree();
   const url = staticFile(src);
   const hideKey = hideNames?.join(',') ?? '';
@@ -341,6 +350,8 @@ export const GlbSet: React.FC<GlbSetProps> = ({
         if (host) {
           host.clear();
           host.add(clone);
+          cloneRef.current = clone;
+          onUpdateRef.current?.(clone);
           host.updateMatrixWorld(true);
           attached = clone;
         }
@@ -368,6 +379,9 @@ export const GlbSet: React.FC<GlbSetProps> = ({
 
     return () => {
       alive = false;
+      if (attached && cloneRef.current === attached) {
+        cloneRef.current = null;
+      }
       if (attached && mountRef.current) {
         mountRef.current.remove(attached);
       }
@@ -378,6 +392,15 @@ export const GlbSet: React.FC<GlbSetProps> = ({
       }
     };
   }, [url, src, glowScale, timeOfDay, errorAlert, hideKey, advance, invalidate]);
+
+  useEffect(() => {
+    if (cloneRef.current && onUpdateRef.current) {
+      onUpdateRef.current(cloneRef.current);
+      cloneRef.current.updateMatrixWorld(true);
+      advance(performance.now());
+      invalidate();
+    }
+  }, [updateKey, advance, invalidate]);
 
   const s: Vec3 = typeof scale === 'number' ? [scale, scale, scale] : scale;
   return <group ref={mountRef} position={position} rotation={rotation} scale={s} />;
