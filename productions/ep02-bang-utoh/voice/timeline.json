@@ -1,0 +1,1395 @@
+{
+  "_doc": "Dihasilkan build_voice.py. JANGAN edit tangan; ubah lines.json lalu build ulang.",
+  "fps": 30,
+  "totalFrames": 2230,
+  "totalSec": 74.33333333333333,
+  "loopCutFrame": 2215,
+  "voiceWavSec": 74.333,
+  "lastAudibleEnd": 73.38,
+  "placeholderLines": [],
+  "beats": [
+    {
+      "beat": 1,
+      "name": "Hook Sambung EP01",
+      "from": 0,
+      "to": 172,
+      "fromSec": 0.0,
+      "toSec": 5.733
+    },
+    {
+      "beat": 2,
+      "name": "Deadline & Kopi",
+      "from": 172,
+      "to": 444,
+      "fromSec": 5.733,
+      "toSec": 14.8
+    },
+    {
+      "beat": 3,
+      "name": "Solusi Salah #1: TV Tabung",
+      "from": 444,
+      "to": 751,
+      "fromSec": 14.8,
+      "toSec": 25.033
+    },
+    {
+      "beat": 4,
+      "name": "Solusi Ajaib #2: Konsultan Oyen",
+      "from": 751,
+      "to": 1175,
+      "fromSec": 25.033,
+      "toSec": 39.167
+    },
+    {
+      "beat": 5,
+      "name": "Kejar Waktu ke Lab FIK",
+      "from": 1175,
+      "to": 1306,
+      "fromSec": 39.167,
+      "toSec": 43.533
+    },
+    {
+      "beat": 6,
+      "name": "Klimaks Demo Lab FIK",
+      "from": 1306,
+      "to": 1733,
+      "fromSec": 43.533,
+      "toSec": 57.767
+    },
+    {
+      "beat": 7,
+      "name": "Replay Bukti & Double Punchline",
+      "from": 1733,
+      "to": 2215,
+      "fromSec": 57.767,
+      "toSec": 73.833
+    }
+  ],
+  "nonverbal": [
+    {
+      "kind": "sigh",
+      "label": "helaan napas berat",
+      "start": 2.33,
+      "end": 2.85,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "U1",
+      "speaker": "bangUtoh",
+      "startFrame": 69,
+      "endFrame": 86
+    },
+    {
+      "kind": "breath",
+      "label": "helaan napas panik",
+      "start": 5.93,
+      "end": 6.43,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "U2",
+      "speaker": "bangUtoh",
+      "startFrame": 177,
+      "endFrame": 193
+    },
+    {
+      "kind": "chuckle",
+      "label": "kekehan halus",
+      "start": 10.24,
+      "end": 11.13,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "S1",
+      "speaker": "buSiti",
+      "startFrame": 307,
+      "endFrame": 334
+    },
+    {
+      "kind": "sniff",
+      "label": "hirupan panjang aroma kopi",
+      "start": 12.39,
+      "end": 13.34,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "S1",
+      "speaker": "buSiti",
+      "startFrame": 371,
+      "endFrame": 401
+    },
+    {
+      "kind": "laugh",
+      "label": "tawa kaget kecil",
+      "start": 15.39,
+      "end": 16.22,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "S2",
+      "speaker": "buSiti",
+      "startFrame": 461,
+      "endFrame": 487
+    },
+    {
+      "kind": "pause",
+      "label": "jeda heran",
+      "start": 17.38,
+      "end": 17.86,
+      "voiced": false,
+      "detect": "silence",
+      "line": "S2",
+      "speaker": "buSiti",
+      "startFrame": 521,
+      "endFrame": 536
+    },
+    {
+      "kind": "chuckle",
+      "label": "kekehan frustrasi",
+      "start": 20.66,
+      "end": 21.63,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "U3",
+      "speaker": "bangUtoh",
+      "startFrame": 619,
+      "endFrame": 649
+    },
+    {
+      "kind": "sigh",
+      "label": "desahan pasrah panjang",
+      "start": 25.26,
+      "end": 25.88,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "U4",
+      "speaker": "bangUtoh",
+      "startFrame": 757,
+      "endFrame": 777
+    },
+    {
+      "kind": "laugh",
+      "label": "tawa kaget bahagia",
+      "start": 33.05,
+      "end": 33.66,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "U5",
+      "speaker": "bangUtoh",
+      "startFrame": 991,
+      "endFrame": 1010
+    },
+    {
+      "kind": "chuckle",
+      "label": "kekehan santai",
+      "start": 37.32,
+      "end": 37.43,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "S3",
+      "speaker": "buSiti",
+      "startFrame": 1119,
+      "endFrame": 1123
+    },
+    {
+      "kind": "laugh",
+      "label": "tawa sombong",
+      "start": 46.58,
+      "end": 47.19,
+      "voiced": true,
+      "detect": "asr-laugh",
+      "line": "U7",
+      "speaker": "bangUtoh",
+      "startFrame": 1397,
+      "endFrame": 1416
+    },
+    {
+      "kind": "sigh",
+      "label": "helaan napas datar dingin",
+      "start": 49.58,
+      "end": 50.02,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "R1",
+      "speaker": "rara",
+      "startFrame": 1487,
+      "endFrame": 1501
+    },
+    {
+      "kind": "sigh",
+      "label": "desahan lelah",
+      "start": 52.05,
+      "end": 53.01,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "R2",
+      "speaker": "rara",
+      "startFrame": 1561,
+      "endFrame": 1591
+    },
+    {
+      "kind": "pause",
+      "label": "jeda tajam (punch-in)",
+      "start": 56.2,
+      "end": 56.64,
+      "voiced": false,
+      "detect": "silence",
+      "line": "R2",
+      "speaker": "rara",
+      "startFrame": 1686,
+      "endFrame": 1700
+    },
+    {
+      "kind": "chuckle",
+      "label": "kekehan sinis",
+      "start": 57.14,
+      "end": 57.63,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "R2",
+      "speaker": "rara",
+      "startFrame": 1714,
+      "endFrame": 1729
+    },
+    {
+      "kind": "sigh",
+      "label": "desahan penutup",
+      "start": 66.04,
+      "end": 66.57,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "R3",
+      "speaker": "rara",
+      "startFrame": 1981,
+      "endFrame": 1998
+    },
+    {
+      "kind": "sigh",
+      "label": "helaan napas pasrah akhir",
+      "start": 72.92,
+      "end": 73.21,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "U9",
+      "speaker": "bangUtoh",
+      "startFrame": 2187,
+      "endFrame": 2197
+    }
+  ],
+  "lines": [
+    {
+      "id": "U1",
+      "beat": 1,
+      "speaker": "bangUtoh",
+      "text": "Error 47 semalem... WiFi kos mati, ngungsi ke warkop.",
+      "performance": "Error 47 semalem... [helaan napas berat] WiFi kos mati, ngungsi ke warkop.",
+      "start": 0.21,
+      "end": 5.6,
+      "startFrame": 6,
+      "endFrame": 168,
+      "audibleStart": 0.2,
+      "audibleEnd": 5.7,
+      "audibleStartFrame": 6,
+      "audibleEndFrame": 171,
+      "clipStart": 0.12,
+      "clipEnd": 5.9,
+      "clipDur": 5.78,
+      "srcDur": 5.878,
+      "lufs": -21.0,
+      "beatWindow": [
+        0.0,
+        5.733
+      ],
+      "cue": "Hook: macro layar laptop 3D merah ERROR 47 + taskbar 06:45 -> stage Warkop; bahu melorot di helaan napas",
+      "gapIdeal": 0.0,
+      "source": "REKAMAN FINAL voice/utoh_01.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "sigh",
+          "label": "helaan napas berat",
+          "start": 2.33,
+          "end": 2.85,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "U1",
+          "speaker": "bangUtoh",
+          "startFrame": 69,
+          "endFrame": 86
+        }
+      ],
+      "check": {
+        "score": 0.939,
+        "recall": 0.667,
+        "heard": "Error 4 .7 semalam! Wi -Fi kos mati, ngungsi ke WarCop!",
+        "passDeltaMaxFrames": 10.8,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            1.66,
+            2.26
+          ],
+          [
+            2.56,
+            2.9
+          ],
+          [
+            3.78,
+            3.93
+          ],
+          [
+            4.08,
+            4.55
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "semalem(6.6f)"
+        ]
+      },
+      "issues": [],
+      "gapAfter": 0.83
+    },
+    {
+      "id": "U2",
+      "beat": 2,
+      "speaker": "bangUtoh",
+      "text": "Jam tujuh demo, Bu! Satu error nggak ketemu!",
+      "performance": "[helaan napas panik] Jam tujuh demo, Bu! Satu error nggak ketemu!",
+      "start": 6.43,
+      "end": 10.09,
+      "startFrame": 192,
+      "endFrame": 303,
+      "audibleStart": 5.78,
+      "audibleEnd": 10.16,
+      "audibleStartFrame": 173,
+      "audibleEndFrame": 305,
+      "clipStart": 5.69,
+      "clipEnd": 10.288,
+      "clipDur": 4.598,
+      "srcDur": 4.598,
+      "lufs": -20.9,
+      "beatWindow": [
+        5.733,
+        14.8
+      ],
+      "cue": "Utoh panik deadline jam 7; Bu Siti jalan planted antar gelas kopi ke-4",
+      "gapIdeal": 0.3,
+      "source": "REKAMAN FINAL voice/utoh_02.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "breath",
+          "label": "helaan napas panik",
+          "start": 5.93,
+          "end": 6.43,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "U2",
+          "speaker": "bangUtoh",
+          "startFrame": 177,
+          "endFrame": 193
+        }
+      ],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Jam 7 demo bu, satu error gak ketemu!",
+        "passDeltaMaxFrames": 5.4,
+        "passDeltaMedianFrames": 0.3,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.61,
+            0.77
+          ],
+          [
+            2.28,
+            2.69
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "demo,(5.4f)",
+          "Bu!(4.8f)",
+          "error(4.2f)"
+        ]
+      },
+      "issues": [],
+      "gapAfter": 1.04
+    },
+    {
+      "id": "S1",
+      "beat": 2,
+      "speaker": "buSiti",
+      "text": "Gelas keempat, Tong. Ngopi dulu.",
+      "performance": "[kekehan halus] Gelas keempat, Tong. [hirupan panjang aroma kopi] Ngopi dulu.",
+      "start": 11.13,
+      "end": 14.57,
+      "startFrame": 333,
+      "endFrame": 438,
+      "audibleStart": 10.24,
+      "audibleEnd": 14.69,
+      "audibleStartFrame": 307,
+      "audibleEndFrame": 441,
+      "clipStart": 10.22,
+      "clipEnd": 14.87,
+      "clipDur": 4.65,
+      "srcDur": 4.676,
+      "lufs": -20.8,
+      "beatWindow": [
+        5.733,
+        14.8
+      ],
+      "cue": "Bu Siti senyum hangat, angkat gelas ke hidung saat menghirup, letakkan deadpan di 'Ngopi dulu'; uap kopi memuncak",
+      "gapIdeal": 0.28,
+      "source": "REKAMAN FINAL voice/buSiti_01.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "chuckle",
+          "label": "kekehan halus",
+          "start": 10.24,
+          "end": 11.13,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "S1",
+          "speaker": "buSiti",
+          "startFrame": 307,
+          "endFrame": 334
+        },
+        {
+          "kind": "sniff",
+          "label": "hirupan panjang aroma kopi",
+          "start": 12.39,
+          "end": 13.34,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "S1",
+          "speaker": "buSiti",
+          "startFrame": 371,
+          "endFrame": 401
+        }
+      ],
+      "check": {
+        "score": 0.898,
+        "recall": 0.6,
+        "heard": "Gulas keempat, Tong. Mopi dulu!",
+        "passDeltaMaxFrames": 25.8,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.41,
+            0.55
+          ],
+          [
+            1.7,
+            1.79
+          ],
+          [
+            2.13,
+            2.34
+          ],
+          [
+            3.01,
+            3.39
+          ]
+        ],
+        "chosenPass": "blind",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 1.65
+    },
+    {
+      "id": "S2",
+      "beat": 3,
+      "speaker": "buSiti",
+      "text": "Lho, nambah? Biasanya TV Ibu digeplak bener.",
+      "performance": "[tawa kaget kecil] Lho, nambah? [jeda heran] Biasanya TV Ibu digeplak bener.",
+      "start": 16.22,
+      "end": 20.49,
+      "startFrame": 486,
+      "endFrame": 615,
+      "audibleStart": 15.39,
+      "audibleEnd": 20.58,
+      "audibleStartFrame": 461,
+      "audibleEndFrame": 618,
+      "clipStart": 15.35,
+      "clipEnd": 20.757,
+      "clipDur": 5.407,
+      "srcDur": 5.407,
+      "lufs": -21.1,
+      "beatWindow": [
+        14.8,
+        25.033
+      ],
+      "cue": "jeda aksi 4f wind-up -> 6f hold -> 1f PLAK! bohlam berayun, laptop 47 -> 48 (+1!); Bu Siti miringkan kepala melihat tangannya",
+      "gapIdeal": 1.65,
+      "source": "REKAMAN FINAL voice/buSiti_02.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "laugh",
+          "label": "tawa kaget kecil",
+          "start": 15.39,
+          "end": 16.22,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "S2",
+          "speaker": "buSiti",
+          "startFrame": 461,
+          "endFrame": 487
+        },
+        {
+          "kind": "pause",
+          "label": "jeda heran",
+          "start": 17.38,
+          "end": 17.86,
+          "voiced": false,
+          "detect": "silence",
+          "line": "S2",
+          "speaker": "buSiti",
+          "startFrame": 521,
+          "endFrame": 536
+        }
+      ],
+      "check": {
+        "score": 0.943,
+        "recall": 0.714,
+        "heard": "Loh, nambah. Biasanya TV ibu digiplak bener.",
+        "passDeltaMaxFrames": 0.0,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.45,
+            0.56
+          ],
+          [
+            1.16,
+            1.37
+          ],
+          [
+            2.03,
+            2.51
+          ],
+          [
+            4.33,
+            4.42
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 1.14
+    },
+    {
+      "id": "U3",
+      "beat": 3,
+      "speaker": "bangUtoh",
+      "text": "Bu, ini laptop, bukan TV tabung!",
+      "performance": "[kekehan frustrasi] Bu, ini laptop, bukan TV tabung!",
+      "start": 21.63,
+      "end": 24.97,
+      "startFrame": 648,
+      "endFrame": 750,
+      "audibleStart": 20.66,
+      "audibleEnd": 25.0,
+      "audibleStartFrame": 619,
+      "audibleEndFrame": 750,
+      "clipStart": 20.59,
+      "clipEnd": 25.266,
+      "clipDur": 4.676,
+      "srcDur": 4.676,
+      "lufs": -21.8,
+      "beatWindow": [
+        14.8,
+        25.033
+      ],
+      "cue": "senyum getir -> meledak angry + tunjuk laptop di 'bukan TV tabung!'",
+      "gapIdeal": 0.26,
+      "source": "REKAMAN FINAL voice/utoh_03.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "chuckle",
+          "label": "kekehan frustrasi",
+          "start": 20.66,
+          "end": 21.63,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "U3",
+          "speaker": "bangUtoh",
+          "startFrame": 619,
+          "endFrame": 649
+        }
+      ],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Bu, ini laptop. Bukan TV tabung.",
+        "passDeltaMaxFrames": 1.2,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.1,
+            0.28
+          ],
+          [
+            0.52,
+            0.66
+          ],
+          [
+            0.86,
+            1.08
+          ],
+          [
+            1.47,
+            1.9
+          ],
+          [
+            2.37,
+            2.53
+          ],
+          [
+            2.81,
+            3.09
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 0.91
+    },
+    {
+      "id": "U4",
+      "beat": 4,
+      "speaker": "bangUtoh",
+      "text": "Udahlah, nyerah... nggak bakal kelar.",
+      "performance": "[desahan pasrah panjang] Udahlah, nyerah... nggak bakal kelar.",
+      "start": 25.88,
+      "end": 29.25,
+      "startFrame": 776,
+      "endFrame": 878,
+      "audibleStart": 25.08,
+      "audibleEnd": 29.37,
+      "audibleStartFrame": 752,
+      "audibleEndFrame": 882,
+      "clipStart": 25.0,
+      "clipEnd": 29.441,
+      "clipDur": 4.441,
+      "srcDur": 4.441,
+      "lufs": -21.7,
+      "beatWindow": [
+        25.033,
+        39.167
+      ],
+      "cue": "sit -> squat meluncur lemas sepanjang desahan; kepala makin tunduk di 'nggak bakal kelar'",
+      "gapIdeal": 0.36,
+      "source": "REKAMAN FINAL voice/utoh_04.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "sigh",
+          "label": "desahan pasrah panjang",
+          "start": 25.26,
+          "end": 25.88,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "U4",
+          "speaker": "bangUtoh",
+          "startFrame": 757,
+          "endFrame": 777
+        }
+      ],
+      "check": {
+        "score": 1.0,
+        "recall": 0.8,
+        "heard": "Udah lah, nyerah, nggak bakal kelar",
+        "passDeltaMaxFrames": 0.6,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.76,
+            0.91
+          ],
+          [
+            1.71,
+            2.03
+          ],
+          [
+            2.6,
+            3.17
+          ],
+          [
+            3.6,
+            3.69
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 1.95
+    },
+    {
+      "id": "U5",
+      "beat": 4,
+      "speaker": "bangUtoh",
+      "text": "Hah?! Nol error?! Yen... lo benerin?!",
+      "performance": "Hah?! Nol error?! [tawa kaget bahagia] Yen... lo benerin?!",
+      "start": 31.2,
+      "end": 35.6,
+      "startFrame": 936,
+      "endFrame": 1068,
+      "audibleStart": 31.18,
+      "audibleEnd": 35.64,
+      "audibleStartFrame": 935,
+      "audibleEndFrame": 1070,
+      "clipStart": 31.13,
+      "clipEnd": 35.884,
+      "clipDur": 4.754,
+      "srcDur": 4.754,
+      "lufs": -21.2,
+      "beatWindow": [
+        25.033,
+        39.167
+      ],
+      "cue": "jeda aksi Oyen jalan planted -> pawRaise kiri, deadpan 3f, kanan -> duduk -> TING! hijau 0 ERROR; Utoh shock+hatPop lalu laugh+sparkle",
+      "gapIdeal": 1.95,
+      "source": "REKAMAN FINAL voice/utoh_05.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "laugh",
+          "label": "tawa kaget bahagia",
+          "start": 33.05,
+          "end": 33.66,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "U5",
+          "speaker": "bangUtoh",
+          "startFrame": 991,
+          "endFrame": 1010
+        }
+      ],
+      "check": {
+        "score": 0.894,
+        "recall": 0.667,
+        "heard": "HAH? NO EROR? Yaaan, lu benerin",
+        "passDeltaMaxFrames": 1.2,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.43,
+            0.75
+          ],
+          [
+            1.75,
+            2.02
+          ],
+          [
+            2.1,
+            2.18
+          ],
+          [
+            2.22,
+            2.3
+          ],
+          [
+            3.23,
+            3.56
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 0.28
+    },
+    {
+      "id": "S3",
+      "beat": 4,
+      "speaker": "buSiti",
+      "text": "Jasa konsultan... ikan asin dua.",
+      "performance": "Jasa konsultan... [kekehan santai] ikan asin dua.",
+      "start": 35.88,
+      "end": 39.02,
+      "startFrame": 1076,
+      "endFrame": 1171,
+      "audibleStart": 35.82,
+      "audibleEnd": 39.08,
+      "audibleStartFrame": 1074,
+      "audibleEndFrame": 1173,
+      "clipStart": 35.8,
+      "clipEnd": 39.274,
+      "clipDur": 3.474,
+      "srcDur": 3.474,
+      "lufs": -20.1,
+      "beatWindow": [
+        25.033,
+        39.167
+      ],
+      "cue": "Bu Siti smug, tangan di pinggang, melirik Oyen; akhir beat taskbar loncat 06:58 + alarm",
+      "gapIdeal": 0.28,
+      "source": "REKAMAN FINAL voice/buSiti_03.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "chuckle",
+          "label": "kekehan santai",
+          "start": 37.32,
+          "end": 37.43,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "S3",
+          "speaker": "buSiti",
+          "startFrame": 1119,
+          "endFrame": 1123
+        }
+      ],
+      "check": {
+        "score": 0.958,
+        "recall": 0.8,
+        "heard": "Jasa konsultan, ikan asim dua.",
+        "passDeltaMaxFrames": 14.4,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.9,
+            1.0
+          ],
+          [
+            1.66,
+            2.02
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "ikan(14.4f)"
+        ]
+      },
+      "issues": [],
+      "gapAfter": 0.78
+    },
+    {
+      "id": "U6",
+      "beat": 5,
+      "speaker": "bangUtoh",
+      "text": "Waduh, jam tujuh kurang dua! Ayo Yen, ikut!",
+      "performance": "Waduh, jam tujuh kurang dua! Ayo Yen, ikut!",
+      "start": 39.8,
+      "end": 42.85,
+      "startFrame": 1194,
+      "endFrame": 1286,
+      "audibleStart": 39.79,
+      "audibleEnd": 42.91,
+      "audibleStartFrame": 1193,
+      "audibleEndFrame": 1288,
+      "clipStart": 39.73,
+      "clipEnd": 43.126,
+      "clipDur": 3.396,
+      "srcDur": 3.396,
+      "lufs": -21.5,
+      "beatWindow": [
+        39.167,
+        43.533
+      ],
+      "cue": "match-cut ALARM 06:58 -> Utoh kaget; sprint duluan, menoleh di 'Ayo Yen, ikut!'; Oyen duduk 12f lalu jalan 1/2 tempo",
+      "gapIdeal": 0.78,
+      "source": "REKAMAN FINAL voice/utoh_06.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 0.954,
+        "recall": 0.875,
+        "heard": "Waduh, jam tujuh kurang dua! Ayo iyan, ikut!",
+        "passDeltaMaxFrames": 1.05,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.57,
+            0.81
+          ],
+          [
+            1.91,
+            2.32
+          ],
+          [
+            2.74,
+            2.88
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 1.15
+    },
+    {
+      "id": "U7",
+      "beat": 6,
+      "speaker": "bangUtoh",
+      "text": "Mbak Rara! Kelar seratus persen! Nol error!",
+      "performance": "Mbak Rara! Kelar seratus persen! [tawa sombong] Nol error!",
+      "start": 44.0,
+      "end": 48.41,
+      "startFrame": 1320,
+      "endFrame": 1453,
+      "audibleStart": 43.97,
+      "audibleEnd": 48.46,
+      "audibleStartFrame": 1319,
+      "audibleEndFrame": 1454,
+      "clipStart": 43.9,
+      "clipEnd": 48.71,
+      "clipDur": 4.81,
+      "srcDur": 4.833,
+      "lufs": -20.4,
+      "beatWindow": [
+        43.533,
+        57.767
+      ],
+      "cue": "Lab FIK: busung dada, silang tangan, laugh -> smug, sparkle di 'Nol error!'",
+      "gapIdeal": 1.15,
+      "source": "REKAMAN FINAL voice/utoh_07.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "laugh",
+          "label": "tawa sombong",
+          "start": 46.58,
+          "end": 47.19,
+          "voiced": true,
+          "detect": "asr-laugh",
+          "line": "U7",
+          "speaker": "bangUtoh",
+          "startFrame": 1397,
+          "endFrame": 1416
+        }
+      ],
+      "check": {
+        "score": 0.899,
+        "recall": 0.429,
+        "heard": "BAK RARA! KELARS RATUS PERSEN! HAHA! NO ERROR!",
+        "passDeltaMaxFrames": 2.4,
+        "passDeltaMedianFrames": 0.6,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.81,
+            1.13
+          ],
+          [
+            2.58,
+            2.82
+          ],
+          [
+            3.08,
+            3.18
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "error!(2.4f)"
+        ]
+      },
+      "issues": [],
+      "gapAfter": 0.3
+    },
+    {
+      "id": "R1",
+      "beat": 6,
+      "speaker": "rara",
+      "text": "Oke... Jalanin.",
+      "performance": "Oke... [helaan napas datar dingin] Jalanin.",
+      "start": 48.71,
+      "end": 50.86,
+      "startFrame": 1461,
+      "endFrame": 1526,
+      "audibleStart": 48.67,
+      "audibleEnd": 51.07,
+      "audibleStartFrame": 1460,
+      "audibleEndFrame": 1533,
+      "clipStart": 48.6,
+      "clipEnd": 51.136,
+      "clipDur": 2.536,
+      "srcDur": 2.586,
+      "lufs": -21.1,
+      "beatWindow": [
+        43.533,
+        57.767
+      ],
+      "cue": "Rara datar; kedip lambat + menunduk di helaan napas; tunjuk dingin di 'Jalanin'",
+      "gapIdeal": 0.3,
+      "source": "REKAMAN FINAL voice/rara_01.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "sigh",
+          "label": "helaan napas datar dingin",
+          "start": 49.58,
+          "end": 50.02,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "R1",
+          "speaker": "rara",
+          "startFrame": 1487,
+          "endFrame": 1501
+        }
+      ],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Oke.. Jalanin..",
+        "passDeltaMaxFrames": 24.0,
+        "passDeltaMedianFrames": 12.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.8,
+            1.0
+          ],
+          [
+            1.39,
+            1.8
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 2.15
+    },
+    {
+      "id": "R2",
+      "beat": 6,
+      "speaker": "rara",
+      "text": "Emang nol error, To. Kodenya juga... nol.",
+      "performance": "[desahan lelah] Emang nol error, To. Kodenya juga... [jeda tajam] nol. [kekehan sinis]",
+      "start": 53.01,
+      "end": 57.12,
+      "startFrame": 1590,
+      "endFrame": 1714,
+      "audibleStart": 52.04,
+      "audibleEnd": 57.74,
+      "audibleStartFrame": 1561,
+      "audibleEndFrame": 1733,
+      "clipStart": 51.97,
+      "clipEnd": 58.0,
+      "clipDur": 6.03,
+      "srcDur": 6.034,
+      "lufs": -21.4,
+      "beatWindow": [
+        43.533,
+        57.767
+      ],
+      "cue": "jeda 4f angkat jari -> 6f hold -> 1f Enter KLAK! -> proyektor mmmmeeee + kursor berkedip + jangkrik; punch-in di jeda sebelum 'nol'",
+      "gapIdeal": 2.15,
+      "source": "REKAMAN FINAL voice/rara_02.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "sigh",
+          "label": "desahan lelah",
+          "start": 52.05,
+          "end": 53.01,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "R2",
+          "speaker": "rara",
+          "startFrame": 1561,
+          "endFrame": 1591
+        },
+        {
+          "kind": "pause",
+          "label": "jeda tajam (punch-in)",
+          "start": 56.2,
+          "end": 56.64,
+          "voiced": false,
+          "detect": "silence",
+          "line": "R2",
+          "speaker": "rara",
+          "startFrame": 1686,
+          "endFrame": 1700
+        },
+        {
+          "kind": "chuckle",
+          "label": "kekehan sinis",
+          "start": 57.14,
+          "end": 57.63,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "R2",
+          "speaker": "rara",
+          "startFrame": 1714,
+          "endFrame": 1729
+        }
+      ],
+      "check": {
+        "score": 0.966,
+        "recall": 0.857,
+        "heard": "Emang nol error to, kodinya juga nol.",
+        "passDeltaMaxFrames": 24.3,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.62,
+            1.1
+          ],
+          [
+            2.66,
+            3.16
+          ],
+          [
+            4.23,
+            4.67
+          ],
+          [
+            5.56,
+            5.66
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "To.(8.4f)"
+        ]
+      },
+      "issues": [],
+      "gapAfter": 0.71
+    },
+    {
+      "id": "U8",
+      "beat": 7,
+      "speaker": "bangUtoh",
+      "text": "Yen! Di warkop lo apain laptop gue?!",
+      "performance": "Yen! Di warkop lo apain laptop gue?!",
+      "start": 57.83,
+      "end": 60.6,
+      "startFrame": 1734,
+      "endFrame": 1818,
+      "audibleStart": 57.82,
+      "audibleEnd": 60.6,
+      "audibleStartFrame": 1734,
+      "audibleEndFrame": 1818,
+      "clipStart": 57.76,
+      "clipEnd": 60.842,
+      "clipDur": 3.082,
+      "srcDur": 3.082,
+      "lufs": -21.2,
+      "beatWindow": [
+        57.767,
+        73.833
+      ],
+      "cue": "CU Utoh melotot tanya ke Oyen",
+      "gapIdeal": 0.44,
+      "source": "REKAMAN FINAL voice/utoh_08.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 0.889,
+        "recall": 0.571,
+        "heard": "Yan, diwargap lo apain laptop gue?",
+        "passDeltaMaxFrames": 1.2,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.5,
+            0.95
+          ],
+          [
+            1.68,
+            1.78
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 2.25
+    },
+    {
+      "id": "O1",
+      "beat": 7,
+      "speaker": "oyen",
+      "text": "Meong.",
+      "performance": "Meong.",
+      "start": 62.85,
+      "end": 63.6,
+      "startFrame": 1885,
+      "endFrame": 1908,
+      "audibleStart": 62.85,
+      "audibleEnd": 63.7,
+      "audibleStartFrame": 1885,
+      "audibleEndFrame": 1911,
+      "clipStart": 62.74,
+      "clipEnd": 63.9,
+      "clipDur": 1.16,
+      "srcDur": 1.451,
+      "lufs": -17.0,
+      "beatWindow": [
+        57.767,
+        73.833
+      ],
+      "cue": "4f white flash -> REPLAY SEPIA (CTRL+A -> DELETE -> mmmm -> 0 ERROR) -> 4f white flash -> eye-line match Oyen kedip 14f -> Meong",
+      "gapIdeal": 2.25,
+      "source": "rekaman kucing asli (assets/voices/oyen.wav)",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": null,
+        "recall": null,
+        "heard": "(kucing, tidak di-ASR; batas dari RMS)"
+      },
+      "issues": [],
+      "gapAfter": 0.36
+    },
+    {
+      "id": "R3",
+      "beat": 7,
+      "speaker": "rara",
+      "text": "Nilai A buat konsultan kamu. Kamu minggu depan ngulang dari awal.",
+      "performance": "Nilai A buat konsultan kamu. [desahan penutup] Kamu minggu depan ngulang dari awal.",
+      "start": 63.96,
+      "end": 68.55,
+      "startFrame": 1918,
+      "endFrame": 2057,
+      "audibleStart": 63.95,
+      "audibleEnd": 68.64,
+      "audibleStartFrame": 1918,
+      "audibleEndFrame": 2060,
+      "clipStart": 63.87,
+      "clipEnd": 68.85,
+      "clipDur": 4.98,
+      "srcDur": 4.989,
+      "lufs": -20.7,
+      "beatWindow": [
+        57.767,
+        73.833
+      ],
+      "cue": "Shot A two-shot Rara+Oyen coret buku nilai -> desahan: tutup buku -> Shot B tight Rara ke Utoh",
+      "gapIdeal": 0.36,
+      "source": "REKAMAN FINAL voice/rara_03.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "sigh",
+          "label": "desahan penutup",
+          "start": 66.04,
+          "end": 66.57,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "R3",
+          "speaker": "rara",
+          "startFrame": 1981,
+          "endFrame": 1998
+        }
+      ],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Nilai A buat konsultan kamu. Kamu minggu depan ngulang dari awal.",
+        "passDeltaMaxFrames": 0.0,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.44,
+            0.57
+          ],
+          [
+            1.74,
+            2.2
+          ],
+          [
+            2.43,
+            2.91
+          ],
+          [
+            3.44,
+            3.6
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 0.32
+    },
+    {
+      "id": "U9",
+      "beat": 7,
+      "speaker": "bangUtoh",
+      "text": "Aduh Oyen! Gara-gara error 47 lagi dong...",
+      "performance": "Aduh Oyen! Gara-gara error 47 lagi dong... [helaan napas pasrah akhir]",
+      "start": 68.87,
+      "end": 72.21,
+      "startFrame": 2066,
+      "endFrame": 2167,
+      "audibleStart": 68.84,
+      "audibleEnd": 73.38,
+      "audibleStartFrame": 2065,
+      "audibleEndFrame": 2202,
+      "clipStart": 68.77,
+      "clipEnd": 73.603,
+      "clipDur": 4.833,
+      "srcDur": 4.833,
+      "lufs": -20.4,
+      "beatWindow": [
+        57.767,
+        73.833
+      ],
+      "cue": "shock + hatPop + tension roll -> bahu jatuh lemas di helaan napas -> hard-cut seamless loop ke f0",
+      "gapIdeal": 0.32,
+      "source": "REKAMAN FINAL voice/utoh_09.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "sigh",
+          "label": "helaan napas pasrah akhir",
+          "start": 72.92,
+          "end": 73.21,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "U9",
+          "speaker": "bangUtoh",
+          "startFrame": 2187,
+          "endFrame": 2197
+        }
+      ],
+      "check": {
+        "score": 0.962,
+        "recall": 0.429,
+        "heard": "Haduh Oyan, gara -gara error 4 .7 lagi dong.",
+        "passDeltaMaxFrames": 3.0,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            1.21,
+            1.49
+          ],
+          [
+            3.46,
+            4.14
+          ],
+          [
+            4.44,
+            4.54
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "lagi(3.0f)"
+        ]
+      },
+      "issues": []
+    }
+  ]
+}

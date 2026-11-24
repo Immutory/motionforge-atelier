@@ -29,6 +29,7 @@ import {
   KampungV2Production,
   kampungV2Meta,
 } from './charlab';
+import { Ep02BangUtohProduction, ep02BangUtohMeta } from './ep02-bang-utoh';
 // @forge:imports
 
 export type RegisteredProduction = { meta: ProductionMeta; Component: ComponentType };
@@ -49,5 +50,6 @@ export const PRODUCTIONS: RegisteredProduction[] = [
   { meta: nusantaraMeta, Component: NusantaraProduction },
   { meta: wargaMeta, Component: WargaProduction },
   { meta: riglabMeta, Component: RigLabProduction },
+  { meta: ep02BangUtohMeta, Component: Ep02BangUtohProduction },
   // @forge:register
 ];

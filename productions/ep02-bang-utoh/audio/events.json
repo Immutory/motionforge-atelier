@@ -1,0 +1,866 @@
+{
+ "_doc": "Dihitung ulang dari voice/timeline.json v5 + ekspor cast.ts v6.1 (frame @30fps). 'frame' = sumber kebenaran; 'at' = frame/30.",
+ "fps": 30,
+ "master": {
+  "lufs": -16,
+  "true_peak_db": -1.0
+ },
+ "duck": {
+  "depth_db": -6,
+  "pre_ms": 120,
+  "post_ms": 180,
+  "smooth_ms": 160
+ },
+ "levels": {
+  "music_lu": -12,
+  "ambience_lu": -22
+ },
+ "music": {
+  "sections": [
+   {
+    "from": 0,
+    "to": 456,
+    "style": "lazy",
+    "gain_db": 0,
+    "fade_out": 1
+   },
+   {
+    "from": 536,
+    "to": 880,
+    "style": "lazy",
+    "gain_db": -2,
+    "fade_in": 6,
+    "fade_out": 8
+   },
+   {
+    "from": 912,
+    "to": 1175,
+    "style": "bright",
+    "gain_db": 0,
+    "fade_out": 3
+   },
+   {
+    "from": 1197,
+    "to": 1302,
+    "style": "chase",
+    "gain_db": 0,
+    "fade_in": 2,
+    "fade_out": 2
+   },
+   {
+    "from": 1306,
+    "to": 1536,
+    "style": "lazy",
+    "gain_db": -1,
+    "fade_in": 8,
+    "fade_out": 1
+   },
+   {
+    "from": 1733,
+    "to": 1820,
+    "style": "tense",
+    "gain_db": -1,
+    "fade_in": 3,
+    "fade_out": 1
+   },
+   {
+    "from": 1820,
+    "to": 1883,
+    "style": "sepia",
+    "gain_db": -3,
+    "fade_in": 2,
+    "fade_out": 2
+   },
+   {
+    "from": 1886,
+    "to": 2230,
+    "style": "lazy",
+    "gain_db": -2,
+    "fade_in": 10,
+    "fade_out": 15
+   }
+  ]
+ },
+ "ambience": {
+  "sections": [
+   {
+    "from": 0,
+    "to": 1175,
+    "style": "warkop",
+    "gain_db": 0,
+    "fade_out": 2
+   },
+   {
+    "from": 1175,
+    "to": 1306,
+    "style": "kampung",
+    "gain_db": 0,
+    "fade_in": 2,
+    "fade_out": 2
+   },
+   {
+    "from": 1306,
+    "to": 1820,
+    "style": "lab",
+    "gain_db": 0,
+    "fade_in": 2
+   },
+   {
+    "from": 1820,
+    "to": 1883,
+    "style": "warkop-sepia",
+    "gain_db": -2,
+    "fade_in": 1,
+    "fade_out": 1
+   },
+   {
+    "from": 1883,
+    "to": 2230,
+    "style": "lab",
+    "gain_db": 0,
+    "fade_in": 1
+   }
+  ]
+ },
+ "events": [
+  {
+   "frame": 0,
+   "at": 0.0,
+   "sfx": "thud",
+   "gain_db": -12,
+   "duck": false,
+   "note": "B1 hook macro ERROR 47 (f0, juga titik loop)"
+  },
+  {
+   "frame": 334,
+   "at": 11.1333,
+   "sfx": "cup",
+   "gain_db": -9,
+   "note": "B2 gelas ke-4 diletakkan tangan kiri EP02_SITI_CUP_DOWN_FRAME f334 (denting gelas + ketuk meja; diverifikasi v6.1)"
+  },
+  {
+   "frame": 405,
+   "at": 13.5,
+   "sfx": "sruput",
+   "gain_db": -20,
+   "params": {
+    "seconds": 0.3
+   },
+   "note": "B2 S1 sesap *sruput* EP02_SITI_SIP_FROM f405 s/d SIP_TO f414 (0,3 dtk, energi di depan, ter-duck di bawah \"Ngopi\" f408; hirupan f371-401 bersih)"
+  },
+  {
+   "frame": 443,
+   "at": 14.7667,
+   "sfx": "step",
+   "gain_db": -20,
+   "note": "B3 langkah Bu Siti ke sisi laptop"
+  },
+  {
+   "frame": 446,
+   "at": 14.8667,
+   "sfx": "swish",
+   "gain_db": -14,
+   "note": "B3 wind-up 4f SITI_SLAP_ARRIVE f446-450"
+  },
+  {
+   "frame": 456,
+   "at": 15.2,
+   "sfx": "slap",
+   "gain_db": -3,
+   "duck": false,
+   "note": "B3 PLAK! EP02_PLAK_FRAME"
+  },
+  {
+   "frame": 456,
+   "at": 15.2,
+   "sfx": "thud",
+   "gain_db": -13,
+   "note": "B3 PLAK lapisan bawah (badan meja); ikut duck agar ekor tidak menimpa tawa S2 f461"
+  },
+  {
+   "frame": 457,
+   "at": 15.2333,
+   "sfx": "blip",
+   "gain_db": -15,
+   "duck": false,
+   "note": "B3 error 47->48 (layar f460; digeser -3f agar tidak menimpa tawa S2 f461)"
+  },
+  {
+   "frame": 819,
+   "at": 27.3,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 71
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 823,
+   "at": 27.4333,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 73
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 827,
+   "at": 27.5667,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 71
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 830,
+   "at": 27.6667,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 73
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 834,
+   "at": 27.8,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 71
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 838,
+   "at": 27.9333,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 73
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 842,
+   "at": 28.0667,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 71
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 845,
+   "at": 28.1667,
+   "sfx": "step",
+   "gain_db": -22,
+   "params": {
+    "seed": 73
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 849,
+   "at": 28.3,
+   "sfx": "step",
+   "gain_db": -23,
+   "params": {
+    "seed": 71
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 853,
+   "at": 28.4333,
+   "sfx": "step",
+   "gain_db": -24,
+   "params": {
+    "seed": 73
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 857,
+   "at": 28.5667,
+   "sfx": "step",
+   "gain_db": -26,
+   "params": {
+    "seed": 71
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 860,
+   "at": 28.6667,
+   "sfx": "step",
+   "gain_db": -28,
+   "params": {
+    "seed": 73
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 864,
+   "at": 28.8,
+   "sfx": "step",
+   "gain_db": -32,
+   "params": {
+    "seed": 71
+   },
+   "note": "B4 langkah Bu Siti WALK3 keluar frame kanan (EP02_SITI_WALK3 [811,945], pijakan walkPhase 0/0.5; memudar ke EP02_SITI_OFFSCREEN_FROM f863, sisanya di luar layar tanpa SFX)"
+  },
+  {
+   "frame": 899,
+   "at": 29.9667,
+   "sfx": "keyclick",
+   "gain_db": -6,
+   "duck": false,
+   "note": "B4 tek 1 cakar kiri EP02_OYEN_STEP1_FRAME"
+  },
+  {
+   "frame": 907,
+   "at": 30.2333,
+   "sfx": "keyclick",
+   "gain_db": -5,
+   "duck": false,
+   "note": "B4 tek 2 cakar kanan EP02_OYEN_STEP2_FRAME"
+  },
+  {
+   "frame": 912,
+   "at": 30.4,
+   "sfx": "ding",
+   "gain_db": -4,
+   "duck": false,
+   "note": "B4 TING layar hijau 0 ERROR EP02_SCREEN_OK_FRAME"
+  },
+  {
+   "frame": 934,
+   "at": 31.1333,
+   "sfx": "pop",
+   "gain_db": -12,
+   "note": "B4 hatPop lompat syok EP02_UTOH_JUMP_FRAME"
+  },
+  {
+   "frame": 1131,
+   "at": 37.7,
+   "sfx": "swish",
+   "gain_db": -27,
+   "note": "B4 S3 Bu Siti angkat gelas \"ikan asin dua\" (toast f1131-1136), ayun lengan halus ter-duck"
+  },
+  {
+   "frame": 1153,
+   "at": 38.4333,
+   "sfx": "alarm",
+   "gain_db": -9,
+   "note": "B4 alarm taskbar 06:58 EP02_TASKBAR_ALARM_FRAME"
+  },
+  {
+   "frame": 1166,
+   "at": 38.8667,
+   "sfx": "whoosh",
+   "gain_db": -12,
+   "note": "B4->B5 transisi, puncak whoosh di cut f1175"
+  },
+  {
+   "frame": 1177,
+   "at": 39.2333,
+   "sfx": "pop",
+   "gain_db": -15,
+   "note": "B5 hatPop kaget (B5.from+2)"
+  },
+  {
+   "frame": 1197,
+   "at": 39.9,
+   "sfx": "whoosh",
+   "gain_db": -12,
+   "note": "B5 mulai sprint EP02_B5_SPRINT_START"
+  },
+  {
+   "frame": 1208,
+   "at": 40.2667,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1212,
+   "at": 40.4,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1216,
+   "at": 40.5333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1219,
+   "at": 40.6333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1221,
+   "at": 40.7,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1224,
+   "at": 40.8,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1227,
+   "at": 40.9,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1230,
+   "at": 41.0,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1233,
+   "at": 41.1,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1236,
+   "at": 41.2,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1239,
+   "at": 41.3,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1242,
+   "at": 41.4,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1245,
+   "at": 41.5,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1247,
+   "at": 41.5667,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1250,
+   "at": 41.6667,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1253,
+   "at": 41.7667,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1256,
+   "at": 41.8667,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1258,
+   "at": 41.9333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1261,
+   "at": 42.0333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1264,
+   "at": 42.1333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1267,
+   "at": 42.2333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1270,
+   "at": 42.3333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1273,
+   "at": 42.4333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1276,
+   "at": 42.5333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1280,
+   "at": 42.6667,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1284,
+   "at": 42.8,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1288,
+   "at": 42.9333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 71
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1294,
+   "at": 43.1333,
+   "sfx": "step",
+   "gain_db": -17,
+   "params": {
+    "seed": 73
+   },
+   "note": "B5 langkah sprint Utoh (walkPhase 0/0.5)"
+  },
+  {
+   "frame": 1302,
+   "at": 43.4,
+   "sfx": "skid",
+   "gain_db": -8,
+   "duck": false,
+   "note": "B5 skid tiba plaza FIK EP02_B5_ARRIVE_FRAME"
+  },
+  {
+   "frame": 1306,
+   "at": 43.5333,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 71
+   },
+   "note": "B6 langkah Utoh masuk Lab FIK"
+  },
+  {
+   "frame": 1311,
+   "at": 43.7,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 73
+   },
+   "note": "B6 langkah Utoh masuk Lab FIK"
+  },
+  {
+   "frame": 1313,
+   "at": 43.7667,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 71
+   },
+   "note": "B6 langkah Utoh masuk Lab FIK"
+  },
+  {
+   "frame": 1315,
+   "at": 43.8333,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 73
+   },
+   "note": "B6 langkah Utoh masuk Lab FIK"
+  },
+  {
+   "frame": 1318,
+   "at": 43.9333,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 71
+   },
+   "note": "B6 langkah Utoh masuk Lab FIK"
+  },
+  {
+   "frame": 1320,
+   "at": 44.0,
+   "sfx": "step",
+   "gain_db": -21,
+   "params": {
+    "seed": 73
+   },
+   "note": "B6 langkah Utoh masuk Lab FIK"
+  },
+  {
+   "frame": 1536,
+   "at": 51.2,
+   "sfx": "keyclick",
+   "gain_db": -2,
+   "duck": false,
+   "note": "B6 Enter KLAK EP02_PROJECTOR_RUN_FRAME"
+  },
+  {
+   "frame": 1536,
+   "at": 51.2,
+   "sfx": "snap",
+   "gain_db": -10,
+   "duck": false,
+   "note": "B6 Enter KLAK lapisan snap"
+  },
+  {
+   "frame": 1539,
+   "at": 51.3,
+   "sfx": "cricket",
+   "gain_db": -10,
+   "params": {
+    "seconds": 0.7
+   },
+   "duck": false,
+   "note": "B6 jangkrik pasca-Enter (0,7 dtk, selesai f1560 sebelum desahan R2 f1561)"
+  },
+  {
+   "frame": 1733,
+   "at": 57.7667,
+   "sfx": "thud",
+   "gain_db": -12,
+   "note": "B7 Utoh syok melotot (B7.from, hatPop)"
+  },
+  {
+   "frame": 1733,
+   "at": 57.7667,
+   "sfx": "pop",
+   "gain_db": -15,
+   "note": "B7 hatPop"
+  },
+  {
+   "frame": 1820,
+   "at": 60.6667,
+   "sfx": "rewind",
+   "gain_db": -5,
+   "duck": false,
+   "note": "B7 white flash masuk Replay Sepia EP02_REPLAY_FROM"
+  },
+  {
+   "frame": 1823,
+   "at": 60.7667,
+   "sfx": "keyclick",
+   "gain_db": -9,
+   "duck": false,
+   "note": "B7 replay cakar kiri CTRL+A (rf 3)"
+  },
+  {
+   "frame": 1838,
+   "at": 61.2667,
+   "sfx": "keyclick",
+   "gain_db": -7,
+   "duck": false,
+   "note": "B7 replay DELETE (rf 18)"
+  },
+  {
+   "frame": 1838,
+   "at": 61.2667,
+   "sfx": "whoosh",
+   "gain_db": -17,
+   "params": {
+    "seconds": 0.3
+   },
+   "duck": false,
+   "note": "B7 replay 47 baris terhapus"
+  },
+  {
+   "frame": 1844,
+   "at": 61.4667,
+   "sfx": "typing",
+   "gain_db": -12,
+   "params": {
+    "seconds": 0.73,
+    "clicks": 16
+   },
+   "duck": false,
+   "note": "B7 replay ketik progresif mmmmeee rf 24-46"
+  },
+  {
+   "frame": 1866,
+   "at": 62.2,
+   "sfx": "ding",
+   "gain_db": -9,
+   "params": {
+    "freq": 1046.5
+   },
+   "duck": false,
+   "note": "B7 replay 0 ERROR (rf 46)"
+  },
+  {
+   "frame": 1877,
+   "at": 62.5667,
+   "sfx": "whoosh",
+   "gain_db": -17,
+   "params": {
+    "seconds": 0.3
+   },
+   "note": "B7 white flash keluar replay EP02_REPLAY_TO f1883 (puncak ~f1882, sebelum meong f1885)"
+  },
+  {
+   "frame": 1918,
+   "at": 63.9333,
+   "sfx": "scribble",
+   "gain_db": -22,
+   "params": {
+    "seconds": 2.0
+   },
+   "note": "B7 Rara coret buku nilai f1918-1978 (berhenti 3f sebelum desahan R3 f1981)"
+  },
+  {
+   "frame": 2064,
+   "at": 68.8,
+   "sfx": "pop",
+   "gain_db": -12,
+   "note": "B7 hatPop U9 syok (L_U9.start-2)"
+  },
+  {
+   "frame": 2066,
+   "at": 68.8667,
+   "sfx": "thud",
+   "gain_db": -9,
+   "note": "B7 punchline U9 syok (kick L_U9.startFrame)"
+  }
+ ]
+}

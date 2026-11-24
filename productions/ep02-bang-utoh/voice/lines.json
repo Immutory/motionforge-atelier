@@ -1,0 +1,152 @@
+{
+  "_doc": "Sumber kebenaran timeline suara EP02 Master Cut v5.0. 15 rekaman final pengguna (utoh_01-09, buSiti_01-03, rara_01-03) + meong asli Oyen. Natural 1.0x, tanpa atempo, tanpa placeholder. `text` = kata yang diucapkan (dipakai ASR & subtitle); `performance` = naskah akting lengkap dengan momen non-verbal; `nonverbal` = penanda yang diberi timestamp oleh build_voice.py (before/after = kata naskah, `kata#2` = kemunculan kedua).",
+  "fps": 30,
+  "totalFrames": 2230,
+  "loopCutFrame": 2215,
+  "scriptBeats": [
+    {"beat": 1, "name": "Hook Sambung EP01", "lead": 0.0},
+    {"beat": 2, "name": "Deadline & Kopi", "lead": 0.25},
+    {"beat": 3, "name": "Solusi Salah #1: TV Tabung", "lead": 1.55},
+    {"beat": 4, "name": "Solusi Ajaib #2: Konsultan Oyen", "lead": 0.30},
+    {"beat": 5, "name": "Kejar Waktu ke Lab FIK", "lead": 0.72},
+    {"beat": 6, "name": "Klimaks Demo Lab FIK", "lead": 0.45},
+    {"beat": 7, "name": "Replay Bukti & Double Punchline", "lead": 0.35}
+  ],
+  "lines": [
+    {
+      "id": "U1", "beat": 1, "speaker": "bangUtoh", "real": "utoh_01",
+      "text": "Error 47 semalem... WiFi kos mati, ngungsi ke warkop.",
+      "performance": "Error 47 semalem... [helaan napas berat] WiFi kos mati, ngungsi ke warkop.",
+      "nonverbal": [{"after": "semalem", "kind": "sigh", "label": "helaan napas berat"}],
+      "start": 0.12, "gap": 0.0,
+      "cue": "Hook: macro layar laptop 3D merah ERROR 47 + taskbar 06:45 -> stage Warkop; bahu melorot di helaan napas"
+    },
+    {
+      "id": "U2", "beat": 2, "speaker": "bangUtoh", "real": "utoh_02",
+      "text": "Jam tujuh demo, Bu! Satu error nggak ketemu!",
+      "performance": "[helaan napas panik] Jam tujuh demo, Bu! Satu error nggak ketemu!",
+      "nonverbal": [{"before": "Jam", "kind": "breath", "label": "helaan napas panik"}],
+      "gap": 0.30,
+      "cue": "Utoh panik deadline jam 7; Bu Siti jalan planted antar gelas kopi ke-4"
+    },
+    {
+      "id": "S1", "beat": 2, "speaker": "buSiti", "clip": "buSiti_01",
+      "text": "Gelas keempat, Tong. Ngopi dulu.",
+      "performance": "[kekehan halus] Gelas keempat, Tong. [hirupan panjang aroma kopi] Ngopi dulu.",
+      "nonverbal": [
+        {"before": "Gelas", "kind": "chuckle", "label": "kekehan halus"},
+        {"after": "Tong", "kind": "sniff", "label": "hirupan panjang aroma kopi"}
+      ],
+      "gap": 0.28,
+      "cue": "Bu Siti senyum hangat, angkat gelas ke hidung saat menghirup, letakkan deadpan di 'Ngopi dulu'; uap kopi memuncak"
+    },
+    {
+      "id": "S2", "beat": 3, "speaker": "buSiti", "clip": "buSiti_02",
+      "text": "Lho, nambah? Biasanya TV Ibu digeplak bener.",
+      "performance": "[tawa kaget kecil] Lho, nambah? [jeda heran] Biasanya TV Ibu digeplak bener.",
+      "nonverbal": [
+        {"before": "Lho", "kind": "laugh", "label": "tawa kaget kecil"},
+        {"after": "nambah", "kind": "pause", "label": "jeda heran"}
+      ],
+      "gap": 1.65,
+      "cue": "jeda aksi 4f wind-up -> 6f hold -> 1f PLAK! bohlam berayun, laptop 47 -> 48 (+1!); Bu Siti miringkan kepala melihat tangannya"
+    },
+    {
+      "id": "U3", "beat": 3, "speaker": "bangUtoh", "real": "utoh_03",
+      "text": "Bu, ini laptop, bukan TV tabung!",
+      "performance": "[kekehan frustrasi] Bu, ini laptop, bukan TV tabung!",
+      "nonverbal": [{"before": "Bu", "kind": "chuckle", "label": "kekehan frustrasi"}],
+      "gap": 0.26,
+      "cue": "senyum getir -> meledak angry + tunjuk laptop di 'bukan TV tabung!'"
+    },
+    {
+      "id": "U4", "beat": 4, "speaker": "bangUtoh", "real": "utoh_04",
+      "text": "Udahlah, nyerah... nggak bakal kelar.",
+      "performance": "[desahan pasrah panjang] Udahlah, nyerah... nggak bakal kelar.",
+      "nonverbal": [{"before": "Udahlah", "kind": "sigh", "label": "desahan pasrah panjang"}],
+      "gap": 0.36,
+      "cue": "sit -> squat meluncur lemas sepanjang desahan; kepala makin tunduk di 'nggak bakal kelar'"
+    },
+    {
+      "id": "U5", "beat": 4, "speaker": "bangUtoh", "real": "utoh_05",
+      "text": "Hah?! Nol error?! Yen... lo benerin?!",
+      "performance": "Hah?! Nol error?! [tawa kaget bahagia] Yen... lo benerin?!",
+      "nonverbal": [{"after": "error", "kind": "laugh", "label": "tawa kaget bahagia"}],
+      "gap": 1.95,
+      "cue": "jeda aksi Oyen jalan planted -> pawRaise kiri, deadpan 3f, kanan -> duduk -> TING! hijau 0 ERROR; Utoh shock+hatPop lalu laugh+sparkle"
+    },
+    {
+      "id": "S3", "beat": 4, "speaker": "buSiti", "clip": "buSiti_03",
+      "text": "Jasa konsultan... ikan asin dua.",
+      "performance": "Jasa konsultan... [kekehan santai] ikan asin dua.",
+      "nonverbal": [{"after": "konsultan", "kind": "chuckle", "label": "kekehan santai"}],
+      "gap": 0.28,
+      "cue": "Bu Siti smug, tangan di pinggang, melirik Oyen; akhir beat taskbar loncat 06:58 + alarm"
+    },
+    {
+      "id": "U6", "beat": 5, "speaker": "bangUtoh", "real": "utoh_06",
+      "text": "Waduh, jam tujuh kurang dua! Ayo Yen, ikut!",
+      "performance": "Waduh, jam tujuh kurang dua! Ayo Yen, ikut!",
+      "gap": 0.78,
+      "cue": "match-cut ALARM 06:58 -> Utoh kaget; sprint duluan, menoleh di 'Ayo Yen, ikut!'; Oyen duduk 12f lalu jalan 1/2 tempo"
+    },
+    {
+      "id": "U7", "beat": 6, "speaker": "bangUtoh", "real": "utoh_07",
+      "text": "Mbak Rara! Kelar seratus persen! Nol error!",
+      "performance": "Mbak Rara! Kelar seratus persen! [tawa sombong] Nol error!",
+      "nonverbal": [{"after": "persen", "kind": "laugh", "label": "tawa sombong"}],
+      "gap": 1.15,
+      "cue": "Lab FIK: busung dada, silang tangan, laugh -> smug, sparkle di 'Nol error!'"
+    },
+    {
+      "id": "R1", "beat": 6, "speaker": "rara", "clip": "rara_01",
+      "text": "Oke... Jalanin.",
+      "performance": "Oke... [helaan napas datar dingin] Jalanin.",
+      "nonverbal": [{"after": "Oke", "kind": "sigh", "label": "helaan napas datar dingin"}],
+      "gap": 0.30,
+      "cue": "Rara datar; kedip lambat + menunduk di helaan napas; tunjuk dingin di 'Jalanin'"
+    },
+    {
+      "id": "R2", "beat": 6, "speaker": "rara", "clip": "rara_02",
+      "text": "Emang nol error, To. Kodenya juga... nol.",
+      "performance": "[desahan lelah] Emang nol error, To. Kodenya juga... [jeda tajam] nol. [kekehan sinis]",
+      "nonverbal": [
+        {"before": "Emang", "kind": "sigh", "label": "desahan lelah"},
+        {"after": "juga", "kind": "pause", "label": "jeda tajam (punch-in)"},
+        {"after": "nol#2", "kind": "chuckle", "label": "kekehan sinis"}
+      ],
+      "gap": 2.15,
+      "cue": "jeda 4f angkat jari -> 6f hold -> 1f Enter KLAK! -> proyektor mmmmeeee + kursor berkedip + jangkrik; punch-in di jeda sebelum 'nol'"
+    },
+    {
+      "id": "U8", "beat": 7, "speaker": "bangUtoh", "real": "utoh_08",
+      "text": "Yen! Di warkop lo apain laptop gue?!",
+      "performance": "Yen! Di warkop lo apain laptop gue?!",
+      "gap": 0.44,
+      "cue": "CU Utoh melotot tanya ke Oyen"
+    },
+    {
+      "id": "O1", "beat": 7, "speaker": "oyen", "audio": "assets/voices/oyen.wav",
+      "text": "Meong.",
+      "performance": "Meong.",
+      "gap": 2.25,
+      "cue": "4f white flash -> REPLAY SEPIA (CTRL+A -> DELETE -> mmmm -> 0 ERROR) -> 4f white flash -> eye-line match Oyen kedip 14f -> Meong"
+    },
+    {
+      "id": "R3", "beat": 7, "speaker": "rara", "clip": "rara_03",
+      "text": "Nilai A buat konsultan kamu. Kamu minggu depan ngulang dari awal.",
+      "performance": "Nilai A buat konsultan kamu. [desahan penutup] Kamu minggu depan ngulang dari awal.",
+      "nonverbal": [{"after": "kamu", "kind": "sigh", "label": "desahan penutup"}],
+      "gap": 0.36,
+      "cue": "Shot A two-shot Rara+Oyen coret buku nilai -> desahan: tutup buku -> Shot B tight Rara ke Utoh"
+    },
+    {
+      "id": "U9", "beat": 7, "speaker": "bangUtoh", "real": "utoh_09",
+      "text": "Aduh Oyen! Gara-gara error 47 lagi dong...",
+      "performance": "Aduh Oyen! Gara-gara error 47 lagi dong... [helaan napas pasrah akhir]",
+      "nonverbal": [{"after": "dong", "kind": "sigh", "label": "helaan napas pasrah akhir"}],
+      "gap": 0.32,
+      "cue": "shock + hatPop + tension roll -> bahu jatuh lemas di helaan napas -> hard-cut seamless loop ke f0"
+    }
+  ]
+}

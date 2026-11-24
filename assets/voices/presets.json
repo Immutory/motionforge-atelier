@@ -1,4 +1,5 @@
 {
+  "bangUtoh": { "exaggeration": 0.54, "cfg": 0.42, "temperature": 0.72 },
   "pakUjang": { "exaggeration": 0.48, "cfg": 0.45, "temperature": 0.75 },
   "tio":      { "exaggeration": 0.52, "cfg": 0.35, "temperature": 0.76 },
   "mbakYuni": { "exaggeration": 0.56, "cfg": 0.50, "temperature": 0.72 },
