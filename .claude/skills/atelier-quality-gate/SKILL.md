@@ -1,39 +1,35 @@
 ---
 name: atelier-quality-gate
-description: Verify stills, previews and final video against automated spatial/QA checks and visual pixel inspection, producing a scored report with a numbered fix list. Use after every production phase, before every approval request, and when the user asks "is it good enough" or "cek kualitas".
+description: Verify stills, previews, thumbnails, and final video against automated 2.5D spatial/QA checks and visual pixel inspection, enforcing zero ice-skating, 2-bone IK + foot roll, soft-lit anti-plastic 3D materials, and zero clipping (Atelier v3.5).
 ---
 
-# Quality Gate (Atelier v2.0)
+# Quality Gate (Atelier v3.5 — 2D-Grade Walk + Soft-Lit 3D Polish)
 
-A gate is a promise that the next phase can start without redoing this one. Every review uses **two layers**: (1) automated spatial/code/QA validation (`engine/core/spatial.ts`, `npm run check`, `npm run qa`), and (2) direct pixel-by-pixel visual inspection of stills and motion previews.
+Every review uses **two layers**: (1) automated 2.5D spatial/code/QA validation (`engine/core/spatial.ts`, `npm run check`, `npm run qa`), and (2) direct pixel-by-pixel visual inspection against `contohvideo/download.mp4` & `(1).mp4`.
 
 ## The Four Gates
-- **G1 Script:** facts sourced, 55–75 s, cast & voice sheet aligned, user approved.
-- **G2 Stills (after Step 3.5 Spatial Audit):** hero stills pass **100% spatial zero-clipping** + visual review for style, framing, proportion, light, and palette.
-- **G3 Motion:** per-beat previews approved for reference cinema camera, organic acting, lip-sync, and timing.
-- **G4 Master:** final mp4 passes automated `npm run qa`, workspace junk cleaned, and user approved.
+- **G1 Script:** facts sourced (when factual), Short `58–75 s` (up to `90 s` for natural user VO, multiple of `90f` for seamless loop), 4-platform thumbnail plan (`y = 295..1630 px`, `x < 920 px`), user approved.
+- **G2 Stills (after Step 3.5 Spatial Audit 2.5D):** hero stills + walk 4-pose check pass **100% spatial zero-clipping** + visual review (0% clipping, 0% plastic sheen, 0% over-bloom, clean 2.5D shadow grounding).
+- **G3 Motion:** per-beat previews approved for 2D-grade articulated walk (zero ice-skating, bent IK knees, 4-pose foot roll, `Math.cos(ph)` counter-swing), Cinema Camera v3.0, 2.5D acting, lip-sync, and loop continuity.
+- **G4 Master:** final mp4 passes `npm run qa`, 4-platform thumbnail exported, workspace junk cleaned, and user approved.
 
 ## Mandatory 5-Pillar Checklist (Every Shot at G2 & G3)
-1. **Zero-Clipping & Spatial Audit (MUST PASS BEFORE VISUAL REVIEW — Auto-Reject Gate G2 on ANY failure!):**
-   - Run `checkPropOverlap`, `checkBillboardSweep` (at active camera yaw!), `checkCounterVisibility`, `checkSafeFraming`, and `checkSightline` from `engine/core/spatial.ts`.
-   - **Auto-reject Gate G2** if even 1 frame shows: crowded/penetrating props, billboard clipping a bench/table/pole, floating feet, **decapitated/sunken head behind a counter**, or any cropped face/ear/critical 3D sign (`WARKOP 24 JAM`, `MENU WARKOP`, `LAB KOMPUTER FIK 2.1`).
-2. **Reference Character Motion (`contohvideo/` & `motion.md`):**
-   - Planted feet (`gait: 'planted'`, zero skating), organic Bezier noodle-limbs, independent `headTilt`, authentic `sitHeight` on benches/chairs, `strikeEnvelope` impact grammar, 4-frame `blinkLidAt`, 2f reaction lead, RMS-gated `talkGated` lip-sync, and zero 1-frame stance/arm flicker (`walk ↔ sit`).
-3. **Reference Cinema Camera (`contohvideo/`):**
-   - **REJECT monotonous slow zoom-in (`creepRate`) across holds!**
-   - Require confident settled holds (`creepRate: 0`) paired with purposeful 3D moves (*Move → Settle*, *Pull-Out Reveal*, *Orbit Arc*, *Top-Down Insert*, *Crane Transition*), clean symmetrical staging, and motivated transitions (`cut` / `dissolve` / `wipe` / `flash`).
-4. **Motivated Light & Look Bible:**
-   - Every light has a diegetic source, directional shadows, characters cleanly separated from backgrounds, never muddy or flat, faces always readable.
-5. **Pure Cinema (Zero 2D HUD Clutter):**
-   - Reject any floating 2D UI boxes, popup cards, alarm banners, or outro panels over the 3D scene; only clean bottom subtitles + speaker label and shot transitions are allowed.
+1. **Zero-Clipping & Spatial Audit 2.5D (Auto-Reject Gate G2 on ANY failure!):**
+   - `checkPropOverlap` (vs `loadSetBoxes` sidecar manifests), tiered + 3D tilted `checkBillboardSweep`, perspective `checkCounterVisibility` (**ZERO `armPose: 'rest'` behind counters**, `handY >= counterTopY + 0.08 m`), `checkSafeFraming` (`actorFramingSubjects`), `checkScreenOcclusion`, and 5-ray `checkSightline` (dandang/uap/poles clear, glass auto-ignored).
+   - Seated characters MUST use single stools/chairs + `seatRadius` (0% chair clipping).
+2. **2D-Grade Walk & 2.5D Reference Motion (`(1).mp4`, `download.mp4`, `motion.md` — Auto-Reject on ANY walk flaw!):**
+   - **ZERO Ice-Skating / Sliding**: Any character moving in XZ MUST use `computeWalkState()` + `gait: 'planted'` (default). **REJECT any XZ translation in `stance: 'stand'`!**
+   - **Articulated 2-Bone Leg IK + Foot Roll**: Verify clear knee bend (`60–70°` Passing), far-leg `16%` depth darkening, 4-pose heel-toe roll (`+18° / 0° / -24°`), `Math.cos(ph)` arm-leg counter-swing, dynamic contact shadow (`blobY = 0.005`), and smooth `strideBlend` ease-out stop.
+   - 1 whole 2.5D silhouette (`resolve25DView` 8-dir, spherical parallax, weighted ink, `actorHandWorldPos` for pure 3D hand props from `engine/props/`, `tiltComp` on high-angle `|pitch| > 12°`), `strikeEnvelope` (4-6-1-8), `springPop`, 4f `blinkLidAt`, 2f reaction lead, RMS `talkGated`, zero 1f flicker.
+3. **Cinema Camera v3.0 (`(1).mp4` & `download.mp4`):**
+   - **REJECT monotonous slow zoom-in!** Require `<CameraRig />`, `DEFAULT_CREEP = 0`, camera-local harmonic `kickOffset`, `moveSettle`, `pullOutReveal`, `whipPan`, analytical `orbit`, `storyDolly`, `topDownInsert` (**3D props only, never overhead on 2D billboards!**), loop-safe `handheld`, and *frame-within-a-frame*.
+4. **Soft-Lit Matte 3D World, Shadow & Look Bible (`download.mp4` Standard):**
+   - **REJECT plastic specular sheen** on asphalt, walls, wood, grass, curbs, or pallets (`classifyGlbSurface` matte `shininess: 0`, Blender `Roughness >= 0.82`, `Normal Strength <= 0.45`, `kampung.glb <= 29 MB`).
+   - Verify soft PCF shadows (`shadow.radius = 3.0`), `LIGHTS.noon.card.castShadow = true`, `uLocalLight` Reinhard soft-clamp (**0% over-bloom / white washout**), real `receiveShadow` & floor/wall `castShadow`, and `POST_HYBRID_25D` or `DEFAULT_POST` parity.
+5. **Pure Cinema, Loop & 4-Platform Safe Zone:**
+   - ZERO 2D HUD boxes; `SUB_STACK = 'label-above'` (`1485–1690 px`) clear of mouths & off during loop tail; `TOTAL_FRAMES % 90 === 0` + audio `"loop"`; 4-platform thumbnail safe-zone (`y = 295..1630 px`, `x < 920 px`).
 
-## Scored Review
-Score color, lighting, ink, textures, characters, depth, composition from 1 to 10. Each fix: number, frame, owner agent, one-line change. Keep each verdict under 200 words and inspect 1–3 images at a time.
-
-## Automated Checks (`npm run check` & `npm run qa`)
-- `npm run check`: 100% TypeScript + JS spatial/camera/cast tests + Python tests must pass.
-- `npm run qa -- out/<slug>/<slug>_final.mp4`: reports black frames (`0`), frozen spans (`0`), and broadcast loudness (`≈ -16 LUFS`, `TP ≤ -1 dBTP`).
-- **Static Camera vs True Freeze:** A settled camera hold (`creepRate: 0`) with live acting (blinks, RMS lip-sync, breathing, steam, monitor pulse, cursor blink, swaying lamps) is **valid and expected**! A `freeze_span` indicates a **true frozen frame** where 0 pixels change across the entire frame — fix it by animating living character/world micro-life, NEVER by adding artificial camera zoom creep.
-
-## Fail Fast
-If any Pillar 1 (Spatial Zero-Clipping) check fails, or more than two visual scores are below 5, stop immediately and return to the owning phase before advancing.
+## Automated Checks & Fail-Fast Rule
+- `npm run check`: 100% TS + Python tests must pass (`pycache=0`, `blend1=0`).
+- `npm run qa -- out/<slug>/<slug>_final.mp4`: `black_frames: 0`, `freeze_spans: 0`, master target `-16.0 LUFS / TP ≤ -1.5 dBTP` (QA band `-17..-13 LUFS / TP ≤ -1.0 dBTP`). Valid settled camera holds with live acting are expected; fix true freezes with micro-life, never camera creep.
+- **Every visual score `< 5` MUST be fixed before the gate can pass; `> 2` scores `< 5` = stop & return to owner phase.**

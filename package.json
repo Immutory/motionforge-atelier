@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "description": "Template studio untuk animasi 2D-in-3D vertikal: karakter kartun 2D di dunia 3D prosedural, dirender dengan Remotion + three.js.",
   "scripts": {
     "doctor": "node pipeline/doctor.mjs",

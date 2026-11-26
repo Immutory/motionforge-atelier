@@ -1,0 +1,61 @@
+{
+  "_doc": "Milik sound-designer. EP03 'Curhat ke Abang Bakmie'. Frame @30fps diturunkan dari ekspor cast.ts (EP03_*), 'frame' = sumber kebenaran. Meong Oyen sudah ada di voice.wav (baris O1), bukan event.",
+  "fps": 30,
+  "master": {"lufs": -15, "true_peak_db": -1.5},
+  "duck": {"depth_db": -7, "pre_ms": 120, "post_ms": 200, "smooth_ms": 160},
+  "levels": {"music_lu": -15, "ambience_lu": -23},
+  "music": {
+    "sections": [
+      {"from": 0, "to": 716, "style": "lazy", "gain_db": -2, "fade_in": 4, "fade_out": 10, "note": "B1-B2 curhat santai"},
+      {"from": 716, "to": 799, "style": "tense", "gain_db": -1, "fade_in": 4, "fade_out": 1, "note": "B3 'Kayak... sekarang?' tegang, putus tepat di lompat kaget"},
+      {"from": 826, "to": 1116, "style": "bright", "gain_db": -3, "fade_in": 8, "fade_out": 12, "note": "B3 sindiran Yuni + B4 pelanggan tetap"},
+      {"from": 1104, "to": 1336, "style": "sepia", "gain_db": -2, "fade_in": 12, "fade_out": 12, "note": "B5 cerita tulus Tio (hangat, lowpass)"},
+      {"from": 1324, "to": 1483, "style": "bright", "gain_db": -3, "fade_in": 12, "fade_out": 2, "note": "B5 Utoh bangkit semangat; berhenti mendadak saat tagihan"},
+      {"from": 1592, "to": 1800, "style": "lazy", "gain_db": -3, "fade_in": 10, "fade_out": 12, "note": "B6 ikan asin -> kontinu sampai f1800, fade 12f bertemu fade_in 4f section pertama saat platform loop ke f0"}
+    ]
+  },
+  "ambience": {
+    "sections": [
+      {"from": 0, "to": 1800, "style": "pedagang-malam", "gain_db": 0, "fade_in": 0, "fade_out": 0}
+    ]
+  },
+  "events": [
+    {"frame": 134, "sfx": "cup", "gain_db": -11, "note": "B1 mangkok mie diletakkan Tio di 'satu' (EP03_BOWL_FRAME)"},
+    {"frame": 192, "sfx": "scribble", "gain_db": -21, "params": {"seconds": 0.65}, "note": "Bon: MIE AYAM 15RB"},
+    {"frame": 198, "sfx": "ladle", "gain_db": -29, "params": {"seconds": 0.3, "seed": 359}, "note": "Tio mengangkat/meniriskan mi dari dandang (siklus 72f, cyc 54); hanya angkatan di luar kata VO"},
+    {"frame": 486, "sfx": "ladle", "gain_db": -29, "params": {"seconds": 0.4, "seed": 647}},
+    {"frame": 602, "sfx": "scribble", "gain_db": -21, "params": {"seconds": 0.65}, "note": "Bon: + PANGSIT 5RB"},
+    {"frame": 645, "sfx": "step", "gain_db": -26, "params": {"seconds": 0.08, "seed": 71}, "note": "Tapak Oyen: siklus walkPhase 18f dari f640, kaki mendarat di fase 0,25/0,75 -> f640+4,5+9k"},
+    {"frame": 654, "sfx": "step", "gain_db": -27, "params": {"seconds": 0.08, "seed": 72}},
+    {"frame": 663, "sfx": "step", "gain_db": -26, "params": {"seconds": 0.08, "seed": 73}},
+    {"frame": 672, "sfx": "step", "gain_db": -27, "params": {"seconds": 0.08, "seed": 74}},
+    {"frame": 681, "sfx": "step", "gain_db": -26, "params": {"seconds": 0.08, "seed": 75}},
+    {"frame": 690, "sfx": "step", "gain_db": -27, "params": {"seconds": 0.08, "seed": 76}},
+    {"frame": 697, "sfx": "swish", "gain_db": -18, "note": "B3 Oyen melompat ke bangku (EP03_OYEN_HOP_FRAME)"},
+    {"frame": 707, "sfx": "pop", "gain_db": -22, "note": "Oyen mendarat di bangku"},
+    {"frame": 765, "sfx": "swish", "gain_db": -20, "note": "Utoh menoleh ke Oyen"},
+    {"frame": 775, "sfx": "blip", "gain_db": -22, "note": "slow-blink Oyen 14f (EP03_OYEN_BLINK_FROM)"},
+    {"frame": 794, "sfx": "whoosh", "gain_db": -13, "params": {"seconds": 0.25}, "duck": false, "note": "wind-up lompat kaget"},
+    {"frame": 799, "sfx": "slap", "gain_db": -12, "duck": false, "note": "STRIKE lompat kaget (EP03_SHOCK_FRAME, + kick kamera)"},
+    {"frame": 805, "sfx": "thud", "gain_db": -14, "note": "Utoh mendarat kembali di bangku (stance jump 799-804, sit f805)"},
+    {"frame": 918, "sfx": "ladle", "gain_db": -29, "params": {"seconds": 0.4, "seed": 1079}},
+    {"frame": 997, "sfx": "ding", "gain_db": -20, "params": {"freq": 1568.0, "seconds": 0.25}, "note": "piring ayam #1 'ting'"},
+    {"frame": 1009, "sfx": "ding", "gain_db": -20, "params": {"freq": 1760.0, "seconds": 0.25}, "note": "piring ayam #2 'ting'"},
+    {"frame": 1044, "sfx": "ding", "gain_db": -19, "params": {"freq": 1975.5, "seconds": 0.25}, "note": "piring ayam #3 'ting' (nada naik)"},
+    {"frame": 1054, "sfx": "scribble", "gain_db": -21, "params": {"seconds": 0.65}, "note": "Bon: + AYAM (OYEN) x3 45RB"},
+    {"frame": 1062, "sfx": "ladle", "gain_db": -29, "params": {"seconds": 0.4, "seed": 1223}},
+    {"frame": 1388, "sfx": "pour", "gain_db": -18, "params": {"seconds": 0.5}, "note": "Tio menuang es teh"},
+    {"frame": 1403, "sfx": "cup", "gain_db": -14, "note": "gelas es teh diletakkan (EP03_ESTEH_FRAME)"},
+    {"frame": 1415, "sfx": "scribble", "gain_db": -22, "params": {"seconds": 0.65}, "note": "Bon: + ES TEH 5RB"},
+    {"frame": 1496, "sfx": "scribble", "gain_db": -20, "params": {"seconds": 0.65}, "note": "Bon: + CURHAT 20RB"},
+    {"frame": 1516, "sfx": "scribble", "gain_db": -19, "params": {"seconds": 0.65}, "note": "Bon: TOTAL 90RB (garis bawah tegas)"},
+    {"frame": 1527, "sfx": "cricket", "gain_db": -15, "params": {"seconds": 0.9}, "duck": false, "note": "hening canggung setelah total"},
+    {"frame": 1538, "sfx": "velcro", "gain_db": -13, "note": "dompet dibuka (EP03_WALLET_FROM_FRAME)"},
+    {"frame": 1554, "sfx": "flutter", "gain_db": -17, "params": {"seconds": 1.35}, "note": "ngengat terbang dari dompet kosong"},
+    {"frame": 1566, "sfx": "ladle", "gain_db": -29, "params": {"seconds": 0.4, "seed": 1727}},
+    {"frame": 1592, "sfx": "swish", "gain_db": -21, "note": "Oyen mendorong ikan asin (EP03_FISH_FROM)"},
+    {"frame": 1600, "sfx": "pop", "gain_db": -16, "note": "ikan asin 'plok' di piring (EP03_FISH_TO)"},
+    {"frame": 1618, "sfx": "pop", "gain_db": -15, "note": "kacamata Tio melorot (EP03_GLASSES_POP)"},
+    {"frame": 1665, "sfx": "thud", "gain_db": -15, "duck": true, "note": "dahi Utoh kembali ke gerobak (EP03_SLUMP_FROM, pose snap f1665); di-duck, dipendekkan agar tidak menutupi 'Bang' U7 f1672", "params": {"seconds": 0.22}}
+  ]
+}

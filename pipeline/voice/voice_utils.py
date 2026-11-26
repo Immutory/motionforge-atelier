@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import subprocess
+import tempfile
 import wave
 from pathlib import Path
 from typing import Any
@@ -23,8 +25,8 @@ _INDO_TTS_REPLACEMENTS: list[tuple[str, str]] = [
     (r"\bS1\s+TI\b", "es satu te i"),
     (r"\bS1\b", "es satu"),
     (r"\bTI\b", "te i"),
-    (r"\bRT\s*0?(\d+)\b", lambda m: f"er te {_spell_short_num(m.group(1), leading_zero=m.group(0).split()[-1].startswith('0'))}"),  # type: ignore[list-item]
-    (r"\bRW\s*0?(\d+)\b", lambda m: f"er we {_spell_short_num(m.group(1), leading_zero=m.group(0).split()[-1].startswith('0'))}"),  # type: ignore[list-item]
+    (r"\bRT\s*(0?)(\d+)\b", lambda m: f"er te {_spell_short_num(m.group(2), leading_zero=bool(m.group(1)))}"),  # type: ignore[list-item]
+    (r"\bRW\s*(0?)(\d+)\b", lambda m: f"er we {_spell_short_num(m.group(2), leading_zero=bool(m.group(1)))}"),  # type: ignore[list-item]
     (r"\bRT\b", "er te"),
     (r"\bRW\b", "er we"),
     (r"\bWi-?Fi\b", "waifai"),
@@ -63,8 +65,10 @@ def _spell_short_num(num_str: str, leading_zero: bool = False) -> str:
         return "sebelas"
     if val < 20:
         return f"{_DIGITS_ID[str(val - 10)]} belas"
-    tens, ones = divmod(val, 10)
-    return f"{_DIGITS_ID[str(tens)]} puluh" + (f" {_DIGITS_ID[str(ones)]}" if ones else "")
+    if val < 100:
+        tens, ones = divmod(val, 10)
+        return f"{_DIGITS_ID[str(tens)]} puluh" + (f" {_DIGITS_ID[str(ones)]}" if ones else "")
+    return " ".join(_DIGITS_ID[ch] for ch in str(val))
 
 
 def normalize_indo_tts_text(text: str) -> str:
@@ -79,29 +83,37 @@ def normalize_indo_tts_text(text: str) -> str:
 
 
 def normalize_wav(src: str | Path, dst: str | Path, sr: int = STUDIO_SR) -> Path:
-    """Konversi file audio apa pun (.mp3/.m4a/.wav) menjadi WAV 48 kHz mono 16-bit PCM."""
+    """Konversi file audio apa pun (.mp3/.m4a/.wav) menjadi WAV 48 kHz mono 16-bit PCM (aman bila src == dst)."""
     src_p = Path(src)
     dst_p = Path(dst)
     dst_p.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-i",
-        str(src_p),
-        "-ar",
-        str(sr),
-        "-ac",
-        "1",
-        "-c:a",
-        "pcm_s16le",
-        str(dst_p),
-    ]
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    if res.returncode != 0:
-        raise RuntimeError(f"ffmpeg gagal mengonversi {src_p}: {res.stderr.strip()}")
+    fd, tmp_name = tempfile.mkstemp(prefix=".norm_", suffix=".wav", dir=str(dst_p.parent))
+    os.close(fd)
+    tmp_p = Path(tmp_name)
+    try:
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            str(src_p),
+            "-ar",
+            str(sr),
+            "-ac",
+            "1",
+            "-c:a",
+            "pcm_s16le",
+            str(tmp_p),
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if res.returncode != 0:
+            raise RuntimeError(f"ffmpeg gagal mengonversi {src_p}: {res.stderr.strip()}")
+        os.replace(tmp_p, dst_p)
+    except Exception:
+        tmp_p.unlink(missing_ok=True)
+        raise
     return dst_p
 
 
@@ -192,9 +204,12 @@ def load_dialogue_script(path: str | Path) -> list[dict[str, Any]]:
     for i, row in enumerate(raw):
         if not isinstance(row, dict):
             raise ValueError(f"Baris skrip ke-{i} harus berupa object JSON.")
-        speaker = str(row.get("speaker", "narrator")).strip()
-        text = clean_word_token(str(row.get("text", "")))
-        audio = str(row["audio"]).strip() if row.get("audio") else None
+        raw_spk = row.get("speaker")
+        speaker = re.sub(r"[^A-Za-z0-9_-]", "_", str(raw_spk if raw_spk is not None else "narrator").strip()) or "narrator"
+        raw_text = row.get("text")
+        text = clean_word_token(str(raw_text)) if raw_text is not None else ""
+        raw_audio = row.get("audio")
+        audio = str(raw_audio).strip() if raw_audio is not None and str(raw_audio).strip() else None
         if not text and not audio:
             raise ValueError(f"Baris skrip ke-{i} ({speaker}) wajib memiliki `text` atau `audio`.")
         lines.append(
@@ -203,19 +218,19 @@ def load_dialogue_script(path: str | Path) -> list[dict[str, Any]]:
                 "text": text,
                 "audio": audio,
                 "ref": row.get("ref"),
-                "exaggeration": float(row["exaggeration"]) if "exaggeration" in row else None,
-                "cfg": float(row["cfg"]) if "cfg" in row else None,
-                "temperature": float(row["temperature"]) if "temperature" in row else None,
-                "seed": int(row["seed"]) if "seed" in row and row["seed"] is not None else None,
-                "align": bool(row.get("align", speaker not in ("oyen", "abu", "belang"))),
-                "gap": float(row.get("gap", DEFAULT_GAP_SEC)),
+                "exaggeration": float(row["exaggeration"]) if row.get("exaggeration") is not None else None,
+                "cfg": float(row["cfg"]) if row.get("cfg") is not None else None,
+                "temperature": float(row["temperature"]) if row.get("temperature") is not None else None,
+                "seed": int(row["seed"]) if row.get("seed") is not None else None,
+                "align": bool(row["align"]) if row.get("align") is not None else (speaker not in ("oyen", "abu", "belang")),
+                "gap": float(row["gap"]) if row.get("gap") is not None else DEFAULT_GAP_SEC,
             }
         )
     return lines
 
 
-def summarize_words(words: list[dict[str, Any]], fps: int = 30, tail_sec: float = 0.5) -> dict[str, Any]:
-    """Hitung ringkasan durasi audio & jumlah frame 30 fps (selaras dengan `durationFromWords`)."""
+def summarize_words(words: list[dict[str, Any]], fps: int = 30, tail_sec: float = 1.2) -> dict[str, Any]:
+    """Hitung ringkasan durasi audio & jumlah frame 30 fps (selaras dengan `durationFromWords`, default tail 1.2 dtk)."""
     last_end = max((float(w["end"]) for w in words), default=0.0)
     total_sec = round(last_end + tail_sec, 3) if words else 0.0
     frames = int(math.ceil(total_sec * fps)) if words else 0

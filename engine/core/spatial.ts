@@ -1,5 +1,8 @@
 import type { Vec3 } from './easing';
 import { ASPECT_9_16, cameraBasis, projectPoint, type CamPose } from './camera';
+import type { ActorPose, ArmPose, BodyBuild } from '../cast/nusantara';
+import { actorHeadCenterY, seatCardPos } from '../cast/nusantara';
+import type { HandProp } from '../cast/props2d';
 
 /** Kotak pembatas sumbu-sejajar (AABB) bernama dalam koordinat dunia Three.js (Y=up, meter). */
 export type NamedBox = {
@@ -8,6 +11,8 @@ export type NamedBox = {
   min: Vec3;
   /** Sudut maksimum [maxX, maxY, maxZ]. */
   max: Vec3;
+  /** true jika seluruh material mesh di GLB bersifat transparan (`BLEND` / `alpha < 0.95`). */
+  transparent?: boolean;
 };
 
 /** Helper membuat `NamedBox` dari titik pusat dan ukuran `[w, h, d]`. */
@@ -81,7 +86,22 @@ export type BillboardSweepCollision = {
   obstacle: string;
   /** Kedalaman sapuan masuk ke AABB + margin (m). */
   penetration: number;
+  /** Zona vertikal yang terdampak bila menggunakan profil bertingkat. */
+  tier?: 'legs' | 'torso' | 'shoulders' | 'full';
   message: string;
+};
+
+export type BillboardSweepOptions = {
+  /** Profil postur badan untuk lebar bertingkat (Atelier v3.0). */
+  build?: BodyBuild;
+  leftArm?: ArmPose;
+  rightArm?: ArmPose;
+  leftProp?: HandProp;
+  rightProp?: HandProp;
+  /** Sudut kemiringan X (*high-angle tiltX* dalam radian, berporos `y = 0`). */
+  tiltX?: number;
+  /** Aktifkan profil lebar bertingkat kaki/pinggul/bahu+prop (otomatis aktif jika `build`/`leftArm`/`rightArm` diisi). */
+  tiered?: boolean;
 };
 
 export type BillboardSweepResult = {
@@ -131,7 +151,24 @@ function segmentIntersectsBoxXZ(
   return t0 <= t1;
 }
 
-/** Jarak minimum segmen 2D ke kotak XZ (0 bila beririsan). */
+/** Jarak titik 2D `(px,pz)` ke kotak XZ. */
+function pointToBoxDistanceXZ(px: number, pz: number, minX: number, maxX: number, minZ: number, maxZ: number): number {
+  const dx = px < minX ? minX - px : px > maxX ? px - maxX : 0;
+  const dz = pz < minZ ? minZ - pz : pz > maxZ ? pz - maxZ : 0;
+  return Math.hypot(dx, dz);
+}
+
+/** Jarak titik 2D `(px,pz)` ke segmen `(x0,z0)->(x1,z1)`. */
+function pointToSegmentDistanceXZ(px: number, pz: number, x0: number, z0: number, x1: number, z1: number): number {
+  const sx = x1 - x0;
+  const sz = z1 - z0;
+  const lenSq = sx * sx + sz * sz;
+  if (lenSq <= 1e-12) return Math.hypot(px - x0, pz - z0);
+  const t = Math.max(0, Math.min(1, ((px - x0) * sx + (pz - z0) * sz) / lenSq));
+  return Math.hypot(px - (x0 + sx * t), pz - (z0 + sz * t));
+}
+
+/** Jarak minimum analitis eksak segmen 2D ke kotak XZ (0 bila beririsan). */
 function segmentToBoxDistanceXZ(
   x0: number,
   z0: number,
@@ -143,24 +180,29 @@ function segmentToBoxDistanceXZ(
   maxZ: number,
 ): number {
   if (segmentIntersectsBoxXZ(x0, z0, x1, z1, minX, maxX, minZ, maxZ)) return 0;
-  let best = Infinity;
-  const samples = 16;
-  for (let s = 0; s <= samples; s++) {
-    const t = s / samples;
-    const px = x0 + (x1 - x0) * t;
-    const pz = z0 + (z1 - z0) * t;
-    const dx = px < minX ? minX - px : px > maxX ? px - maxX : 0;
-    const dz = pz < minZ ? minZ - pz : pz > maxZ ? pz - maxZ : 0;
-    const d = Math.hypot(dx, dz);
-    if (d < best) best = d;
-  }
-  return best;
+  return Math.min(
+    pointToBoxDistanceXZ(x0, z0, minX, maxX, minZ, maxZ),
+    pointToBoxDistanceXZ(x1, z1, minX, maxX, minZ, maxZ),
+    pointToSegmentDistanceXZ(minX, minZ, x0, z0, x1, z1),
+    pointToSegmentDistanceXZ(maxX, minZ, x0, z0, x1, z1),
+    pointToSegmentDistanceXZ(minX, maxZ, x0, z0, x1, z1),
+    pointToSegmentDistanceXZ(maxX, maxZ, x0, z0, x1, z1),
+  );
+}
+
+function armOutFactor(arm?: ArmPose, prop?: HandProp): number {
+  let k = 1.0;
+  if (arm === 'point' || arm === 'wave') k = 1.18;
+  else if (arm === 'raise') k = 1.12;
+  else if (arm === 'hold') k = 1.08;
+  if (prop && prop !== 'none') k = Math.max(k, 1.15);
+  return k;
 }
 
 /**
  * Hitung proyeksi bidang datar `<ActorBillboard>` / `<CatBillboard>` setelah berputar `yaw`
- * menghadap `camPos`, lalu deteksi apakah ujung kiri/kanan bidang billboard menyapu masuk ke
- * bangku, meja, konter, dinding, atau tiang.
+ * menghadap `camPos` (plus opsional profil lebar bertingkat & bidang miring 3D `tiltX` di Atelier v3.0),
+ * lalu deteksi apakah ujung kiri/kanan bidang billboard menyapu masuk ke bangku, meja, konter, dinding, atau tiang.
  */
 export function checkBillboardSweep(
   actorPos: Vec3,
@@ -169,6 +211,7 @@ export function checkBillboardSweep(
   camPos: Vec3,
   obstacles: NamedBox[],
   margin = 0.04,
+  opts?: BillboardSweepOptions,
 ): BillboardSweepResult {
   const dx = camPos[0] - actorPos[0];
   const dz = camPos[2] - actorPos[2];
@@ -184,43 +227,130 @@ export function checkBillboardSweep(
   const pRight: Vec3 = [actorPos[0] + rx * halfW, actorPos[1], actorPos[2] + rz * halfW];
   const yawDeg = (Math.atan2(fx, fz) * 180) / Math.PI;
 
-  const yMin = actorPos[1];
-  const yMax = actorPos[1] + actorHeight;
+  const tiltX = opts?.tiltX ?? 0;
+  const useTiered = Boolean(opts?.tiered || opts?.build || opts?.leftArm || opts?.rightArm || opts?.leftProp || opts?.rightProp);
+  const buildMul = opts?.build === 'big' ? 1.16 : opts?.build === 'slim' ? 0.9 : 1.0;
+  const shoulderMul = Math.max(armOutFactor(opts?.leftArm, opts?.leftProp), armOutFactor(opts?.rightArm, opts?.rightProp));
+
+  type Tier = { name: 'legs' | 'torso' | 'shoulders' | 'full'; y0: number; y1: number; wFrac: number };
+  const tiers: Tier[] = useTiered
+    ? [
+        { name: 'legs', y0: 0, y1: actorHeight * 0.4, wFrac: 0.62 * buildMul },
+        { name: 'torso', y0: actorHeight * 0.4, y1: actorHeight * 0.68, wFrac: 0.82 * buildMul },
+        { name: 'shoulders', y0: actorHeight * 0.68, y1: actorHeight, wFrac: Math.min(1.3, buildMul * shoulderMul) },
+      ]
+    : [{ name: 'full', y0: 0, y1: actorHeight, wFrac: 1 }];
+
   const collisions: BillboardSweepCollision[] = [];
+  const cosT = Math.cos(tiltX);
+  const sinT = Math.sin(tiltX);
 
   for (const box of obstacles) {
-    // Abaikan halangan yang sepenuhnya di atas kepala atau di bawah telapak kaki.
-    if (yMax <= box.min[1] + 1e-4 || yMin >= box.max[1] - 1e-4) continue;
-    const hitsExpanded = segmentIntersectsBoxXZ(
-      pLeft[0],
-      pLeft[2],
-      pRight[0],
-      pRight[2],
-      box.min[0] - margin,
-      box.max[0] + margin,
-      box.min[2] - margin,
-      box.max[2] + margin,
-    );
-    if (!hitsExpanded) continue;
-    const rawDist = segmentToBoxDistanceXZ(
-      pLeft[0],
-      pLeft[2],
-      pRight[0],
-      pRight[2],
-      box.min[0],
-      box.max[0],
-      box.min[2],
-      box.max[2],
-    );
-    const penetration = Math.max(0, margin - rawDist);
-    collisions.push({
-      obstacle: box.name,
-      penetration,
-      message:
-        rawDist === 0
-          ? `Billboard (yaw ${yawDeg.toFixed(1)}°) menembus ${box.name}`
-          : `Billboard (yaw ${yawDeg.toFixed(1)}°) terlalu dekat dengan ${box.name} (jarak ${rawDist.toFixed(3)} m < margin ${margin.toFixed(3)} m)`,
-    });
+    let worstPen = 0;
+    let worstRawDist = Infinity;
+    let worstTier: Tier['name'] = 'full';
+
+    for (const tier of tiers) {
+      const worldY0 = actorPos[1] + tier.y0 * cosT;
+      const worldY1 = actorPos[1] + tier.y1 * cosT;
+      const tyMin = Math.min(worldY0, worldY1);
+      const tyMax = Math.max(worldY0, worldY1);
+      if (tyMax <= box.min[1] + 1e-4 || tyMin >= box.max[1] - 1e-4) continue;
+
+      const tHalfW = halfW * tier.wFrac;
+      const ovMin = Math.max(tyMin, box.min[1]);
+      const ovMax = Math.min(tyMax, box.max[1]);
+
+      if (Math.abs(tiltX) <= 1e-4) {
+        const x0 = actorPos[0] - rx * tHalfW;
+        const z0 = actorPos[2] - rz * tHalfW;
+        const x1 = actorPos[0] + rx * tHalfW;
+        const z1 = actorPos[2] + rz * tHalfW;
+        const hitsExpanded = segmentIntersectsBoxXZ(
+          x0,
+          z0,
+          x1,
+          z1,
+          box.min[0] - margin,
+          box.max[0] + margin,
+          box.min[2] - margin,
+          box.max[2] + margin,
+        );
+        if (!hitsExpanded) continue;
+        const rawDist = segmentToBoxDistanceXZ(x0, z0, x1, z1, box.min[0], box.max[0], box.min[2], box.max[2]);
+        const pen = margin - rawDist;
+        if (pen > worstPen) {
+          worstPen = pen;
+          worstRawDist = rawDist;
+          worstTier = tier.name;
+        }
+      } else {
+        // Eksak O(1) tanpa blind spot: proyeksi XZ dari quad miring 3D di [ovMin, ovMax] adalah OBB 2D
+        // berorientasi basis ortonormal (right, forward) dengan setengah lebar tHalfW dan setengah kedalaman halfD.
+        const invCos = Math.abs(cosT) > 1e-4 ? 1 / cosT : 1;
+        const sf0 = (ovMin - actorPos[1]) * invCos * sinT;
+        const sf1 = (ovMax - actorPos[1]) * invCos * sinT;
+        const midSf = (sf0 + sf1) * 0.5;
+        const halfD = Math.abs(sf1 - sf0) * 0.5;
+        const obbCx = actorPos[0] + fx * midSf;
+        const obbCz = actorPos[2] + fz * midSf;
+        const boxCx = (box.min[0] + box.max[0]) * 0.5;
+        const boxCz = (box.min[2] + box.max[2]) * 0.5;
+        const boxHx = (box.max[0] - box.min[0]) * 0.5;
+        const boxHz = (box.max[2] - box.min[2]) * 0.5;
+        const dx = boxCx - obbCx;
+        const dz = boxCz - obbCz;
+
+        // Uji SAT 4 sumbu (X dunia, Z dunia, right OBB, forward OBB) terhadap kotak diperluas `margin`.
+        const obbProjX = Math.abs(rx) * tHalfW + Math.abs(fx) * halfD;
+        const obbProjZ = Math.abs(rz) * tHalfW + Math.abs(fz) * halfD;
+        const sepX = Math.abs(dx) - (boxHx + obbProjX);
+        const sepZ = Math.abs(dz) - (boxHz + obbProjZ);
+        const sepR = Math.abs(dx * rx + dz * rz) - (tHalfW + boxHx * Math.abs(rx) + boxHz * Math.abs(rz));
+        const sepF = Math.abs(dx * fx + dz * fz) - (halfD + boxHx * Math.abs(fx) + boxHz * Math.abs(fz));
+        const maxSep = Math.max(sepX, sepZ, sepR, sepF);
+        if (maxSep >= margin) continue;
+
+        let rawDist: number;
+        if (maxSep <= 0) {
+          rawDist = 0;
+        } else {
+          // Jarak eksak antara 4 tepi OBB dan AABB (sekaligus titik sudut dalam kotak sudah tertangani maxSep <= 0)
+          const c0x = obbCx - rx * tHalfW - fx * halfD;
+          const c0z = obbCz - rz * tHalfW - fz * halfD;
+          const c1x = obbCx + rx * tHalfW - fx * halfD;
+          const c1z = obbCz + rz * tHalfW - fz * halfD;
+          const c2x = obbCx + rx * tHalfW + fx * halfD;
+          const c2z = obbCz + rz * tHalfW + fz * halfD;
+          const c3x = obbCx - rx * tHalfW + fx * halfD;
+          const c3z = obbCz - rz * tHalfW + fz * halfD;
+          rawDist = Math.min(
+            segmentToBoxDistanceXZ(c0x, c0z, c1x, c1z, box.min[0], box.max[0], box.min[2], box.max[2]),
+            segmentToBoxDistanceXZ(c1x, c1z, c2x, c2z, box.min[0], box.max[0], box.min[2], box.max[2]),
+            segmentToBoxDistanceXZ(c2x, c2z, c3x, c3z, box.min[0], box.max[0], box.min[2], box.max[2]),
+            segmentToBoxDistanceXZ(c3x, c3z, c0x, c0z, box.min[0], box.max[0], box.min[2], box.max[2]),
+          );
+        }
+        const pen = margin - rawDist;
+        if (pen > worstPen) {
+          worstPen = pen;
+          worstRawDist = rawDist;
+          worstTier = tier.name;
+        }
+      }
+    }
+
+    if (worstPen > 1e-9) {
+      collisions.push({
+        obstacle: box.name,
+        penetration: worstPen,
+        tier: useTiered ? worstTier : undefined,
+        message:
+          worstRawDist === 0
+            ? `Billboard (yaw ${yawDeg.toFixed(1)}°) menembus ${box.name}${useTiered ? ` [tier: ${worstTier}]` : ''}`
+            : `Billboard (yaw ${yawDeg.toFixed(1)}°) terlalu dekat dengan ${box.name} (jarak ${worstRawDist.toFixed(3)} m < margin ${margin.toFixed(3)} m)`,
+      });
+    }
   }
 
   return { ok: collisions.length === 0, yawDeg, endpoints: [pLeft, pRight], collisions };
@@ -232,6 +362,8 @@ export type CounterVisibilityResult = {
   shoulderY: number;
   /** Ketinggian puncak kepala karakter (m). */
   headTopY: number;
+  /** Ketinggian bibir konter terproyeksi ke bidang aktor dari elevasi kamera aktif (m). */
+  effectiveCounterY: number;
   /** Tinggi torso atas (bahu + dada + lengan) yang tampak di atas konter (m). */
   torsoAboveCounter: number;
   /** Tinggi total kepala + torso yang tampak di atas konter (m). */
@@ -248,23 +380,43 @@ const SHOULDER_RATIO = (1040 - 422) / 1100;
 /**
  * Cegah bug "kepala terpenggal/tenggelam di balik konter": menjamin dada atas, bahu, & lengan
  * karakter terlihat jelas (`>= minUpperBodyVisible`, default `0.32 m`) di atas permukaan konter.
+ * Atelier v3.0: bila `camPos` & `counterFrontZ` diberikan, menghitung proyeksi perspektif bibir konter
+ * dari elevasi kamera (menangkap kamera rendah yang secara optik memenggal bahu penjual!).
  */
 export function checkCounterVisibility(
   actorPos: Vec3,
   actorHeight: number,
   counterTopY: number,
   minUpperBodyVisible = 0.32,
+  camPos?: Vec3,
+  counterFrontZ?: number,
 ): CounterVisibilityResult {
   const shoulderY = actorPos[1] + actorHeight * SHOULDER_RATIO;
   const headTopY = actorPos[1] + actorHeight * HEAD_TOP_RATIO;
-  const torsoAboveCounter = shoulderY - counterTopY;
-  const headTopAboveCounter = headTopY - counterTopY;
-  const recommendedBaseY = Math.max(0, counterTopY + minUpperBodyVisible - actorHeight * SHOULDER_RATIO);
+
+  let effectiveCounterY = counterTopY;
+  if (camPos && counterFrontZ !== undefined) {
+    const dLip = counterFrontZ - camPos[2];
+    const dActor = actorPos[2] - camPos[2];
+    if (dLip * dActor <= 0 || Math.abs(dActor) <= Math.abs(dLip)) {
+      // Kamera di sisi yang sama dengan aktor (atau di belakang konter) -> konter tidak menghalangi aktor sama sekali.
+      effectiveCounterY = actorPos[1];
+    } else if (Math.abs(dLip) <= 1e-4) {
+      effectiveCounterY = camPos[1] < counterTopY ? 1e6 : counterTopY;
+    } else {
+      const projectedY = camPos[1] + ((counterTopY - camPos[1]) * dActor) / dLip;
+      effectiveCounterY = Math.max(counterTopY, projectedY);
+    }
+  }
+
+  const torsoAboveCounter = shoulderY - effectiveCounterY;
+  const headTopAboveCounter = headTopY - effectiveCounterY;
+  const recommendedBaseY = Math.max(0, effectiveCounterY + minUpperBodyVisible - actorHeight * SHOULDER_RATIO);
   const ok = torsoAboveCounter >= minUpperBodyVisible - 1e-6;
   const message = ok
     ? `Visibilitas konter aman: bahu/dada ${torsoAboveCounter.toFixed(2)} m di atas konter (min ${minUpperBodyVisible.toFixed(2)} m).`
-    : `Karakter tenggelam di balik konter: torso di atas konter hanya ${torsoAboveCounter.toFixed(2)} m < ${minUpperBodyVisible.toFixed(2)} m. Naikkan pijakan ke y >= ${recommendedBaseY.toFixed(2)} m.`;
-  return { ok, shoulderY, headTopY, torsoAboveCounter, headTopAboveCounter, recommendedBaseY, message };
+    : `Karakter tenggelam di balik konter: torso di atas konter hanya ${torsoAboveCounter.toFixed(2)} m < ${minUpperBodyVisible.toFixed(2)} m (efektif konter ${effectiveCounterY.toFixed(2)} m). Naikkan pijakan ke y >= ${recommendedBaseY.toFixed(2)} m.`;
+  return { ok, shoulderY, headTopY, effectiveCounterY, torsoAboveCounter, headTopAboveCounter, recommendedBaseY, message };
 }
 
 export type FramingSubject = {
@@ -278,6 +430,38 @@ export type FramingSubject = {
   /** Jika true, subjek tidak boleh masuk zona subtitle 9:16 (y layar ~76–88% -> NDC y ∈ [-0.76, -0.52]). */
   avoidSubtitle?: boolean;
 };
+
+export type ActorFramingInput = {
+  name: string;
+  position: Vec3;
+  height?: number;
+  pose?: Partial<Pick<ActorPose, 'stance' | 'sitHeight' | 'actorHeight'>>;
+  seatRadius?: number;
+  avoidSubtitle?: boolean;
+};
+
+/**
+ * Helper v3.0 untuk membentuk `FramingSubject[]` wajah/kepala aktor secara otomatis
+ * (sinkron 100% dengan `actorHeadCenterY` di `nusantara.ts` untuk `sit`, `sitHeight`, `sitCross`, `squat`, `jump`, & `seatRadius`).
+ */
+export function actorFramingSubjects(actors: ActorFramingInput[], camPos?: Vec3): FramingSubject[] {
+  return actors.map((a) => {
+    const h = a.height ?? 1.96;
+    const base = a.seatRadius && camPos ? seatCardPos(a.position, a.seatRadius, camPos) : a.position;
+    const poseForHead: Partial<ActorPose> | undefined =
+      a.pose && a.pose.sitHeight !== undefined && a.pose.actorHeight === undefined && (a.seatRadius ?? 0) > 0
+        ? { ...a.pose, actorHeight: h }
+        : a.pose;
+    const headCenterY = base[1] + actorHeadCenterY(h, poseForHead);
+    return {
+      name: a.name,
+      center: [base[0], headCenterY, base[2]],
+      halfW: h * 0.15,
+      halfH: h * 0.14,
+      avoidSubtitle: a.avoidSubtitle ?? true,
+    };
+  });
+}
 
 export type FramingViolation = {
   subject: string;
@@ -294,6 +478,8 @@ export type SafeFramingResult = {
 
 /** Zona subtitle vertikal 9:16 standar studio (y layar 76%–88% dari atas -> NDC [-0.76, -0.52]). */
 export const SUBTITLE_ZONE_NDC_9_16 = { minY: -0.76, maxY: -0.52 } as const;
+/** Zona subtitle lanskap 16:9 standar studio (y layar 87%–97% dari atas -> NDC [-0.94, -0.74]). */
+export const SUBTITLE_ZONE_NDC_16_9 = { minY: -0.94, maxY: -0.74 } as const;
 
 /**
  * Verifikasi framing memakai `projectPoint()` dari `engine/core/camera.ts`:
@@ -363,22 +549,100 @@ export function checkSafeFraming(
         message: `${s.name} melewati batas aman vertikal (|y|=${maxAbsY.toFixed(2)} > ${marginY.toFixed(2)}).`,
       });
     }
-    if (
-      s.avoidSubtitle &&
-      maxNdcY > SUBTITLE_ZONE_NDC_9_16.minY &&
-      minNdcY < SUBTITLE_ZONE_NDC_9_16.maxY
-    ) {
+    const subZone = aspect < 1 ? SUBTITLE_ZONE_NDC_9_16 : SUBTITLE_ZONE_NDC_16_9;
+    if (s.avoidSubtitle && maxNdcY > subZone.minY && minNdcY < subZone.maxY) {
       violations.push({
         subject: s.name,
         reason: 'subtitleOverlap',
         maxAbsX,
         maxAbsY,
-        message: `${s.name} masuk ke zona subtitle 9:16 (NDC y [${minNdcY.toFixed(2)}, ${maxNdcY.toFixed(2)}]).`,
+        message: `${s.name} masuk ke zona subtitle ${aspect < 1 ? '9:16' : '16:9'} (NDC y [${minNdcY.toFixed(2)}, ${maxNdcY.toFixed(2)}]).`,
       });
     }
   }
 
   return { ok: violations.length === 0, violations };
+}
+
+export type ScreenOcclusionHit = {
+  occluder: string;
+  overlapRatio: number;
+  message: string;
+};
+
+export type ScreenOcclusionResult = {
+  ok: boolean;
+  hits: ScreenOcclusionHit[];
+};
+
+function projectSubjectRect(
+  camPose: CamPose,
+  s: FramingSubject,
+  aspect: number,
+  clampNearLens = false,
+): { minX: number; maxX: number; minY: number; maxY: number; depth: number } | null {
+  const { forward, right, up } = cameraBasis(camPose);
+  const relC: Vec3 = [s.center[0] - camPose.pos[0], s.center[1] - camPose.pos[1], s.center[2] - camPose.pos[2]];
+  const centerDepth = relC[0] * forward[0] + relC[1] * forward[1] + relC[2] * forward[2];
+  if (centerDepth <= 0) return null;
+  if (!clampNearLens && centerDepth <= 0.05) return null;
+  const effDepth = Math.max(0.05, centerDepth);
+  const ty = Math.tan((camPose.fov * Math.PI) / 360);
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const sx of [-1, 1]) {
+    for (const sy of [-1, 1]) {
+      const rx = relC[0] + right[0] * sx * s.halfW + up[0] * sy * s.halfH;
+      const ry = relC[1] + right[1] * sx * s.halfW + up[1] * sy * s.halfH;
+      const rz = relC[2] + right[2] * sx * s.halfW + up[2] * sy * s.halfH;
+      const d = rx * forward[0] + ry * forward[1] + rz * forward[2];
+      if (!clampNearLens && d <= 0.05) return null;
+      const cd = Math.max(0.05, d);
+      const px = (rx * right[0] + ry * right[1] + rz * right[2]) / (cd * ty * aspect);
+      const py = (rx * up[0] + ry * up[1] + rz * up[2]) / (cd * ty);
+      minX = Math.min(minX, px);
+      maxX = Math.max(maxX, px);
+      minY = Math.min(minY, py);
+      maxY = Math.max(maxY, py);
+    }
+  }
+  return { minX, maxX, minY, maxY, depth: effDepth };
+}
+
+/**
+ * Audit oklusi layar 2,5D (Atelier v3.0): mendeteksi bila prop atau karakter yang lebih dekat ke kamera
+ * menutupi wajah pembicara (`target`) melebihi `maxOverlapRatio` (default `0.20` = 20% luas wajah) pada framing 9:16.
+ */
+export function checkScreenOcclusion(
+  camPose: CamPose,
+  target: FramingSubject,
+  occluders: FramingSubject[],
+  aspect = ASPECT_9_16,
+  maxOverlapRatio = 0.2,
+): ScreenOcclusionResult {
+  const tr = projectSubjectRect(camPose, target, aspect);
+  if (!tr) return { ok: true, hits: [] };
+  const targetArea = Math.max(1e-6, (tr.maxX - tr.minX) * (tr.maxY - tr.minY));
+  const hits: ScreenOcclusionHit[] = [];
+
+  for (const occ of occluders) {
+    if (occ.name === target.name) continue;
+    const or = projectSubjectRect(camPose, occ, aspect, true);
+    if (!or || or.depth >= tr.depth - 0.05) continue;
+    const ix = Math.max(0, Math.min(tr.maxX, or.maxX) - Math.max(tr.minX, or.minX));
+    const iy = Math.max(0, Math.min(tr.maxY, or.maxY) - Math.max(tr.minY, or.minY));
+    const overlapRatio = (ix * iy) / targetArea;
+    if (overlapRatio > maxOverlapRatio + 1e-6) {
+      hits.push({
+        occluder: occ.name,
+        overlapRatio,
+        message: `${occ.name} (di depan kamera) menutupi ${(overlapRatio * 100).toFixed(1)}% wajah ${target.name} (> ${(maxOverlapRatio * 100).toFixed(0)}%).`,
+      });
+    }
+  }
+  return { ok: hits.length === 0, hits };
 }
 
 export type SightlineHit = {
@@ -390,6 +654,13 @@ export type SightlineHit = {
   hitPoint: Vec3;
 };
 
+export type SightlineOptions = {
+  /** Radius kerucut wajah/prop (m). Bila > 0, menembakkan 5-ray face cone (pusat + 4 tepi). */
+  targetRadius?: number;
+  /** Abaikan otomatis mesh kaca transparan (`/glass/i`). Default `true`. */
+  ignoreGlass?: boolean;
+};
+
 export type SightlineResult = {
   ok: boolean;
   blockedBy: SightlineHit[];
@@ -397,49 +668,99 @@ export type SightlineResult = {
   suggestedHideNames: string[];
 };
 
+function intersectRayBox(origin: Vec3, dir: Vec3, box: NamedBox): { tEnter: number; tExit: number } | null {
+  const rayLen = Math.hypot(dir[0], dir[1], dir[2]);
+  const epsT = Math.min(0.01, 0.02 / Math.max(rayLen, 1e-3));
+  let tMin = epsT;
+  let tMax = 1 - epsT;
+  for (let axis = 0; axis < 3; axis++) {
+    const o = origin[axis];
+    const d = dir[axis];
+    if (Math.abs(d) < 1e-12) {
+      if (o < box.min[axis] || o > box.max[axis]) return null;
+    } else {
+      let t1 = (box.min[axis] - o) / d;
+      let t2 = (box.max[axis] - o) / d;
+      if (t1 > t2) [t1, t2] = [t2, t1];
+      tMin = Math.max(tMin, t1);
+      tMax = Math.min(tMax, t2);
+      if (tMin > tMax) return null;
+    }
+  }
+  return { tEnter: tMin, tExit: tMax };
+}
+
 /**
  * Deteksi tiang, kabel, lampu, atau furnitur yang memotong garis pandang `camPos -> targetPos`.
- * Mengembalikan `suggestedHideNames` yang siap dimasukkan ke prop `hideNames` di `GlbSet`.
+ * Atelier v3.0: mendukung opsi `targetRadius` (*5-ray face cone* pusat + 4 tepi wajah/prop) dan
+ * filter otomatis kaca transparan (`ignoreGlass`, default `true`).
  */
-export function checkSightline(camPos: Vec3, targetPos: Vec3, blockingBoxes: NamedBox[]): SightlineResult {
-  const dir: Vec3 = [targetPos[0] - camPos[0], targetPos[1] - camPos[1], targetPos[2] - camPos[2]];
-  const blockedBy: SightlineHit[] = [];
+export function checkSightline(
+  camPos: Vec3,
+  targetPos: Vec3,
+  blockingBoxes: NamedBox[],
+  opts?: SightlineOptions,
+): SightlineResult {
+  const ignoreGlass = opts?.ignoreGlass ?? true;
+  const radius = Math.max(0, opts?.targetRadius ?? 0);
 
-  for (const box of blockingBoxes) {
-    let tMin = 0.01;
-    let tMax = 0.99;
-    let hit = true;
-    for (let axis = 0; axis < 3; axis++) {
-      const o = camPos[axis];
-      const d = dir[axis];
-      if (Math.abs(d) < 1e-12) {
-        if (o < box.min[axis] || o > box.max[axis]) {
-          hit = false;
-          break;
-        }
-      } else {
-        let t1 = (box.min[axis] - o) / d;
-        let t2 = (box.max[axis] - o) / d;
-        if (t1 > t2) [t1, t2] = [t2, t1];
-        tMin = Math.max(tMin, t1);
-        tMax = Math.min(tMax, t2);
-        if (tMin > tMax) {
-          hit = false;
-          break;
-        }
-      }
-    }
-    if (hit) {
-      const hitPoint: Vec3 = [
-        camPos[0] + dir[0] * tMin,
-        camPos[1] + dir[1] * tMin,
-        camPos[2] + dir[2] * tMin,
-      ];
-      blockedBy.push({ name: box.name, tEnter: tMin, tExit: tMax, hitPoint });
+  const targets: Vec3[] = [targetPos];
+  if (radius > 0) {
+    const fx = targetPos[0] - camPos[0];
+    const fy = targetPos[1] - camPos[1];
+    const fz = targetPos[2] - camPos[2];
+    const fl = Math.hypot(fx, fy, fz) || 1;
+    const f: Vec3 = [fx / fl, fy / fl, fz / fl];
+    const refUp: Vec3 = Math.abs(f[1]) > 0.99 ? [0, 0, -1] : [0, 1, 0];
+    const rx = f[1] * refUp[2] - f[2] * refUp[1];
+    const ry = f[2] * refUp[0] - f[0] * refUp[2];
+    const rz = f[0] * refUp[1] - f[1] * refUp[0];
+    const rl = Math.hypot(rx, ry, rz) || 1;
+    const r: Vec3 = [rx / rl, ry / rl, rz / rl];
+    const u: Vec3 = [
+      r[1] * f[2] - r[2] * f[1],
+      r[2] * f[0] - r[0] * f[2],
+      r[0] * f[1] - r[1] * f[0],
+    ];
+    for (const [sr, su] of [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+    ] as const) {
+      targets.push([
+        targetPos[0] + (r[0] * sr + u[0] * su) * radius,
+        targetPos[1] + (r[1] * sr + u[1] * su) * radius,
+        targetPos[2] + (r[2] * sr + u[2] * su) * radius,
+      ]);
     }
   }
 
-  blockedBy.sort((a, b) => a.tEnter - b.tEnter);
+  const bestByName = new Map<string, SightlineHit>();
+  for (const box of blockingBoxes) {
+    const isTransparentGlass = box.transparent === true || (box.transparent === undefined && /glass/i.test(box.name));
+    if (ignoreGlass && isTransparentGlass) continue;
+    for (const tp of targets) {
+      const dir: Vec3 = [tp[0] - camPos[0], tp[1] - camPos[1], tp[2] - camPos[2]];
+      const hit = intersectRayBox(camPos, dir, box);
+      if (!hit) continue;
+      const prev = bestByName.get(box.name);
+      if (!prev || hit.tEnter < prev.tEnter) {
+        bestByName.set(box.name, {
+          name: box.name,
+          tEnter: hit.tEnter,
+          tExit: hit.tExit,
+          hitPoint: [
+            camPos[0] + dir[0] * hit.tEnter,
+            camPos[1] + dir[1] * hit.tEnter,
+            camPos[2] + dir[2] * hit.tEnter,
+          ],
+        });
+      }
+    }
+  }
+
+  const blockedBy = [...bestByName.values()].sort((a, b) => a.tEnter - b.tEnter);
   return {
     ok: blockedBy.length === 0,
     blockedBy,

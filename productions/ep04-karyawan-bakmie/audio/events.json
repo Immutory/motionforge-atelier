@@ -1,0 +1,65 @@
+{
+  "_doc": "Milik sound-designer. EP04 'Karyawan Baru Bakmie Tio, Bosnya Si Oyen?!' (2610f = 87,00 dtk, loopCutFrame = 2595). Frame SFX diturunkan dari ekspor cast.ts (EP04_*). 4 meong Oyen sudah menyatu di voice.wav.",
+  "fps": 30,
+  "master": {
+    "lufs": -16.0,
+    "true_peak_db": -1.5
+  },
+  "loop": {
+    "cutFrame": 2595,
+    "xfade_ms": 15
+  },
+  "duck": {
+    "depth_db": -7.0,
+    "pre_ms": 120,
+    "post_ms": 190,
+    "smooth_ms": 160
+  },
+  "levels": {
+    "music_lu": -15,
+    "ambience_lu": -23
+  },
+  "music": {
+    "sections": [
+      {"from": 0,    "to": 343,  "style": "lazy",   "gain_db": -2, "fade_in": 4,  "fade_out": 8,  "note": "B1 Hook & B2 perkenalan santai"},
+      {"from": 343,  "to": 364,  "style": "tense",  "gain_db": -1, "fade_in": 2,  "fade_out": 1,  "note": "B2 reveal MANDOR QC -> putus tepat di shock U3"},
+      {"from": 376,  "to": 1070, "style": "bright", "gain_db": -3, "fade_in": 8,  "fade_out": 10, "note": "B2 senior + B3 Pak Ujang & cakar Oyen"},
+      {"from": 1070, "to": 1412, "style": "lazy",   "gain_db": -2, "fade_in": 8,  "fade_out": 10, "note": "B4 sindiran Mbak Yuni & poster Karyawan Terbaik"},
+      {"from": 1412, "to": 1705, "style": "bright", "gain_db": -1, "fade_in": 6,  "fade_out": 10, "note": "B5 Mode Multithreading + 3x Deploy energik"},
+      {"from": 1705, "to": 2061, "style": "sepia",  "gain_db": -2, "fade_in": 10, "fade_out": 4,  "note": "B6 ketenangan semu hangat sebelum badai Slip Gaji"},
+      {"from": 2089, "to": 2377, "style": "tense",  "gain_db": -2, "fade_in": 4,  "fade_out": 10, "note": "B7 shock utang naik 120rb & rincian potongan Tio"},
+      {"from": 2377, "to": 2610, "style": "lazy",   "gain_db": -2, "fade_in": 8,  "fade_out": 12, "note": "B8 callback & seamless loop bertemu f0"}
+    ]
+  },
+  "ambience": {
+    "sections": [
+      {"from": 0, "to": 2610, "style": "pedagang-malam", "gain_db": 0, "fade_in": 0, "fade_out": 0}
+    ]
+  },
+  "events": [
+    {"frame": 54,   "sfx": "whoosh",   "gain_db": -18, "params": {"seconds": 0.25}, "note": "B1 moveSettle pan ke karton 90RB"},
+    {"frame": 148,  "sfx": "ladle",    "gain_db": -26, "params": {"seconds": 0.35, "seed": 401}, "note": "B1/B2 aduk dandang"},
+    {"frame": 343,  "sfx": "swish",    "gain_db": -16, "note": "B2 pullOutReveal MANDOR QC (EP04_OYEN_REVEAL_FROM)"},
+    {"frame": 364,  "sfx": "slap",     "gain_db": -11, "duck": false, "note": "B2 Utoh shock Mandor QC kucing (EP04_U3_SHOCK_FRAME)"},
+    {"frame": 635,  "sfx": "step",     "gain_db": -24, "params": {"seconds": 0.09, "seed": 411}, "note": "B3 langkah planted Pak Ujang #1"},
+    {"frame": 645,  "sfx": "step",     "gain_db": -24, "params": {"seconds": 0.09, "seed": 412}, "note": "B3 langkah planted Pak Ujang #2"},
+    {"frame": 655,  "sfx": "step",     "gain_db": -24, "params": {"seconds": 0.09, "seed": 413}, "note": "B3 langkah planted Pak Ujang #3"},
+    {"frame": 665,  "sfx": "step",     "gain_db": -24, "params": {"seconds": 0.09, "seed": 414}, "note": "B3 langkah planted Pak Ujang #4"},
+    {"frame": 730,  "sfx": "cup",      "gain_db": -14, "note": "B3 mangkok Pak Ujang diletakkan (EP04_BOWL_UJANG_FRAME)"},
+    {"frame": 875,  "sfx": "slap",     "gain_db": -10, "duck": false, "note": "B3 cakar Oyen menepuk meja PLAK! (EP04_FLATLAY_PAW_IMPACT)"},
+    {"frame": 1005, "sfx": "pop",      "gain_db": -13, "duck": false, "note": "B3 Utoh shock potong bon (EP04_U6_SHOCK_FRAME)"},
+    {"frame": 1383, "sfx": "slap",     "gain_db": -11, "duck": false, "note": "B4 poster KARYAWAN TERBAIK ditempel PLAK! (EP04_POSTER_IMPACT)"},
+    {"frame": 1536, "sfx": "ding",     "gain_db": -16, "duck": false, "params": {"freq": 1568.0, "seconds": 0.22}, "note": "B5 Deploy #1 (EP04_DEPLOY_FRAMES[0])"},
+    {"frame": 1536, "sfx": "cup",      "gain_db": -14, "note": "B5 mangkok Deploy #1 mendarat"},
+    {"frame": 1557, "sfx": "ding",     "gain_db": -16, "duck": false, "params": {"freq": 1760.0, "seconds": 0.22}, "note": "B5 Deploy #2 (EP04_DEPLOY_FRAMES[1])"},
+    {"frame": 1557, "sfx": "cup",      "gain_db": -14, "note": "B5 mangkok Deploy #2 mendarat"},
+    {"frame": 1574, "sfx": "ding",     "gain_db": -15, "duck": false, "params": {"freq": 1975.5, "seconds": 0.25}, "note": "B5 Deploy #3 (EP04_DEPLOY_FRAMES[2])"},
+    {"frame": 1574, "sfx": "cup",      "gain_db": -13, "note": "B5 mangkok Deploy #3 mendarat"},
+    {"frame": 1598, "sfx": "swish",    "gain_db": -17, "note": "B5 Tio membalik papan KEPALA MANDOR (EP04_PROMOTE_FROM)"},
+    {"frame": 1612, "sfx": "pop",      "gain_db": -15, "note": "B5 papan KEPALA MANDOR terkunci"},
+    {"frame": 1724, "sfx": "pop",      "gain_db": -16, "note": "B6 Pak Ujang menaruh uang (EP04_CASH_FRAME)"},
+    {"frame": 2061, "sfx": "scribble", "gain_db": -18, "params": {"seconds": 0.75}, "note": "B7 SLIP GAJI SHIFT 1 muncul (EP04_SLIP_FROM)"},
+    {"frame": 2089, "sfx": "slap",     "gain_db": -10, "duck": false, "note": "B7 Utoh shock utang 120RB (EP04_U11_SHOCK_FRAME)"},
+    {"frame": 2377, "sfx": "ladle",    "gain_db": -26, "params": {"seconds": 0.35, "seed": 499}, "note": "B8 kembali aduk dandang menuju loop (EP04_LOOP_POSE_FROM)"}
+  ]
+}

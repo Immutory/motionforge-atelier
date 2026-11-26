@@ -1,55 +1,22 @@
-# Look-match study: shared context for every agent (read fully before starting)
+# Look-Match Study Context — MotionForge Atelier v3.0 (2.5D Reference Edition)
 
-## Goal
-Our original 67 s vertical short "The Bridge That Fell for a Song" (1831 Broughton bridge, 74 marching soldiers) is
-rendered in three.js and currently looks flat, pastel and cheap next to the reference channel (the reference channel, studied
-privately). The user wants our picture to be as close as possible in QUALITY and STYLE: colourful, high contrast,
-"targeted" colours, black ink outlines on the 3D world, painted textures, real shading/lighting on characters and
-world, deep blurred backgrounds, lively movement, better character shapes (heads not perfect circles, better body
-structure). Story, script, characters and voice stay OURS: derive general rules and numbers, never trace or copy his
-specific characters, props or shots.
+## Tujuan
+Acuan gaya & teknis terukur untuk seluruh produksi animasi **2,5D-in-3D** di **MotionForge Atelier v3.0** (semesta *Bang Utoh · Kampung Rawa Sari RT 04*). Semua angka di `references/reports/*.md` adalah aturan visual & motion umum — cerita, tokoh (`CAST_PRESETS` 13 karakter + `CAT_PRESETS` 3 kucing), set 3D Blender (`kampung.glb`, `warkop.glb`, `kost.glb`, `kampus.glb`), suara, dan shot 100% orisinal studio.
 
-## Reference material (private study only: never upload, publish or send any of it anywhere)
-- 20 reference shorts, 720x1280, 30 fps: `references/vids/NN_<id>.mp4` (01 = newest).
-- Contact sheets, each = 2 s = 60 frames: `references/measure/NN_<id>_sheets/sNN.jpg`.
-- Earlier summary: `references/STYLE_BIBLE.md`. Quick overview sheet: `references/refs_sheet.jpg`.
-- Extract frames yourself, e.g. `ffmpeg -v error -ss 12.4 -i references/vids/01_Mz72MuPgnGY.mp4 -frames:v 1 out.png`
-  (use PNG for measurements; JPEG is fine for viewing). Crop/zoom with PIL (nearest-neighbour upscales for line widths).
-- Burned-in captions: one white bold word with a black outline, centred, roughly 60-74 % of frame height. MASK that band
-  (or detect the white+black text) before any statistics, and do not mistake caption outlines for scene ink lines.
+## Materi Referensi Utama (Studi Privat — Jangan Pernah Dipublikasikan)
+1. **`contohvideo/Panduan Analisis dan Produksi Video Animasi - Google Gemini (1).mp4`** (65,3 dtk):
+   - Acuan utama **Karakter 2,5D Utuh** (1 siluet vektor utuh dengan *spherical face parallax*, *weighted asymmetric 2.5D ink*, bayangan siluet nyata ke lantai & dinding belakang, interaksi tangan 2D → prop 3D murni), **Motion Grammar** (`DEFAULT_CREEP = 0`, `moveSettle`, `strikeEnvelope` 4-6-1-8 + *camera-local harmonic shake*, *high-angle* `tiltX` tanpa gepeng, `topDownInsert` khusus prop 3D), dan *diegetic 3D storytelling*.
+2. **`contohvideo/download.mp4`** (99,9 dtk):
+   - Acuan utama **Atmosfer Dunia 3D Lembut** (*soft-lit atmospheric 3D world*, integrasi cahaya & bayangan 2D-in-3D nyata dengan `receiveShadow` + `uLocalLight` soft-clamped, *frame-within-a-frame*, dan `POST_HYBRID_25D` outline lingkungan tipis + shallow DOF).
+3. **Laporan Terukur (`references/reports/`):**
+   - `motion.md`, `characters.md`, `lighting.md`, `depth.md`, `outlines.md`, `grade.md`, `textures.md`.
 
-## Our current frames (state before this pass)
-- `your Remotion project/out/bridge/test/` b_*.jpg, c_*.jpg (540x960 stills, frame number in the name), contact sheets
-  `sheet_c1.jpg`, `sheet_c2.jpg`. Shots: 1-7 soldiers marching on a plank suspension bridge (day), 8 bolt snaps + deck
-  drops, 9-10 soldiers sitting in the river, 11-13 golden hour (bridge, park swing, side view), 14 bank + officer
-  hammering a sign, 15 tourists strolling (day).
-- Do NOT render new stills and do NOT edit anything under `your Remotion project` (other agents and the lead are editing it).
-
-## Our stack (so recommendations are implementable)
-- `your Remotion project` Remotion 4.0.290 + three 0.175 + @react-three/fiber 9.1.2 + @react-three/postprocessing 3.0.4 +
-  postprocessing 6.37.2, composition `BridgeShort` 1080x1920 30 fps. Source in `src/videos/bridge/` of your Remotion project:
-  - `story.ts` timeline, cameras (CAMS), lights (LIGHTS day/golden: sun dir/colour/intensity, hemisphere, fill, sky colours).
-  - `world.ts` World: gradient sky sphere, HemisphereLight + DirectionalLight sun (4096 shadow map) + fill, Fog(90,560),
-    sprite clouds, water mesh, procedural bridge, per-frame posing; `build.ts` town (boxy gabled houses with canvas
-    facade textures, Kenney CC0 low-poly GLB props converted to MeshLambertMaterial); `paint.ts` procedural Canvas2D
-    textures (grass, cobble, stone, planks, beam, water, roof, brick, chain, facades).
-  - `toon.ts` characters drawn with Canvas2D (a `Pen` helper: poly/ell/line/stroke) on a 600x1000 design canvas,
-    soles at y=975: bodyFront / bodySide, outfits (rifleman with shako, officer, kid, parent, townsfolk), expressions,
-    effect sprites (notes, bursts, splash, stars...). Current heads are perfect circles, thick uniform outline, flat fills.
-  - `cast.ts` sprite pool; each character = camera-facing billboard plane, MeshLambertMaterial with the drawing as
-    map + emissiveMap (emissive about 0.36, so it looks pasted-on), alphaTest 0.5; casts shadows via a depth material.
-  - `ink.ts` current outline: screen-space Laplacian of 1/viewZ only (no normals), threshold 0.06 -> almost no lines.
-  - `Bridge.tsx` EffectComposer chain: Ink -> DepthOfField -> Bloom(0.3, threshold 0.86) -> ToneMapping NEUTRAL, MSAA 4.
-- Tools on this machine: python (numpy 2.4, PIL 12, scipy 1.18; no OpenCV), ffmpeg/ffprobe. Do not pip-install anything,
-  do not download code or tools from the internet.
-
-## Deliverable (each agent)
-1. Work only inside `references/<your-topic>/` (scripts, crops, side-by-side images).
-2. Write `references/reports/<your-topic>.md`:
-   - measured numbers (tables) from MANY reference frames across the 20 videos (frame-by-frame where it matters),
-     and the same measurements on our stills, with the gap stated plainly;
-   - paths of the comparison crops / side-by-sides you made;
-   - a concrete implementation recipe for OUR stack: exact parameter values, hex colours, GLSL / TypeScript snippets,
-     which file/function to change;
-   - the top 5 changes ranked by visual impact.
-3. Final message: at most 200 words summary + the report path.
+## Stack Produksi MotionForge Atelier v3.0
+- **Render & 3D:** Remotion + Three.js + `@react-three/fiber` + Three.js `EffectComposer` (`engine/post/PostStack.tsx`) (`1080×1920` 9:16 Short & `1920×1080` 16:9 Episode, `30 fps`).
+- **Engine (`engine/`):**
+  - `engine/core/`: `camera.ts` (`DEFAULT_CREEP = 0`, `moveSettle`, `pullOutReveal`, `whipPan`, analitis `orbit`, `storyDolly`, `topDownInsert`, `craneTransition`, `handheld`, camera-local harmonic `kickOffset`, `viewAxisFocus`), `CameraRig.tsx`, `spatial.ts` (audit spasial 2,5D Fase 3.5).
+  - `engine/cast/`: `ActorBillboard.tsx` & `nusantara.ts` (13 karakter `CAST_PRESETS`, *spherical face parallax*, 8-arah termasuk `backThreeQuarter`, `resolve25DView`, `actorHandWorldPos`, `seatRadius`, `tiltX`), `CatBillboard.tsx` & `cat.ts` (3 kucing `CAT_PRESETS`), `expressions.ts` (13 ekspresi + `blinkLidAt`), `lipsync.ts`, `props2d.ts`, `sticker.ts`.
+  - `engine/stage/`: `Stage.tsx`, `lights.ts` (`noon`, `amber`, `dusk`, `night`, `neon`), `shade.ts` (`twoTone` + `cardShade` dengan `uLocalLight` Reinhard soft-clamp & `receiveShadow` nyata).
+  - `engine/sets/`: `GlbSet.tsx`, `KampungSet.tsx`, `WarkopSet.tsx`, `KostSet.tsx`, `KampusSet.tsx` (`public/sets/*.glb` + `*.boxes.json`).
+  - `engine/post/`: `PostStack.tsx` (`DEFAULT_POST` + `POST_HYBRID_25D`), `passes.ts`, `shaders.ts`.
+- **Sound & Voice:** `sound/` (`-16,0 LUFS`, `≤ -1,5 dBTP`), `pipeline/voice/` (Chatterbox TTS lokal / VO pengguna + `faster-whisper`).

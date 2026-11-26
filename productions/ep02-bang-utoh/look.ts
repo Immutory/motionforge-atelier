@@ -36,7 +36,7 @@ export type Ep02LightId =
   | 'lab-proyektor'
   | 'lab-siluet';
 
-/** Sama dengan `Ep02Location` milik set.tsx (rentang dari BEATS: warkop B1–B5, kampung B6, lab B7–B9). */
+/** Sama dengan `Ep02Location` milik set.tsx (rentang dari BEATS: warkop B1–B4, kampung B5, lab B6–B7). */
 export type Ep02LightLocation = Ep02Location;
 
 /** Layar laptop (sama dengan `laptopScreenAt(frame)` di cast.ts milik character-animator). */
@@ -134,6 +134,8 @@ const WARKOP_PAGI: LightPreset = {
     lambert: 0.32,
     sideK: 0.86,
     term: 0.18,
+    // EP02 v6.1 mengompensasi cahaya praktis lewat uniform lightAt() -> kunci localLight: 0 agar 100% identik v6.1.
+    localLight: 0,
   },
   card: {
     tint: [1.03, 1.0, 0.96],
@@ -167,6 +169,7 @@ const KAMPUNG_SIANG: LightPreset = {
     lambert: 0.35,
     sideK: 0.85,
     term: 0.2,
+    localLight: 0,
   },
   card: {
     tint: [1.02, 1.0, 0.97],
@@ -202,6 +205,7 @@ const LAB_LED: LightPreset = {
     lambert: 0.25,
     sideK: 0.9,
     term: 0.3,
+    localLight: 0,
   },
   card: {
     tint: [1.0, 1.0, 1.02],
@@ -240,6 +244,8 @@ const LAB_SILUET: LightPreset = {
     lambert: 0.3,
     sideK: 0.86,
     term: 0.18,
+    // Jaga siluet gelap Oyen pada lab-siluet tidak diterangi kembali oleh spotlight jendela.
+    localLight: 0,
   },
   card: {
     // Siluet terbaca: ~0,5 dari albedo (oranye Oyen tetap oranye), bayangan biru-ungu, tidak hitam.

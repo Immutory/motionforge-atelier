@@ -4,6 +4,7 @@ Materi belajar gaya milikmu sendiri.
 
 - `frames/`  38 frame referensi (short01 sampai short20, frame 60 dan 180) untuk dibandingkan dengan still kamu.
 - `sheets/`  20 contact sheet, satu per video referensi.
+- `reports/` laporan pengukuran terkalibrasi studio (`motion.md`, `depth.md`, `grade.md`, `lighting.md`, `outlines.md`, `characters.md`, `textures.md`, dll.).
 - `measure-template.md`  cetakan laporan ukur per topik.
 
 Nama file `shortNN_FFFF.jpg` berarti video referensi ke-NN pada frame FFFF.

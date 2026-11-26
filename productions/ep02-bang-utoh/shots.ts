@@ -102,7 +102,7 @@ const REPLAY_EYELINE_GLIDE = 24;
 export const EP02_B5_CRANE_TO = B5.from + 38;
 
 /**
- * EP02 "Konsultan Oyen" — FINAL MASTER v6.0 (Sinematika Kamera Gaya Referensi):
+ * EP02 "Konsultan Oyen" — FINAL MASTER v6.1 (Sinematika Kamera Gaya Referensi):
  * 1. ZERO SLOW ZOOM-IN: `creepRate: 0` di 100% hold dialog, reaksi, dan panggung.
  * 2. MOVE -> SETTLE TEGAS: setiap gerakan kamera bermotivasi (pull-out reveal, lateral pan kopi,
  *    push-in PLAK, cut+push-in Bu Siti heran (v6.1), dolly-in Oyen, pan Bu Siti konter, crane-down->side-scroll B5,
@@ -178,7 +178,7 @@ export const EP02_CUT_PUSH_GLIDE = 26;
 
 const B5_SMOOTH = 10;
 const B5_LEAD = 0.16;
-/** ZERO slow dolly zoom-in selama tracking horizontal B5 (v6.0 Law #1 & #4)! */
+/** ZERO slow dolly zoom-in selama tracking horizontal B5 (v6.1 Law #1 & #4)! */
 export const B5_DOLLY_IN = 0;
 
 /**

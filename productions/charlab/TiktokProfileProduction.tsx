@@ -420,7 +420,10 @@ export const TiktokProfileProduction: React.FC = () => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    renderTiktokMatchingProfile(ctx, width, variant);
+    ctx.save();
+    ctx.setTransform(width / 2048, 0, 0, height / 2048, 0, 0);
+    renderTiktokMatchingProfile(ctx, 2048, variant);
+    ctx.restore();
   }, [width, height, variant]);
 
   return (

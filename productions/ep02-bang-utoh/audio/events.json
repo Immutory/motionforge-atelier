@@ -3,7 +3,7 @@
  "fps": 30,
  "master": {
   "lufs": -16,
-  "true_peak_db": -1.0
+  "true_peak_db": -1.5
  },
  "duck": {
   "depth_db": -6,

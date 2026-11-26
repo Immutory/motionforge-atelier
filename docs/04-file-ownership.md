@@ -14,23 +14,25 @@ Satu file, satu pemilik. Ini mencegah dua agent menimpa pekerjaan satu sama lain
 | `productions/<slug>/Production.tsx` (wiring composer) | post-compositor | semua |
 | `productions/<slug>/audio/events.json` | sound-designer | render-engineer |
 | `productions/<slug>/reports/*` | qa-inspector | showrunner |
-| `productions/<slug>/PRODUCTION_LOG.md` | showrunner | pengguna |
-| `engine/core`, `engine/stage` | cinematographer dan light-colorist (sesuai isi) | semua |
-| `engine/cast` | character-animator | semua |
-| `engine/sets`, `engine/textures` | set-designer | cinematographer, light-colorist |
-| `assets/sets/*`, `public/sets/*.glb` | set-designer | semua |
-| `assets/sets/build_kampung_v2.py`, `export_kampung_glb.py`, `generate_pbr_textures.py`, `ZONING_KAMPUNG_V2.md` | set-designer | cinematographer, light-colorist |
+| `productions/<slug>/PRODUCTION_LOG.md`, `UPLOAD.md` | showrunner | pengguna |
+| `engine/core/*` (termasuk `camera.ts`, `CameraRig.tsx`, `easing.ts`, `timeline.ts`, `spatial.ts`) | cinematographer | semua (`set-designer`, `character-animator`, `qa-inspector` konsumen utama `spatial.ts`) |
+| `engine/stage/*` | light-colorist | semua |
+| `engine/cast/*` | character-animator | semua |
+| `engine/sets/*`, `engine/props/*`, `engine/textures/*` | set-designer | cinematographer, light-colorist |
+| `assets/sets/*`, `public/sets/*.glb`, `public/sets/*.boxes.json` | set-designer | semua |
+| `assets/sets/build_kampung_v2.py`, `upgrade_sets_v3.py`, `export_kampung_glb.py`, `generate_pbr_textures.py`, `ZONING_KAMPUNG_V2.md` | set-designer | cinematographer, light-colorist |
 | `productions/charlab/KampungV2Production.tsx` (komposisi QC dunia) | set-designer | qa-inspector |
 | `productions/charlab/reports/*` | qa-inspector | showrunner |
 | `assets/characters/*` | character-animator | semua |
-| `engine/post` | post-compositor | semua |
+| `engine/post/*` | post-compositor | semua |
 | `productions/charlab/*` | character-animator (karakter), set-designer (set lab) | semua |
 | `assets/voices/*.wav`, `assets/voices/presets.json` (referensi suara terkunci) | voice-director | sound-designer |
 | `pipeline/voice/*` (TTS lokal, aligner, SRT ke words) | voice-director | render-engineer |
 | `sound/*` | sound-designer | render-engineer |
-| `pipeline/*` (selain `pipeline/voice/`), `out/*` | render-engineer | semua |
-| `tests/*` | pemilik file yang dites (mis. `tests/camera.test.ts` milik cinematographer, `tests/sets-spots.test.ts` milik set-designer) | qa-inspector |
-| `.claude/agents/*`, `.claude/skills/*`, `docs/*`, `CLAUDE.md`, `README.md` | showrunner (mengubah hanya atas persetujuan pengguna) | semua |
+| `pipeline/*` (selain `pipeline/voice/`), `studio/*`, `out/*` | render-engineer | semua |
+| `productions/registry.ts` | showrunner (otomatis diperbarui lewat `forge:new`) | semua |
+| `tests/*` | pemilik file yang dites (mis. `tests/camera.test.ts` & `tests/spatial.test.ts` milik cinematographer, `tests/sets-spots.test.ts` milik set-designer) | qa-inspector |
+| `.claude/agents/*`, `.claude/skills/*`, `docs/*`, `references/*`, `CLAUDE.md`, `README.md` | showrunner (mengubah hanya atas persetujuan pengguna) | semua |
 
 ## Catatan: episode 1 memakai tata letak lama
 `productions/ep01_bang_utoh_vlog/` dan `productions/ep01_bang_utoh_short/` dibuat sebelum pola `_starter`

@@ -5,11 +5,13 @@ export { NusantaraProduction } from './NusantaraProduction';
 export { WargaProduction } from './WargaProduction';
 export { RigLabProduction } from './RigLabProduction';
 export { BangUtohProduction } from './BangUtohProduction';
+export { EbotProduction } from './EbotProduction';
 export { SetLabProduction } from './SetLabProduction';
 export { KucingOyenProduction } from './KucingOyenProduction';
 export { YoutubeBannerProduction } from './YoutubeBannerProduction';
 export { YoutubeProfileProduction } from './YoutubeProfileProduction';
 export { TiktokProfileProduction } from './TiktokProfileProduction';
+export { ShortsThumbnailsProduction } from './ShortsThumbnailsProduction';
 export { KampungUpgradeProduction } from './KampungUpgradeProduction';
 export { KampungV2Production, KAMPUNG_V2_SLIDES } from './KampungV2Production';
 
@@ -67,6 +69,15 @@ export const bangUtohMeta: ProductionMeta = {
   durationInFrames: 240,
 };
 
+export const ebotMeta: ProductionMeta = {
+  id: 'ebot',
+  title: 'Karakter Lokal Orisinal — Ebot (Gaya Kasual Lokal & Kulit Sawo Matang Hangat)',
+  width: 1080,
+  height: 1920,
+  fps: 30,
+  durationInFrames: 240,
+};
+
 export const setLabMeta: ProductionMeta = {
   id: 'setlab',
   title: 'Set Dunia 3D Blender (Warkop · Kamar Kost · Lab Kampus S1 TI)',
@@ -110,6 +121,15 @@ export const tiktokProfileMeta: ProductionMeta = {
   height: 2048,
   fps: 30,
   durationInFrames: 2,
+};
+
+export const shortsThumbsMeta: ProductionMeta = {
+  id: 'shortsthumbs',
+  title: 'Shorts Thumbnails 9:16 (1080x1920) — EP02 Konsultan Oyen, EP03 Curhat Bakmie, & EP04 Karyawan Baru',
+  width: 1080,
+  height: 1920,
+  fps: 30,
+  durationInFrames: 3,
 };
 
 export const kampungUpgradeMeta: ProductionMeta = {

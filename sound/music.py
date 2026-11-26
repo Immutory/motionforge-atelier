@@ -26,8 +26,10 @@ def midi_hz(m: float) -> float:
 @lru_cache(maxsize=256)
 def pluck(midi: int, seconds: float = 0.9, bright: float = 1.0) -> np.ndarray:
     """Petikan senar aditif (mirip ukulele/kentrung): harmonik atas luruh lebih cepat."""
+    n = max(0, int(round(seconds * SR)))
+    if n == 0:
+        return np.zeros(0, dtype=np.float32)
     f = midi_hz(midi)
-    n = int(seconds * SR)
     t = np.arange(n, dtype=np.float64) / SR
     out = np.zeros(n, dtype=np.float64)
     for h in range(1, 8):
@@ -36,15 +38,18 @@ def pluck(midi: int, seconds: float = 0.9, bright: float = 1.0) -> np.ndarray:
         amp = (1.0 / h) * (bright if h > 2 else 1.0)
         dec = 0.55 / (1 + 0.65 * (h - 1))
         out += amp * np.sin(2 * np.pi * f * h * t * (1 + 0.0004 * h)) * np.exp(-t / dec)
-    atk = int(0.003 * SR)
-    out[:atk] *= np.linspace(0, 1, atk)
+    atk = min(n, int(0.003 * SR))
+    if atk > 0:
+        out[:atk] *= np.linspace(0, 1, atk)
     return out.astype(np.float32)
 
 
 @lru_cache(maxsize=64)
 def bass(midi: int, seconds: float) -> np.ndarray:
+    n = max(0, int(round(seconds * SR)))
+    if n == 0 or seconds <= 0:
+        return np.zeros(0, dtype=np.float32)
     f = midi_hz(midi)
-    n = int(seconds * SR)
     t = np.arange(n, dtype=np.float64) / SR
     x = np.sin(2 * np.pi * f * t) + 0.25 * np.sin(4 * np.pi * f * t) + 0.08 * np.sin(6 * np.pi * f * t)
     e = np.minimum(1, t / 0.008) * np.exp(-t / (seconds * 0.7))
@@ -82,7 +87,9 @@ STYLES = {
 
 def render_music(style: str, seconds: float) -> np.ndarray:
     st = STYLES[style]
-    n = int(seconds * SR) + 1
+    if seconds <= 0:
+        return np.zeros(0, dtype=np.float32)
+    n = max(1, int(round(seconds * SR)))
     out = np.zeros(n + SR, dtype=np.float32)
     beat = 60.0 / st["bpm"]
     eighth = beat / 2
@@ -117,19 +124,34 @@ def render_music(style: str, seconds: float) -> np.ndarray:
                 put(shaker(7 + q % 3), t0 + q * step + step / 2, 0.22 if q % 2 else 0.14)
     out = out[:n]
     if st["lp"]:
-        out = lowpass(out, st["lp"]) + highpass(noise(len(out) / SR, 5), 3000) * 0.004
+        hiss = highpass(noise(len(out) / SR, 5), 3000)
+        out = lowpass(out, st["lp"]) + hiss[: len(out)] * 0.004
     return out
 
 
-def _brown(seconds: float, seed: int) -> np.ndarray:
+def _brown(seconds: float, seed: int, hp_hz: float = 20.0) -> np.ndarray:
+    """Noise coklat (-6 dB/oktaf) dibentuk di domain frekuensi + highpass ~20 Hz (orde 2).
+
+    Dulu: cumsum lalu kurangi rata-rata bergerak `mode="same"` -> bocor di tepi (drift DC/infrasonik
+    hingga -9 dBFS di 50 ms terakhir, terdengar sebagai "dug"/klik di akhir file & titik loop).
+    Sintesis spektral ini periodik (tanpa tepi), rata-rata nol, dan tanpa energi < hp_hz.
+    """
     w = noise(seconds, seed).astype(np.float64)
-    b = np.cumsum(w)
-    b -= np.convolve(b, np.ones(4801) / 4801, mode="same")  # buang drift DC (~10 Hz HP)
+    if len(w) == 0:
+        return np.zeros(0, dtype=np.float32)
+    spec = np.fft.rfft(w)
+    f = np.fft.rfftfreq(len(w), 1 / SR)
+    f[0] = 1e-9
+    shape = (1.0 / np.maximum(f, hp_hz)) * (f**2 / (f**2 + hp_hz**2))  # 1/f di atas hp, highpass 12 dB/okt di bawah
+    shape[0] = 0.0
+    b = np.fft.irfft(spec * shape, len(w))
     return (b / (np.max(np.abs(b)) or 1)).astype(np.float32)
 
 
 def render_ambience(style: str, seconds: float, seed: int = 0) -> np.ndarray:
-    n = int(seconds * SR)
+    n = max(0, int(round(seconds * SR)))
+    if n == 0:
+        return np.zeros(0, dtype=np.float32)
     t = np.arange(n, dtype=np.float32) / SR
     rng = np.random.default_rng(100 + seed)
     if style in ("warkop", "warkop-sepia"):
@@ -155,6 +177,20 @@ def render_ambience(style: str, seconds: float, seed: int = 0) -> np.ndarray:
                 f0 = rng.uniform(3200, 4200)
                 ch = sine(np.linspace(f0, f0 * 1.35, m), dur) * env_ad(m, 0.01, 0.05)
                 x[i : i + m] += ch * 0.08
+    elif style == "pedagang-malam":
+        # Area pedagang malam: jangkrik berdenyut, motor lewat jauh sesekali, desis wajan/dandang tipis.
+        x = lowpass(_brown(seconds, 41 + seed), 500) * 0.45 + lowpass(highpass(noise(seconds, 42 + seed), 2500), 7000) * 0.03
+        chirp = (sine(4300, seconds) * 0.5 + sine(4700, seconds) * 0.3) * (0.5 + 0.5 * np.sign(np.sin(2 * np.pi * 18 * t)))
+        x += chirp * (0.5 + 0.5 * np.sin(2 * np.pi * 0.7 * t)) ** 2 * 0.018
+        for at in np.arange(3.0, seconds, 11.0):
+            i = int((at + rng.uniform(-1.5, 1.5)) * SR)
+            dur = 3.2
+            m = int(dur * SR)
+            if 0 <= i < n - m:
+                tm = np.arange(m, dtype=np.float32) / SR
+                engine = sine(np.linspace(85, 70, m), dur) * (0.6 + 0.4 * np.sin(2 * np.pi * 11 * tm))
+                x[i : i + m] += lowpass(engine, 400) * np.sin(np.pi * tm / dur) ** 2 * 0.12
+        x += lowpass(highpass(noise(seconds, 43 + seed), 3000), 9000) * 0.012 * (1 + 0.3 * np.sin(2 * np.pi * 0.13 * t))
     elif style == "lab":
         # Lab komputer: AC + kipas PC/proyektor (dengung 120 Hz + desis halus).
         x = lowpass(_brown(seconds, 31 + seed), 600) * 0.5 + lowpass(highpass(noise(seconds, 32 + seed), 1500), 6000) * 0.05
@@ -179,7 +215,7 @@ def render_bed(spec: dict | None, kind: str, n_total: int, fps: float) -> np.nda
     if not spec:
         return out
     for k, sec in enumerate(spec.get("sections", [])):
-        i = int(round(sec["from"] / fps * SR))
+        i = max(0, int(round(sec["from"] / fps * SR)))
         j = min(n_total, int(round(sec["to"] / fps * SR)))
         if j <= i:
             continue

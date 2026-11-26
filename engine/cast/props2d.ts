@@ -1,5 +1,5 @@
 /**
- * Pustaka 22 prop tangan 2D yang dapat dipasang di tangan kiri atau kanan karakter mana pun.
+ * Pustaka 23 prop tangan 2D yang dapat dipasang di tangan kiri atau kanan karakter mana pun.
  * Digambar pada sistem koordinat lokal tangan (0, 0).
  */
 
@@ -26,7 +26,8 @@ export type HandProp =
   | 'pen'
   | 'lap'
   | 'phoneClock'
-  | 'glassEmpty';
+  | 'glassEmpty'
+  | 'walletEmpty';
 
 /**
  * Jam bawaan di layar prop `phoneClock` bila pose tidak mengisi `HandPropOptions.text`
@@ -328,6 +329,26 @@ export function drawHandProp(ctx: Ctx, prop: HandProp, x: number, y: number, ink
         ctx.fillRect(18, 2, 14, 8);
         ctx.restore();
       }
+      break;
+    }
+    case 'walletEmpty': {
+      // Dompet kulit cokelat terbuka, isinya kosong melompong (gag "dompet kosong").
+      ctx.translate(14, -16);
+      ctx.rotate(-0.12);
+      inked(ctx, () => { ctx.beginPath(); ctx.roundRect(-36, -26, 72, 46, 7); }, '#8a5634', ink, 4);
+      ctx.fillStyle = '#3a2418';
+      ctx.fillRect(-28, -18, 56, 26);
+      ctx.strokeStyle = '#c99267';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(-32, -22, 64, 38);
+      ctx.setLineDash([]);
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -26);
+      ctx.lineTo(0, 20);
+      ctx.stroke();
       break;
     }
     case 'pointer': {

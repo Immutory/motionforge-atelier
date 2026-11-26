@@ -6,12 +6,18 @@ out/*
 .DS_Store
 *.log
 __pycache__/
+.pytest_cache/
 *.pyc
 *.blend1
 *.blend2
+Thumbs.db
+*.tmp
+*.bak
 # aset berat dan materi referensi privat
 public/*.mp3
 public/*.wav
+public/**/*.mp3
+public/**/*.wav
 references/frames/
 references/sheets/
 contohvideo/

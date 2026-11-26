@@ -1,0 +1,926 @@
+[
+  {
+    "text": "Gara-gara",
+    "start": 0.2,
+    "end": 0.68,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "bon",
+    "start": 0.68,
+    "end": 0.86,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "sembilan",
+    "start": 0.86,
+    "end": 1.2,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "puluh",
+    "start": 1.2,
+    "end": 1.5,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "ribu",
+    "start": 1.5,
+    "end": 2.64,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "gue",
+    "start": 3.25,
+    "end": 3.56,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "resmi",
+    "start": 3.56,
+    "end": 4.08,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "jadi",
+    "start": 4.08,
+    "end": 4.28,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "tukang",
+    "start": 4.28,
+    "end": 4.56,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "bakmie.",
+    "start": 4.56,
+    "end": 5.03,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Lunas",
+    "start": 5.19,
+    "end": 6.31,
+    "speaker": "tio"
+  },
+  {
+    "text": "gampang.",
+    "start": 6.31,
+    "end": 7.09,
+    "speaker": "tio"
+  },
+  {
+    "text": "Tapi",
+    "start": 7.53,
+    "end": 8.27,
+    "speaker": "tio"
+  },
+  {
+    "text": "kenalin",
+    "start": 8.27,
+    "end": 8.97,
+    "speaker": "tio"
+  },
+  {
+    "text": "dulu,",
+    "start": 8.97,
+    "end": 9.23,
+    "speaker": "tio"
+  },
+  {
+    "text": "atasan",
+    "start": 9.85,
+    "end": 10.43,
+    "speaker": "tio"
+  },
+  {
+    "text": "shift",
+    "start": 10.43,
+    "end": 10.79,
+    "speaker": "tio"
+  },
+  {
+    "text": "malam.",
+    "start": 10.79,
+    "end": 11.33,
+    "speaker": "tio"
+  },
+  {
+    "text": "Meong.",
+    "start": 11.65,
+    "end": 12.09,
+    "speaker": "oyen"
+  },
+  {
+    "text": "Hah?!",
+    "start": 12.21,
+    "end": 12.79,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Mandor",
+    "start": 12.79,
+    "end": 13.27,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "QC-nya",
+    "start": 13.27,
+    "end": 14.29,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "kucing",
+    "start": 14.77,
+    "end": 15.11,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "yang",
+    "start": 15.11,
+    "end": 15.21,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "semalem?!",
+    "start": 15.21,
+    "end": 15.91,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Iya.",
+    "start": 16.03,
+    "end": 17.05,
+    "speaker": "tio"
+  },
+  {
+    "text": "Karyawan",
+    "start": 17.75,
+    "end": 18.35,
+    "speaker": "tio"
+  },
+  {
+    "text": "senior,",
+    "start": 18.35,
+    "end": 18.81,
+    "speaker": "tio"
+  },
+  {
+    "text": "bergaji",
+    "start": 19.23,
+    "end": 19.75,
+    "speaker": "tio"
+  },
+  {
+    "text": "ayam.",
+    "start": 19.75,
+    "end": 20.84,
+    "speaker": "tio"
+  },
+  {
+    "text": "Mas,",
+    "start": 21.2,
+    "end": 21.4,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "bakmie",
+    "start": 21.8,
+    "end": 22.12,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "ayam",
+    "start": 22.12,
+    "end": 22.44,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "biasa",
+    "start": 22.44,
+    "end": 22.74,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "siji.",
+    "start": 22.74,
+    "end": 23.14,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "Sing",
+    "start": 23.4,
+    "end": 23.78,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "cepet,",
+    "start": 23.78,
+    "end": 24.12,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "nggih.",
+    "start": 24.24,
+    "end": 24.4,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "Optimasi",
+    "start": 24.54,
+    "end": 25.048,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "resource",
+    "start": 25.237,
+    "end": 25.373,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "suwiran",
+    "start": 25.373,
+    "end": 25.783,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "ayam",
+    "start": 25.783,
+    "end": 26.007,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "cukup",
+    "start": 26.007,
+    "end": 26.077,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "segini",
+    "start": 26.077,
+    "end": 26.183,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "aja.",
+    "start": 26.183,
+    "end": 29.04,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Meong!",
+    "start": 29.26,
+    "end": 29.64,
+    "speaker": "oyen"
+  },
+  {
+    "text": "Mandor",
+    "start": 29.76,
+    "end": 30.1,
+    "speaker": "tio"
+  },
+  {
+    "text": "bilang",
+    "start": 30.1,
+    "end": 30.28,
+    "speaker": "tio"
+  },
+  {
+    "text": "kurang.",
+    "start": 30.28,
+    "end": 30.92,
+    "speaker": "tio"
+  },
+  {
+    "text": "Tambahin,",
+    "start": 31.28,
+    "end": 31.84,
+    "speaker": "tio"
+  },
+  {
+    "text": "potong",
+    "start": 32.14,
+    "end": 32.42,
+    "speaker": "tio"
+  },
+  {
+    "text": "bon",
+    "start": 32.42,
+    "end": 32.68,
+    "speaker": "tio"
+  },
+  {
+    "text": "lo",
+    "start": 32.68,
+    "end": 32.84,
+    "speaker": "tio"
+  },
+  {
+    "text": "ya.",
+    "start": 32.84,
+    "end": 33.47,
+    "speaker": "tio"
+  },
+  {
+    "text": "Lho?!",
+    "start": 33.59,
+    "end": 33.81,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Kok",
+    "start": 34.13,
+    "end": 34.37,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "malah",
+    "start": 34.37,
+    "end": 34.65,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "potong",
+    "start": 34.65,
+    "end": 34.87,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "bon",
+    "start": 34.87,
+    "end": 35.01,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "gue?!",
+    "start": 35.01,
+    "end": 35.55,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Mahasiswa",
+    "start": 35.79,
+    "end": 37.11,
+    "speaker": "mbakYuni"
+  },
+  {
+    "text": "IT",
+    "start": 37.11,
+    "end": 37.39,
+    "speaker": "mbakYuni"
+  },
+  {
+    "text": "kok",
+    "start": 37.39,
+    "end": 37.77,
+    "speaker": "mbakYuni"
+  },
+  {
+    "text": "disuruh-suruh",
+    "start": 37.77,
+    "end": 38.43,
+    "speaker": "mbakYuni"
+  },
+  {
+    "text": "kucing",
+    "start": 38.43,
+    "end": 38.91,
+    "speaker": "mbakYuni"
+  },
+  {
+    "text": "sih,",
+    "start": 38.91,
+    "end": 39.01,
+    "speaker": "mbakYuni"
+  },
+  {
+    "text": "To?",
+    "start": 39.11,
+    "end": 39.29,
+    "speaker": "mbakYuni"
+  },
+  {
+    "text": "Nggak",
+    "start": 39.41,
+    "end": 39.67,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "adil,",
+    "start": 39.67,
+    "end": 40.15,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Bang!",
+    "start": 40.21,
+    "end": 40.33,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Dia",
+    "start": 40.89,
+    "end": 41.01,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "cuma",
+    "start": 41.01,
+    "end": 41.21,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "duduk",
+    "start": 41.21,
+    "end": 41.61,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "makan",
+    "start": 41.61,
+    "end": 41.79,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "ayam!",
+    "start": 41.79,
+    "end": 42.41,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Meong.",
+    "start": 42.55,
+    "end": 42.87,
+    "speaker": "oyen"
+  },
+  {
+    "text": "Jiwa",
+    "start": 42.99,
+    "end": 43.43,
+    "speaker": "tio"
+  },
+  {
+    "text": "pemimpin!",
+    "start": 43.43,
+    "end": 44.31,
+    "speaker": "tio"
+  },
+  {
+    "text": "Selamat",
+    "start": 44.55,
+    "end": 45.09,
+    "speaker": "tio"
+  },
+  {
+    "text": "Mandor,",
+    "start": 45.09,
+    "end": 45.55,
+    "speaker": "tio"
+  },
+  {
+    "text": "karyawan",
+    "start": 45.79,
+    "end": 46.25,
+    "speaker": "tio"
+  },
+  {
+    "text": "terbaik!",
+    "start": 46.25,
+    "end": 46.81,
+    "speaker": "tio"
+  },
+  {
+    "text": "Tiga",
+    "start": 47.29,
+    "end": 47.49,
+    "speaker": "tio"
+  },
+  {
+    "text": "pesanan",
+    "start": 47.49,
+    "end": 47.83,
+    "speaker": "tio"
+  },
+  {
+    "text": "masuk",
+    "start": 47.83,
+    "end": 48.05,
+    "speaker": "tio"
+  },
+  {
+    "text": "barengan",
+    "start": 48.05,
+    "end": 48.63,
+    "speaker": "tio"
+  },
+  {
+    "text": "nih,",
+    "start": 48.63,
+    "end": 48.85,
+    "speaker": "tio"
+  },
+  {
+    "text": "To.",
+    "start": 48.89,
+    "end": 49.07,
+    "speaker": "tio"
+  },
+  {
+    "text": "Mie,",
+    "start": 49.19,
+    "end": 49.69,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "ayam,",
+    "start": 49.87,
+    "end": 50.31,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "kuah",
+    "start": 50.57,
+    "end": 51.19,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "deploy!",
+    "start": 51.19,
+    "end": 51.57,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Deploy!",
+    "start": 51.89,
+    "end": 52.27,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Deploy!",
+    "start": 52.45,
+    "end": 53.02,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Mantap,",
+    "start": 53.16,
+    "end": 53.82,
+    "speaker": "tio"
+  },
+  {
+    "text": "tim",
+    "start": 53.98,
+    "end": 54.14,
+    "speaker": "tio"
+  },
+  {
+    "text": "rapi.",
+    "start": 54.14,
+    "end": 54.56,
+    "speaker": "tio"
+  },
+  {
+    "text": "Mandor",
+    "start": 54.9,
+    "end": 55.44,
+    "speaker": "tio"
+  },
+  {
+    "text": "resmi",
+    "start": 55.44,
+    "end": 55.74,
+    "speaker": "tio"
+  },
+  {
+    "text": "naik",
+    "start": 55.74,
+    "end": 56.2,
+    "speaker": "tio"
+  },
+  {
+    "text": "jadi",
+    "start": 56.2,
+    "end": 56.36,
+    "speaker": "tio"
+  },
+  {
+    "text": "Kepala.",
+    "start": 56.36,
+    "end": 56.72,
+    "speaker": "tio"
+  },
+  {
+    "text": "Wah,",
+    "start": 56.94,
+    "end": 57.34,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "mantep",
+    "start": 57.7,
+    "end": 58.28,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "tenan,",
+    "start": 58.28,
+    "end": 58.72,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "Mas!",
+    "start": 58.8,
+    "end": 58.94,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "Ini",
+    "start": 59.48,
+    "end": 59.66,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "uangnya,",
+    "start": 59.66,
+    "end": 60.1,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "matur",
+    "start": 60.38,
+    "end": 60.66,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "nuwun,",
+    "start": 60.66,
+    "end": 60.9,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "nggih.",
+    "start": 60.98,
+    "end": 61.13,
+    "speaker": "pakUjang"
+  },
+  {
+    "text": "Pesanan",
+    "start": 61.31,
+    "end": 61.65,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "beres,",
+    "start": 61.65,
+    "end": 62.35,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "pelanggan",
+    "start": 62.55,
+    "end": 62.97,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "puas.",
+    "start": 62.97,
+    "end": 63.57,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Utang",
+    "start": 64.25,
+    "end": 64.81,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "lunas",
+    "start": 64.81,
+    "end": 65.15,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "dong,",
+    "start": 65.15,
+    "end": 65.29,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Bang?",
+    "start": 65.37,
+    "end": 65.55,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Ini",
+    "start": 65.75,
+    "end": 65.93,
+    "speaker": "tio"
+  },
+  {
+    "text": "slip",
+    "start": 65.93,
+    "end": 66.15,
+    "speaker": "tio"
+  },
+  {
+    "text": "gaji",
+    "start": 66.15,
+    "end": 66.47,
+    "speaker": "tio"
+  },
+  {
+    "text": "shift",
+    "start": 66.47,
+    "end": 66.73,
+    "speaker": "tio"
+  },
+  {
+    "text": "pertamamu.",
+    "start": 66.73,
+    "end": 67.59,
+    "speaker": "tio"
+  },
+  {
+    "text": "Cek",
+    "start": 67.71,
+    "end": 68.19,
+    "speaker": "tio"
+  },
+  {
+    "text": "dulu.",
+    "start": 68.19,
+    "end": 68.55,
+    "speaker": "tio"
+  },
+  {
+    "text": "Hah?!",
+    "start": 69.7,
+    "end": 70.36,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Kerja",
+    "start": 70.36,
+    "end": 70.72,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "semalaman,",
+    "start": 70.72,
+    "end": 71.44,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "kok",
+    "start": 71.78,
+    "end": 72.0,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "utang",
+    "start": 72.0,
+    "end": 72.26,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "gue",
+    "start": 72.26,
+    "end": 72.4,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "malah",
+    "start": 72.4,
+    "end": 72.64,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "naik",
+    "start": 72.64,
+    "end": 72.76,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "seratus",
+    "start": 72.76,
+    "end": 73.08,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "duapuluh?!",
+    "start": 73.08,
+    "end": 73.94,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "Upah",
+    "start": 74.06,
+    "end": 74.32,
+    "speaker": "tio"
+  },
+  {
+    "text": "tiga",
+    "start": 74.32,
+    "end": 74.54,
+    "speaker": "tio"
+  },
+  {
+    "text": "puluh,",
+    "start": 74.54,
+    "end": 75.3,
+    "speaker": "tio"
+  },
+  {
+    "text": "dikurangi",
+    "start": 75.42,
+    "end": 76.1,
+    "speaker": "tio"
+  },
+  {
+    "text": "ayam",
+    "start": 76.1,
+    "end": 76.7,
+    "speaker": "tio"
+  },
+  {
+    "text": "VIP",
+    "start": 76.7,
+    "end": 77.14,
+    "speaker": "tio"
+  },
+  {
+    "text": "plus",
+    "start": 77.14,
+    "end": 77.7,
+    "speaker": "tio"
+  },
+  {
+    "text": "biaya",
+    "start": 77.7,
+    "end": 78.1,
+    "speaker": "tio"
+  },
+  {
+    "text": "training.",
+    "start": 78.1,
+    "end": 78.55,
+    "speaker": "tio"
+  },
+  {
+    "text": "Meong.",
+    "start": 78.67,
+    "end": 79.23,
+    "speaker": "oyen"
+  },
+  {
+    "text": "Bang",
+    "start": 79.45,
+    "end": 81.04,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "kok",
+    "start": 81.04,
+    "end": 81.3,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "kerja",
+    "start": 81.3,
+    "end": 81.68,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "sehari",
+    "start": 81.68,
+    "end": 82.16,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "utang",
+    "start": 82.16,
+    "end": 82.48,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "gue",
+    "start": 82.48,
+    "end": 82.68,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "malah",
+    "start": 82.68,
+    "end": 82.96,
+    "speaker": "bangUtoh"
+  },
+  {
+    "text": "nambah",
+    "start": 82.96,
+    "end": 84.74,
+    "speaker": "bangUtoh"
+  }
+]

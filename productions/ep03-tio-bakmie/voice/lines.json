@@ -1,0 +1,132 @@
+{
+  "_doc": "Sumber kebenaran timeline suara EP03 \"Curhat ke Abang Bakmie\" (naskah v3, G1 disetujui 2026-11-24). Bang Utoh = rekaman pengguna (`real`). Tio = rekaman pengguna `tio.mp3` dipotong jadi `tio_01-07` (`clip`). Mbak Yuni = rekaman pengguna `yuni.mp3` -> `yuni_01` (`clip`). Oyen = meong asli. Natural 1.0x, tanpa atempo. `text` = kata yang diucapkan (ASR & subtitle); `performance` = naskah akting; `nonverbal` = penanda yang diberi timestamp oleh build_voice.py; `gap` = jeda (dtk) sebelum baris ini untuk ruang aksi.",
+  "fps": 30,
+  "totalFrames": 1800,
+  "loopCutFrame": 1785,
+  "scriptBeats": [
+    {"beat": 1, "name": "Hook: kalah sama kucing", "lead": 0.0},
+    {"beat": 2, "name": "Filosofi mie", "lead": 0.35},
+    {"beat": 3, "name": "Dia di belakangmu", "lead": 0.6},
+    {"beat": 4, "name": "Pelanggan tetap", "lead": 0.4},
+    {"beat": 5, "name": "Cerita tulus Tio", "lead": 1.6},
+    {"beat": 6, "name": "Tagihan + loop", "lead": 0.9}
+  ],
+  "lines": [
+    {
+      "id": "U1", "beat": 1, "speaker": "bangUtoh", "real": "utoh_01",
+      "text": "Bang... gue kalah sama kucing.",
+      "performance": "Bang... gue kalah sama kucing.",
+      "start": 0.35, "gap": 0.0,
+      "cue": "Dahi Utoh jatuh ke meja gerobak {duk}; suara sedikit teredam"
+    },
+    {
+      "id": "T1", "beat": 1, "speaker": "tio", "clip": "tio_01",
+      "text": "Mie ayam satu, curhat gratis.",
+      "performance": "[tetap mengaduk] Mie ayam satu, curhat gratis.",
+      "gap": 0.3,
+      "cue": "Tio tidak menoleh, mengaduk dandang; menulis MIE AYAM 15RB di papan bon"
+    },
+    {
+      "id": "U2", "beat": 2, "speaker": "bangUtoh", "real": "utoh_02",
+      "text": "Kucing warkop dapet nilai A. Gue disuruh ngulang dari nol.",
+      "performance": "Kucing warkop dapet nilai A. Gue disuruh ngulang dari nol.",
+      "gap": 0.6,
+      "cue": "Curhat cepat, kesal; Tio menyajikan mangkok dengan khidmat"
+    },
+    {
+      "id": "T2", "beat": 2, "speaker": "tio", "clip": "tio_02",
+      "text": "Hidup itu kayak mie, To. Kelamaan direbus... lembek.",
+      "performance": "[helaan napas bijak \"haa\"] Hidup itu kayak mie, To. [jeda] Kelamaan direbus... lembek.",
+      "nonverbal": [{"before": "Hidup", "kind": "sigh", "label": "helaan napas bijak"}, {"after": "To", "kind": "pause", "label": "jeda bijak"}],
+      "gap": 0.4,
+      "cue": "Kacamata berkilau bohlam; mi diangkat sumpit lalu melorot lemas di 'lembek'"
+    },
+    {
+      "id": "U3", "beat": 2, "speaker": "bangUtoh", "real": "utoh_03",
+      "text": "...Maksudnya apa, Bang?",
+      "performance": "...Maksudnya apa, Bang?",
+      "gap": 0.8,
+      "cue": "Utoh menatap kosong"
+    },
+    {
+      "id": "T3", "beat": 2, "speaker": "tio", "clip": "tio_03",
+      "text": "Nggak tau. Tambah pangsit?",
+      "performance": "Nggak tau. Tambah pangsit?",
+      "gap": 0.45,
+      "cue": "Datar total; langsung menulis + PANGSIT 5RB"
+    },
+    {
+      "id": "U4", "beat": 3, "speaker": "bangUtoh", "real": "utoh_04",
+      "text": "Tiap gue ngoding, kucing itu nongol terus!",
+      "performance": "Tiap gue ngoding, kucing itu nongol terus!",
+      "gap": 1.2,
+      "cue": "Utoh mengoceh heboh; Oyen pelan naik ke bangku di belakangnya"
+    },
+    {
+      "id": "T4", "beat": 3, "speaker": "tio", "clip": "tio_04",
+      "text": "Kayak... sekarang?",
+      "performance": "[melirik ke balik bahu Utoh] Kayak... sekarang?",
+      "gap": 0.5,
+      "cue": "Tio melirik, keringat menetes"
+    },
+    {
+      "id": "Y1", "beat": 3, "speaker": "mbakYuni", "clip": "yuni_01",
+      "text": "Curhat mulu, ngodingnya kapan?",
+      "performance": "Curhat mulu, ngodingnya kapan?",
+      "gap": 2.2,
+      "cue": "Sebelumnya: Utoh menoleh, face-to-face slow-blink Oyen 14f, lompat kaget (strikeEnvelope). Yuni menutup terpal gerobak tanpa menoleh"
+    },
+    {
+      "id": "U5", "beat": 4, "speaker": "bangUtoh", "real": "utoh_05",
+      "text": "Bang! Dia nggak pesen!",
+      "performance": "Bang! Dia nggak pesen!",
+      "gap": 1.6,
+      "cue": "Tio menaruh piring topping ayam pertama untuk Oyen"
+    },
+    {
+      "id": "T5", "beat": 4, "speaker": "tio", "clip": "tio_05",
+      "text": "Pelanggan tetap.",
+      "performance": "[kekeh] Pelanggan tetap.",
+      "nonverbal": [{"before": "Pelanggan", "kind": "chuckle", "label": "kekeh"}],
+      "gap": 0.3,
+      "cue": "Piring ke-2 dan ke-3; + AYAM (OYEN) x3 45RB di bon Utoh"
+    },
+    {
+      "id": "T6", "beat": 5, "speaker": "tio", "clip": "tio_06",
+      "text": "Gue juga pernah ngulang, To. Gerobak pertama kebakar. Sekarang? ...Masih sepi sih.",
+      "performance": "Gue juga pernah ngulang, To. Gerobak pertama kebakar. [jeda] Sekarang? ...Masih sepi sih.",
+      "nonverbal": [{"after": "kebakar", "kind": "pause", "label": "jeda tulus"}],
+      "gap": 2.6,
+      "cue": "Momen hangat: Tio bersandar menatap bohlam, DOF tipis; melirik bangku kosong di 'masih sepi sih'"
+    },
+    {
+      "id": "U6", "beat": 5, "speaker": "bangUtoh", "real": "utoh_06",
+      "text": "Oke, Bang. Besok gue mulai dari nol.",
+      "performance": "[tawa kecil] Oke, Bang. Besok gue mulai dari nol.",
+      "nonverbal": [{"before": "Oke", "kind": "chuckle", "label": "tawa kecil"}],
+      "gap": 0.5,
+      "cue": "Bahu naik, menyeruput mi; Tio menuang es teh, + ES TEH 5RB"
+    },
+    {
+      "id": "T7", "beat": 6, "speaker": "tio", "clip": "tio_07",
+      "text": "Totalnya sembilan puluh ribu.",
+      "performance": "Totalnya sembilan puluh ribu.",
+      "gap": 1.6,
+      "cue": "Insert bon: + CURHAT 20RB -> TOTAL 90RB"
+    },
+    {
+      "id": "O1", "beat": 6, "speaker": "oyen", "audio": "assets/voices/oyen.wav",
+      "text": "Meong.",
+      "performance": "Meong.",
+      "gap": 3.0,
+      "cue": "Sebelumnya: dompet kosong, ngengat terbang; Oyen mendorong 2 ikan asin ke atas bon"
+    },
+    {
+      "id": "U7", "beat": 6, "speaker": "bangUtoh", "real": "utoh_07",
+      "text": "Bang... gue kalah lagi sama kucing.",
+      "performance": "Bang... gue kalah lagi sama kucing.",
+      "gap": 1.2,
+      "cue": "Kacamata Tio melorot; papan DICARI KARYAWAN; dahi Utoh jatuh ke meja (pose = B1) -> hard cut loop f1785"
+    }
+  ]
+}

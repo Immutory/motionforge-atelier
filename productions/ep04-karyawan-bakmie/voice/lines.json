@@ -1,0 +1,41 @@
+{
+  "_doc": "Timeline suara EP04 'Karyawan Baru Bakmie Tio, Bosnya Si Oyen?!' (8 beat, 20 baris VO ekspresif pengguna + 4 meong asli Oyen). Target durasi 62-70 dtk (kelipatan 90f).",
+  "fps": 30,
+  "ttsTempo": 1.07,
+  "scriptBeats": [
+    {"beat": 1, "name": "Mid-Action Hook + Pan Kertas", "lead": 0.0},
+    {"beat": 2, "name": "Reveal Atasan Shift Malam (Mandor QC)", "lead": 0.20},
+    {"beat": 3, "name": "Pembeli Pertama (Pak Ujang) + Mangkok Mie", "lead": 0.30},
+    {"beat": 4, "name": "Komentar Mbak Yuni & Karyawan Terbaik", "lead": 0.22},
+    {"beat": 5, "name": "Multithreading + strikeEnvelope & Kepala Mandor", "lead": 0.22},
+    {"beat": 6, "name": "Ketenangan Semu Sebelum Badai", "lead": 0.25},
+    {"beat": 7, "name": "Punchline Slip Gaji 120RB", "lead": 0.25},
+    {"beat": 8, "name": "Callback & Seamless Loop", "lead": 0.20}
+  ],
+  "lines": [
+    {"id": "U1",  "beat": 1, "speaker": "bangUtoh", "file": "user_vo/U1.mp3",          "start": 0.16, "gap": 0.0,  "text": "Gara-gara bon sembilan puluh ribu... gue resmi jadi tukang bakmie."},
+    {"id": "T1",  "beat": 2, "speaker": "tio",      "file": "user_vo/T1.mp3",          "gap": 0.14, "text": "Lunas gampang. Tapi kenalin dulu, atasan shift malam."},
+    {"id": "O1",  "beat": 2, "speaker": "oyen",     "audio": "assets/voices/oyen.wav", "trim": [0.0, 0.56], "gainDb": 0.5,  "gap": 0.32, "text": "Meong."},
+    {"id": "U3",  "beat": 2, "speaker": "bangUtoh", "file": "user_vo/U3.mp3",          "gap": 0.12, "text": "Hah?! Mandor QC-nya... kucing yang semalem?!"},
+    {"id": "T2",  "beat": 2, "speaker": "tio",      "file": "user_vo/T2.mp3",          "gap": 0.12, "text": "Iya. Karyawan senior, bergaji ayam."},
+    {"id": "PU1", "beat": 3, "speaker": "pakUjang", "file": "user_vo/PU1.mp3",         "gap": 0.36, "text": "Mas, bakmie ayam biasa siji. Sing cepet, nggih."},
+    {"id": "U5",  "beat": 3, "speaker": "bangUtoh", "file": "user_vo/U5.mp3",          "gap": 0.14, "text": "Optimasi resource... suwiran ayam cukup segini aja."},
+    {"id": "O2",  "beat": 3, "speaker": "oyen",     "audio": "assets/voices/oyen.wav", "trim": [0.02, 0.50], "gainDb": 1.0,  "gap": 0.22, "text": "Meong!"},
+    {"id": "T3",  "beat": 3, "speaker": "tio",      "file": "user_vo/T3.mp3",          "gap": 0.12, "text": "Mandor bilang kurang. Tambahin, potong bon lo ya."},
+    {"id": "U6",  "beat": 3, "speaker": "bangUtoh", "file": "user_vo/U6.mp3",          "gap": 0.12, "text": "Lho?! Kok malah potong bon gue?!"},
+    {"id": "Y1",  "beat": 4, "speaker": "mbakYuni", "file": "user_vo/Y1.mp3",          "gap": 0.24, "text": "Mahasiswa IT kok disuruh-suruh kucing sih, To?"},
+    {"id": "U7",  "beat": 4, "speaker": "bangUtoh", "file": "user_vo/U7.mp3",          "gap": 0.12, "text": "Nggak adil, Bang! Dia cuma duduk makan ayam!"},
+    {"id": "O3",  "beat": 4, "speaker": "oyen",     "audio": "assets/voices/oyen.wav", "trim": [0.05, 0.44], "gainDb": -1.5, "gap": 0.14, "text": "Meong."},
+    {"id": "T4",  "beat": 4, "speaker": "tio",      "file": "user_vo/T4.mp3",          "gap": 0.12, "text": "Jiwa pemimpin! Selamat Mandor, karyawan terbaik!"},
+    {"id": "T5",  "beat": 5, "speaker": "tio",      "file": "user_vo/T5.mp3",          "gap": 0.48, "text": "Tiga pesanan masuk barengan nih, To."},
+    {"id": "U9",  "beat": 5, "speaker": "bangUtoh", "file": "user_vo/U9.mp3",          "gap": 0.12, "text": "Mie, ayam, kuah... deploy! Deploy! Deploy!"},
+    {"id": "T6",  "beat": 5, "speaker": "tio",      "file": "user_vo/T6.mp3",          "gap": 0.14, "text": "Mantap, tim rapi. Mandor resmi naik jadi Kepala."},
+    {"id": "PU2", "beat": 6, "speaker": "pakUjang", "file": "user_vo/PU2.mp3",         "gap": 0.22, "text": "Wah, mantep tenan, Mas! Ini uangnya, matur nuwun, nggih."},
+    {"id": "U10", "beat": 6, "speaker": "bangUtoh", "file": "user_vo/U10.mp3",         "gap": 0.18, "text": "Pesanan beres, pelanggan puas. Utang lunas dong, Bang?"},
+    {"id": "T7",  "beat": 7, "speaker": "tio",      "file": "user_vo/T7.mp3",          "gap": 0.20, "text": "Ini slip gaji shift pertamamu. Cek dulu."},
+    {"id": "U11", "beat": 7, "speaker": "bangUtoh", "file": "user_vo/U11.mp3",         "gap": 1.15, "text": "Hah?! Kerja semalaman, kok utang gue malah naik seratus duapuluh?!"},
+    {"id": "T8",  "beat": 7, "speaker": "tio",      "file": "user_vo/T8.mp3",          "gap": 0.12, "text": "Upah tiga puluh, dikurangi ayam VIP plus biaya training."},
+    {"id": "O4",  "beat": 7, "speaker": "oyen",     "audio": "assets/voices/oyen.wav", "trim": [0.0, 0.68],  "gainDb": 0.0,  "gap": 0.12, "text": "Meong."},
+    {"id": "U12", "beat": 8, "speaker": "bangUtoh", "file": "user_vo/U12.mp3",         "gap": 0.22, "text": "Bang... kok kerja sehari utang gue malah nambah..."}
+  ]
+}

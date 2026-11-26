@@ -4,6 +4,7 @@ import { ThreeCanvas } from '@remotion/three';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
+  ActorBillboard,
   DEFAULT_POST,
   GRADE_PRESETS,
   LIGHTS,
@@ -14,14 +15,15 @@ import {
   kickOffset,
   sampleCamera,
   smootherstep,
+  type ActorPose,
   type CamKey,
   type CamPose,
+  type CastPresetId,
+  type HandProp,
   type PostParams,
   type Vec3,
 } from '../../engine';
-import { SetPieces } from '../_starter/set';
-import { WargaCard } from './WargaCard';
-import type { WargaId, WargaPose } from './warga';
+import { SetPieces } from './LabStageSet';
 
 const CameraRig: React.FC<{ pose: CamPose; shake?: { dx: number; dy: number; droll: number } }> = ({
   pose,
@@ -44,7 +46,8 @@ type ShowcaseSlide = {
   blur: number;
   title: string;
   subtitle: string;
-  focusId?: WargaId;
+  focusActor?: CastPresetId;
+  explainProp?: HandProp;
 };
 
 const SLIDES: ShowcaseSlide[] = [
@@ -65,7 +68,8 @@ const SLIDES: ShowcaseSlide[] = [
     blur: 0.78,
     title: 'ID-5 — PAK BUDI (PAK RT / BAPAK KOMPLEK)',
     subtitle: 'Kemeja Kotak, Sarung Tenun & Kumis · Kiri: Kopi Tubruk · Kanan: Kaget Heboh',
-    focusId: 'ID5',
+    focusActor: 'pakBudi',
+    explainProp: 'kopi',
   },
   {
     from: 60,
@@ -75,7 +79,8 @@ const SLIDES: ShowcaseSlide[] = [
     blur: 0.78,
     title: 'ID-6 — BU SITI (IBU WARUNG / EMAK-EMAK)',
     subtitle: 'Cepol Tinggi, Daster Bunga & Celemek · Kiri: Sodet/Spatula · Kanan: Kaget Heboh',
-    focusId: 'ID6',
+    focusActor: 'buSiti',
+    explainProp: 'sodet',
   },
   {
     from: 90,
@@ -85,7 +90,8 @@ const SLIDES: ShowcaseSlide[] = [
     blur: 0.78,
     title: 'ID-7 — RAKA (PELAJAR SMA INDONESIA)',
     subtitle: 'Seragam Putih-Abu, Dasi OSIS & Ransel · Kiri: Smartphone · Kanan: Plot-Twist',
-    focusId: 'ID7',
+    focusActor: 'raka',
+    explainProp: 'phone',
   },
   {
     from: 120,
@@ -95,7 +101,8 @@ const SLIDES: ShowcaseSlide[] = [
     blur: 0.78,
     title: 'ID-8 — BANG UDIN (ABANG OJOL / KURIR)',
     subtitle: 'Jaket Hijau Reflektor & Helm Visor · Kiri: HP Peta · Kanan: Helm Loncat',
-    focusId: 'ID8',
+    focusActor: 'bangUdin',
+    explainProp: 'phoneMap',
   },
 ];
 
@@ -146,26 +153,67 @@ export const WargaProduction: React.FC = () => {
   const pakX = -1.75 + walkT * 1.15;
   const ojolX = 1.75 - walkT * 1.15;
   const walkPhase = ((frame - ANIM_START) / 22) % 1;
-  const talkWave = Math.max(0, Math.sin((frame - 186) * 0.65) * 0.5 + 0.5);
+  const talkWaveVal = Math.max(0, Math.sin((frame - 186) * 0.65) * 0.5 + 0.5);
 
-  const pakAnimPose: WargaPose =
+  const pakAnimPose: ActorPose =
     frame < 185
-      ? { mode: 'walk', walkPhase, blink: blinkLidAt(frame, 5, 30), facing: 0.38 }
-      : frame < SHOCK_F
-        ? { mode: 'explain', talk: talkWave, blink: blinkLidAt(frame, 5, 30, [186, SHOCK_F]), facing: 0.32 }
-        : { mode: 'shock', blink: blinkLidAt(frame, 5, 30, [SHOCK_F]), facing: 0.08 };
-
-  const ojolAnimPose: WargaPose =
-    frame < 185
-      ? { mode: 'walk', walkPhase: (walkPhase + 0.45) % 1, blink: blinkLidAt(frame, 8, 30), facing: -0.38 }
+      ? { face: 'happy', stance: 'walk', walkPhase, blink: blinkLidAt(frame, 5, 30), facing: 0.38, view: 'threeQuarter' }
       : frame < SHOCK_F
         ? {
-            mode: 'explain',
+            face: 'happy',
+            stance: 'stand',
+            leftArm: 'point',
+            rightArm: 'hold',
+            rightProp: 'kopi',
+            talk: talkWaveVal,
+            blink: blinkLidAt(frame, 5, 30, [186, SHOCK_F]),
+            facing: 0.32,
+            view: 'threeQuarter',
+          }
+        : {
+            face: 'shock',
+            stance: 'stand',
+            leftArm: 'raise',
+            rightArm: 'raise',
+            fx: 'shock',
+            blink: blinkLidAt(frame, 5, 30, [SHOCK_F]),
+            facing: 0.08,
+            view: 'front',
+          };
+
+  const ojolAnimPose: ActorPose =
+    frame < 185
+      ? {
+          face: 'happy',
+          stance: 'walk',
+          walkPhase: (walkPhase + 0.45) % 1,
+          blink: blinkLidAt(frame, 8, 30),
+          facing: -0.38,
+          view: 'threeQuarter',
+        }
+      : frame < SHOCK_F
+        ? {
+            face: 'happy',
+            stance: 'stand',
+            leftArm: 'hold',
+            leftProp: 'phoneMap',
+            rightArm: 'hip',
             talk: Math.max(0, Math.sin((frame - 196) * 0.55) * 0.45),
             blink: blinkLidAt(frame, 8, 30, [SHOCK_F]),
             facing: -0.32,
+            view: 'threeQuarter',
           }
-        : { mode: 'shock', blink: blinkLidAt(frame, 8, 30, [SHOCK_F]), facing: -0.08 };
+        : {
+            face: 'shock',
+            stance: 'stand',
+            leftArm: 'raise',
+            rightArm: 'raise',
+            hatPop: 1,
+            fx: 'shock',
+            blink: blinkLidAt(frame, 8, 30, [SHOCK_F]),
+            facing: -0.08,
+            view: 'front',
+          };
 
   const title = isAnim
     ? frame < 185
@@ -192,8 +240,8 @@ export const WargaProduction: React.FC = () => {
 
           {isAnim ? (
             <>
-              <WargaCard
-                id="ID5"
+              <ActorBillboard
+                actor="pakBudi"
                 pose={pakAnimPose}
                 position={[pakX, 0, 0.2]}
                 faceTo={camPose.pos}
@@ -201,8 +249,8 @@ export const WargaProduction: React.FC = () => {
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <WargaCard
-                id="ID8"
+              <ActorBillboard
+                actor="bangUdin"
                 pose={ojolAnimPose}
                 position={[ojolX, 0, 0.2]}
                 faceTo={camPose.pos}
@@ -211,38 +259,38 @@ export const WargaProduction: React.FC = () => {
                 blobColor={light.card.blob}
               />
             </>
-          ) : !slide.focusId ? (
+          ) : !slide.focusActor ? (
             <>
-              <WargaCard
-                id="ID5"
-                pose={{ mode: 'idle', facing: 0.34 }}
+              <ActorBillboard
+                actor="pakBudi"
+                pose={{ face: 'happy', stance: 'stand', rightArm: 'hold', rightProp: 'kopi', facing: 0.34, view: 'threeQuarter' }}
                 position={[-1.42, 0, -0.15]}
                 faceTo={camPose.pos}
                 height={1.98}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <WargaCard
-                id="ID6"
-                pose={{ mode: 'idle', facing: 0.24 }}
+              <ActorBillboard
+                actor="buSiti"
+                pose={{ face: 'happy', stance: 'stand', rightArm: 'hold', rightProp: 'sodet', facing: 0.24, view: 'threeQuarter' }}
                 position={[-0.48, 0, 0.35]}
                 faceTo={camPose.pos}
                 height={1.9}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <WargaCard
-                id="ID7"
-                pose={{ mode: 'idle', facing: -0.24 }}
+              <ActorBillboard
+                actor="raka"
+                pose={{ face: 'happy', stance: 'stand', leftArm: 'hold', leftProp: 'phone', facing: -0.24, view: 'threeQuarter' }}
                 position={[0.48, 0, 0.35]}
                 faceTo={camPose.pos}
                 height={1.88}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <WargaCard
-                id="ID8"
-                pose={{ mode: 'idle', facing: -0.34 }}
+              <ActorBillboard
+                actor="bangUdin"
+                pose={{ face: 'happy', stance: 'stand', leftArm: 'hold', leftProp: 'phoneMap', facing: -0.34, view: 'threeQuarter' }}
                 position={[1.42, 0, -0.15]}
                 faceTo={camPose.pos}
                 height={2.0}
@@ -252,21 +300,39 @@ export const WargaProduction: React.FC = () => {
             </>
           ) : (
             <>
-              <WargaCard
-                id={slide.focusId}
-                pose={{ mode: 'explain', talk: 0.78, facing: 0.32 }}
+              <ActorBillboard
+                actor={slide.focusActor}
+                pose={{
+                  face: 'happy',
+                  stance: 'stand',
+                  leftArm: 'point',
+                  rightArm: 'hold',
+                  rightProp: slide.explainProp ?? 'none',
+                  talk: 0.78,
+                  facing: 0.32,
+                  view: 'threeQuarter',
+                }}
                 position={[-0.6, 0, 0.2]}
                 faceTo={camPose.pos}
-                height={slide.focusId === 'ID7' ? 1.9 : 1.98}
+                height={slide.focusActor === 'raka' ? 1.9 : 1.98}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <WargaCard
-                id={slide.focusId}
-                pose={{ mode: 'shock', facing: 0.08 }}
+              <ActorBillboard
+                actor={slide.focusActor}
+                pose={{
+                  face: 'shock',
+                  stance: 'stand',
+                  leftArm: 'raise',
+                  rightArm: 'raise',
+                  hatPop: 1,
+                  fx: 'shock',
+                  facing: 0.08,
+                  view: 'front',
+                }}
                 position={[0.62, 0, 0.2]}
                 faceTo={camPose.pos}
-                height={slide.focusId === 'ID7' ? 1.9 : 1.98}
+                height={slide.focusActor === 'raka' ? 1.9 : 1.98}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
@@ -305,7 +371,7 @@ export const WargaProduction: React.FC = () => {
         </div>
       </div>
 
-      {!isAnim && !slide.focusId && (
+      {!isAnim && !slide.focusActor && (
         <div
           style={{
             position: 'absolute',

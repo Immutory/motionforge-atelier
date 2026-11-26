@@ -6,12 +6,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+        with:
+          node-version: 22
+          cache: 'npm'
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - run: pip install numpy
+      - run: pip install numpy scipy
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
       - run: for f in pipeline/*.mjs; do node --check "$f"; done
+      - run: python -m py_compile pipeline/qa/qa_check.py pipeline/make_sheet.py pipeline/voice/*.py sound/*.py

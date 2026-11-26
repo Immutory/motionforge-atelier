@@ -18,18 +18,57 @@ export function useBigTemp() {
   return dir;
 }
 
-export function parseArgs(argv) {
+/**
+ * Parser argumen CLI deterministik:
+ * - Mendukung `--key=value` dan `--key value`
+ * - Flag yang terdaftar di `opts.booleans` tidak pernah menelan argumen posisional sesudahnya (mis. `--png ep02`)
+ */
+export function parseArgs(argv, opts = {}) {
+  const boolSet = new Set(opts.booleans ?? []);
   const args = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
+    if (a === '--') {
+      args._.push(...argv.slice(i + 1));
+      break;
+    }
     if (a.startsWith('--')) {
-      const key = a.slice(2);
-      const next = argv[i + 1];
-      if (!next || next.startsWith('--')) args[key] = true;
-      else { args[key] = next; i++; }
-    } else args._.push(a);
+      const eq = a.indexOf('=');
+      if (eq !== -1) {
+        args[a.slice(2, eq)] = a.slice(eq + 1);
+      } else {
+        const key = a.slice(2);
+        if (boolSet.has(key)) {
+          args[key] = true;
+        } else {
+          const next = argv[i + 1];
+          if (next === undefined || next.startsWith('--')) {
+            args[key] = true;
+          } else {
+            args[key] = next;
+            i++;
+          }
+        }
+      }
+    } else {
+      args._.push(a);
+    }
   }
   return args;
+}
+
+export function requireFiniteNumber(raw, fallback, label, { min = -Infinity, max = Infinity } = {}) {
+  if (raw === undefined) return fallback;
+  if (raw === true || raw === '') {
+    console.error(`Flag --${label} membutuhkan nilai angka.`);
+    process.exit(1);
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < min || n > max) {
+    console.error(`Nilai --${label} tidak valid: ${raw}`);
+    process.exit(1);
+  }
+  return n;
 }
 
 export async function prepare(slug) {

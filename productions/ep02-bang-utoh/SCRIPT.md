@@ -1,9 +1,9 @@
-# Naskah EP02 — "Konsultan Oyen" (FINAL MASTER v6.0)
+# Naskah EP02 — "Konsultan Oyen" (FINAL MASTER v6.1 — Gate G4 LULUS)
 
 - **Format:** 9:16 · 1080×1920 · 30 fps · **74,33 detik / 2230 frame** (cut loop `f2215`), natural `1.0x`, tanpa `atempo`
 - **Total kata:** **100 kata** (Bang Utoh 63 kata / 9 baris, Bu Siti 17 kata / 3 baris, Mbak Rara 20 kata / 3 baris) + 1 meong asli Si Oyen
 - **Suara:** 15 rekaman final pengguna (`voice/utoh_01–09`, `buSiti_01–03`, `rara_01–03`) + `assets/voices/oyen.wav`. Nol placeholder.
-- **Status:** **FINAL MASTER v6.0** (15 VO final terkunci, sinematika referensi *move → settle* nol slow-zoom, nol clipping 3D).
+- **Status:** **FINAL MASTER v6.1 — Gate G4 LULUS** (15 VO final terkunci, sinematika referensi *Move → Settle* `creepRate: 0`, `roll: 0`, nol clipping 3D).
 - **Aturan visual:** **ZERO kotak HUD/banner 2D.** Satu-satunya teks 2D: subtitle + label pembicara di zona bawah (`y ≈ 1485 px`), transisi *cross-dissolve* / flash replay, dan tint sepia replay.
 - Sumber kebenaran waktu: `voice/timeline.json` (kata, napas, tawa, jeda) dan `voice/rms.json` (amplitudo per frame).
 
@@ -12,7 +12,7 @@ kata yang diucapkan (dipakai ASR dan subtitle).
 
 ---
 
-## Tabel Beat v5.0 (7 Beat · Sebab → Akibat · Seamless Loop)
+## Tabel Beat FINAL MASTER v6.1 (7 Beat · Sebab → Akibat · Seamless Loop)
 
 | Beat & Lokasi | Waktu (frame / dtk) | Dialog final (rekaman) | Aksi & akting inti |
 |---|---|---|---|
@@ -26,9 +26,7 @@ kata yang diucapkan (dipakai ASR dan subtitle).
 
 ---
 
-## Durasi & Empat Pilar
-- **Durasi:** 74,33 dtk. Ini di atas target 58–68 dtk karena rekaman final memuat akting non-verbal (17 momen napas/tawa,
-  total ±9 dtk) dan dipakai utuh pada `1.0x`. Lihat opsi pemangkasan di laporan Gate G1.
-- **4 Pilar:** Grounded (nol teleport/skating), Motivated light (sinar pagi, 3 bohlam berayun, rim laptop, proyektor),
-  Acting with props (laptop 3D, gelas kopi + uap, buku nilai, cakar Oyen), Moving camera (anti-yoyo, parallax truck, punch-in, 3 tension roll).
+## Durasi & Lima Pilar Studio v2.0
+- **Durasi:** 74,33 dtk (masuk rentang fleksibel Short 55–75 dtk karena rekaman final memuat 17 momen akting non-verbal napas/tawa, total ±9 dtk, dipakai utuh pada `1.0x`).
+- **5 Pilar:** Zero-Clipping & Spatial Safety (nol teleport/skating/clipping), Reference Character Motion (akting tangan kosong + prop diegetik: laptop 3D, gelas kopi + uap, buku nilai, cakar Oyen), Reference Cinema Camera (*Move → Settle* dengan `creepRate: 0` & `roll: 0`), Motivated Light (sinar pagi, 3 bohlam berayun, rim laptop, proyektor), Pure Cinema (ZERO 2D HUD boxes).
 - **Umpan EP03:** Oyen dapat nilai A sementara Bang Utoh mengulang.

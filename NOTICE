@@ -7,9 +7,9 @@ pipeline, sound lab, tes, dan dokumentasi.
 
 Diadaptasi dari alur referensi (ide dan angka kerja, bukan teks atau kode):
   - urutan pass post-processing
-  - target kecepatan naskah 3,7 kata per detik
+  - target kecepatan naskah ~3,7 kata per detik (disesuaikan studio menjadi 3,5–3,8 kata/detik)
   - kedip 4 frame dan kick kamera singkat
-  - target loudness sekitar -14 LUFS
+  - target loudness referensi -14 LUFS (disesuaikan studio menjadi -16,0 LUFS / TP <= -1,5 dBTP, band QA -17..-13 LUFS)
   - prinsip gate persetujuan antar fase
 
 Frame dan contact sheet di references/ berasal dari materi referensi tersebut. Gunakan untuk belajar

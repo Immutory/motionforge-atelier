@@ -1,53 +1,43 @@
 ---
 name: atelier-cast-craft
-description: Create and animate original 2D characters and 2D cats as lit billboards in a 3D scene (`ActorBillboard`, `CatBillboard`, `CharCard`) following studio reference animation standards (`contohvideo/` & `references/reports/motion.md`) with zero-clipping `checkBillboardSweep`. Use for character design, expressions, poses, stances, blink timing, lip-sync, walk cycles, impact grammar, and branding art.
+description: Create and animate original 2.5D characters and 2D cats (`ActorBillboard`, `CatBillboard`, `CharCard`) following Atelier v3.5 standards (`contohvideo/(1).mp4`, `download.mp4`, `references/reports/motion.md`) with 2-Bone Analytic Leg IK, 4-pose foot roll, far-leg depth shading, `Math.cos(ph)` arm counter-swing, `computeWalkState()`, default `gait: 'planted'`, 1 whole 2.5D silhouette, `resolve25DView` 8-dir, `actorHandWorldPos`, `seatRadius`, `tiltComp`, and `checkBillboardSweep`.
 ---
 
-# Cast Craft (Atelier v2.0)
+# Cast Craft (Atelier v3.5 — 2D-Grade Walk in 2.5D)
 
-Characters and animals are **2D Canvas2D vector drawings** placed on camera-facing billboards (`NOINK` layer) inside the 3D world. They integrate into 3D lighting via `cardShade`, `alphaToCoverage`, `customDepthMaterial`, and a multiply floor contact shadow. Primary motion & acting references: `contohvideo/Panduan Analisis dan Produksi Video Animasi - Google Gemini (1).mp4`, `references/reports/characters.md`, and `references/reports/motion.md`.
+Characters and cats are **1 whole 2.5D vector silhouette** drawn via Canvas2D (`NOINK` layer) — **NEVER** split into floating Z-planes. They integrate physically into 3D worlds via spherical face parallax, weighted asymmetric 2.5D ink, `receiveShadow`/`castShadow` (floor + back wall via `DoubleSide` depth), `uLocalLight` soft-clamped lighting, `actorHandWorldPos` pure 3D hand props, `seatRadius`, high-angle `tiltComp`, and **2D-grade articulated locomotion**. Primary references: `contohvideo/Panduan Analisis dan Produksi Video Animasi - Google Gemini (1).mp4`, `contohvideo/download.mp4`, and `references/reports/{characters,motion}.md`.
 
 ## Human Modular Rig (`engine/cast/nusantara.ts` + `ActorBillboard.tsx`)
 - Design canvas `700 × 1100`, soles at `y = 1040`, supersample `2x` (`1400 × 2200`).
-- **12 Official Indonesian Cast (`CAST_PRESETS`)**:
-  - Lead #1: `bangUtoh` (**Bolohoutoh / Bang Utoh** — Mahasiswa S1 Teknik Informatika: navy HMTI hoodie, lanyard KTM, `</>` badge, cyan LED headphones, tech glasses, messy ahoge hair).
-  - Supporting & Warga Kampung Rawa Sari RT 04: `arya` (Mas Arya), `rara` (Mbak Rara), `dimas` (Bang Dimas), `saka` (Saka Nusantara), `pakBudi` (Pak Budi / Pak RT), `buSiti` (Bu Siti / Warkop), `raka` (Raka SMA), `bangUdin` (Bang Udin Ojol), `pakUjang` (Pak Ujang, satpam kampung / Pos Ronda), `tio` (Tio, pedagang Bakmie Ayam: no hat, thick dark glasses, dark brown skin, `build: 'big'`), `mbakYuni` (Mbak Yuni, pedagang Es Buah).
-- **Optional `CharacterSpec` fields** (all default off, preserving backward compatibility):
-  - `build: 'slim' | 'regular' | 'big'` scales torso, belly, limbs, hands, and apron while keeping `ACTOR_SOLE_Y` grounded (`buildFactors(spec)`).
-  - `glassesStyle: 'round' | 'tech' | 'thick'`, `hairCombed`, `mouthColor`, `tongueColor`, `lipColor`, `blushColor`, `eyeShine`.
-- **13 Expressions** (`neutral`, `happy`, `laugh`, `shock`, `sad`, `angry`, `smug`, `skeptical`, `nervous`, `tired`, `idea`, `focus`, **`strain`**) + automatic/override **Comic FX** (`shock`, `sweat`, `anger`, `sparkle`, `question`). Pair **lidded deadpan** (`neutral`/`tired`) against sharp peaks (`shock`, `angry`, `laugh`, `strain`) for maximum comedic contrast.
-- **6 Stances (`ActorStance`)**: `stand`, `walk`, `sit`, `sitCross` (duduk bersila), `squat` (jongkok warkop), `jump`.
-- **4 Full Views (`ActorView`)**: `front`, `threeQuarter`, `side`, and complete **`back`** (back hair, hoodie hood, backpack, back outfit) enabling 180° turns facing boards/walls!
-- **Acting Preference (Zero Hand Props Default)**: Keep characters tangan kosong (`leftProp: 'none', rightProp: 'none'`) unless the script explicitly requires a prop; never sprint with awkward props in both hands.
+- **13 Official Indonesian Cast (`CAST_PRESETS`)**:
+  - Lead #1: `bangUtoh` (**Bolohoutoh / Bang Utoh**), plus **`ebot`** (pemuda kasual lokal ber-outer rajut earth-tone, fade crop).
+  - Supporting & Warga Kampung Rawa Sari RT 04: `arya`, `rara`, `dimas`, `saka`, `pakBudi`, `buSiti`, `raka`, `bangUdin`, `pakUjang`, `tio`, `mbakYuni`.
+- **13 Expressions** (`neutral`, `happy`, `laugh`, `shock`, `sad`, `angry`, `smug`, `skeptical`, `nervous`, `tired`, `idea`, `focus`, **`strain`** `> <`) + Comic FX.
+- **6 Stances (`ActorStance`)**: `stand`, `walk`, `sit`, `sitCross`, `squat`, `jump`.
+- **5 Views / 8-Direction Smooth Turns (`ActorView` + `resolve25DView`)**: `front`, `threeQuarter`, `side`, **`backThreeQuarter`**, and `back`. Always use `resolve25DView(actorPos, forwardOrYaw, camPos)` instead of duplicating `viewFor()` per episode!
 
-## Reference Character Animation Standards (v2.0)
-1. **Organic Noodle-Limbs & Walk Rhythm**:
-   - Arms and legs articulate via **3-point Bezier curves** (`shoulder → organic elbow → hand`, `hip → organic knee → foot`).
-   - Walk cycles maintain **3–6% body height bob** (lowest at foot contact) and **1°–7° torso lean** synced to the step.
-   - Always use **planted gait** (`gait: 'planted'`, `walkPhase = distance / actorWalkCycleMeters(...)`) whenever a character translates across ground — **ZERO moonwalk/skating**!
-2. **Independent `headTilt` & Authentic `sitHeight`**:
-   - Use `headTilt` (degrees, independent of torso `lean`) for questioning, deadpan, disbelief, or sigh beats.
-   - Whenever `stance: 'sit'`, pass `sitHeight` from `SpotMeta.seatY` (e.g. `0.475` for `WK_BenchL_Top`) so hips sit cleanly on the bench/chair with natural knee bend.
-3. **Action Impact Grammar & Spring Overshoot**:
-   - Use **`strikeEnvelope(frame, impactFrame, { windup: 4, hold: 6, follow: 8 })`** for hits, desk slams, stomps, and emphatic gestures (*4f wind-up → 6f tense hold → 1f strike → 8f damped follow-through*).
-   - Use **`springPop(frame, triggerFrame, peak)`** for snappy `hatPop`, shock pops, and prop pops.
-4. **Blink, Reaction Lead & RMS-Gated Lip-Sync**:
-   - **Blink**: `blinkLidAt(frame, seed, fps, swapFrames)` — mandatory **4-frame `0.5 / 1 / 1 / 0.5`** blink on every expression swap, staggered per character.
-   - **Reaction Lead**: Land expression/pose swaps **2 frames before the triggering word** via `reactionFrame(words, index, fps, 2)`.
-   - **Lip-Sync**: Use `talkAt(WORDS, frame, fps, 1)` or **RMS-gated `talkGated`** for recorded VO so pauses stay closed, breaths open slightly, laughs oscillate, and syllables lead by 1 frame.
-   - **Zero 1-Frame Flicker**: Hold every stance/arm state `>= 3` frames and bridge large arm leaps with `HandRig` breakdown (`from`/`t`).
-5. **100% Texture Reactivity**: `<ActorBillboard>` and `<CatBillboard>` serialize all pose fields via `actorPoseKey(pose)` / `catPoseKey(pose)` so no pose change can ever stall in `useMemo`.
+## Atelier v3.5 2D-Grade Walk & 2.5D Character Standards
+1. **2-Bone Analytic Leg IK & Articulated Foot Roll (`nusantara.ts` v3.5)**:
+   - Walking uses **`solveLegIK(hip, ankle, thighLen, shinLen, bendDir)`** for rigid thigh/shin bone lengths with crisp `60–70°` knee bend during Passing/Swing and full extension on Contact/Push-off (zero rubber noodle legs!).
+   - **Far-Leg Depth Shading (`darkenHex`)**: On `side` & `threeQuarter`, the far leg renders behind the near leg darkened by `16%` so stride silhouettes never merge into scissors.
+   - **4-Pose Classic 2D Foot Roll (`footRollPitchRad`)**: Heel-Strike `+18°`, Down/Flat Contact `0°`, Toe-Off `-24°`, Passing/Swing `-12° → +14°`.
+   - **Correct Arm-Leg Counter-Swing & Vertical Bob**: Uses `Math.cos(ph)` counter-swing (front right leg pairs with front left arm) across `side`, `threeQuarter`/`backThreeQuarter`, and foreshortened depth stride on `front`/`back`; lowest bob at Down (`u ≈ 0.12`), highest at Up (`u ≈ 0.37`), forward lean aligned with `travelDir`.
+2. **ZERO Ice-Skating Rule (`computeWalkState` + Default `gait: 'planted'`)**:
+   - **`gait` defaults to `'planted'`** on both humans and cats (`ActorBillboard`, `CatBillboard`).
+   - **MANDATORY**: Whenever an actor's XZ position moves (`|ΔXZ| > 0.002 m/frame`), drive pose via **`computeWalkState(posFn, frame, actorHeight, camPos, opts)`**! It projects horizontal speed onto the camera-facing billboard plane (`strideBlend` 0..1 with smooth ease-out settle), auto-switches `'walk'` ↔ `'stand'`, and unlocks natural arm swing unless overridden (`leftArmOverride`/`rightArmOverride`). **FORBIDDEN: sliding XZ in `stance: 'stand'`!**
+   - Dynamic floor contact shadow (`blobY = 0.005`, `blobScaleX`/`blobScaleZ` breathing with walk phase).
+3. **Spherical Face Parallax, Weighted Ink, & Pure 3D Hand Props**:
+   - Cosine foreshortening on far facial features + weighted ink (`#1f192d`).
+   - Attach pure 3D props from `engine/props/` (`BakmieBowl3D`, `DrinkCup3D`, `DiegeticNote3D`, `BoxSign3D`, `Phone3D`, `Laptop3D`) via **`actorHandWorldPos(...)`** (keep `leftProp`/`rightProp: 'none'` when holding a 3D mesh).
+4. **Ergonomic Seating, Counter Rules, & High-Angle `tiltComp`**:
+   - Seat characters on **single stools/chairs** with `seatRadius` + `sitHeight` from `SpotMeta.seatY` (auto-injects `actorHeight: height`).
+   - **FORBIDDEN: `armPose: 'rest'` behind any counter/cart!** Keep every hand `>= counterTopY + 0.08 m`.
+   - `tiltComp` (default `true`) tilts smoothly around soles `y = 0` when camera `|pitch| > 12°`.
+5. **Motion Grammar & Timing**: `strikeEnvelope` (4f wind-up → 6f hold → 1f strike → 8f follow), `springPop` decaying to `0` on shock `hatPop`, 4-frame `blinkLidAt` (locked on first/last 8f), 2f reaction lead, RMS-gated `talkGated`, zero 1f flicker (`>= 3f` holds), `BREATH_PERIOD = 90`.
 
 ## 2D Animated Cat Rig (`engine/cast/cat.ts` + `CatBillboard.tsx`)
-- **Rule**: Cats are **ALWAYS 2D animated characters (`<CatBillboard />`)**, never 3D Blender meshes!
-- Design canvas `720 × 660`, soles at `y = 595`, supersample `2x`. Height `0.56–0.78 m`.
-- **3 Presets (`CAT_PRESETS`)**: `oyen`, `abu`, `belang`.
-- **5 Cat Stances (`CatStance`)**: `sit`, `stand`, `walk` (planted 4-leg cycle), `sleep` (*loaf* + `Zzz`), `jump`.
-- **Expressive Controls**: `pawRaise` + precision targeting via **`pawAngle`** (degrees) and **`pawReach`** (0.5–1.8×) to tap buttons/props; 3-stage wave-propagated **`tailPhase`** (auto-puffs on `shock`/`angry`); `stretch`, `earTwitch`, `breathPhase`, `blink`, and `talk`.
+- **Rule**: Cats are **ALWAYS 2D (`<CatBillboard />`)**, never 3D Blender meshes!
+- **3 Presets (`CAT_PRESETS`)**: `oyen`, `abu`, `belang`. Default **`gait: 'planted'`** + **`catWalkCycleMeters(height, stride)`** (0% cat paw sliding!), `backThreeQuarter`, `seatRadius`, `groundY`, `tiltComp`, `pawRaise` + `pawAngle`/`pawReach`, wave-propagated `tailPhase` (drawn once cleanly on `back`/`backThreeQuarter`), `stretch`, `blink`, `talk`.
 
-## Mandatory Spatial Safety Check (`checkBillboardSweep`)
-Every `<ActorBillboard>` (width ~1.1–1.25 m) and `<CatBillboard>` (width ~0.59 m) rotates `yaw` to face the active camera. **Before G2**, run **`checkBillboardSweep(actorPos, width, height, camPos, obstacles, 0.04)`** from `engine/core/spatial.ts` at every key shot & OTS angle to guarantee **0% billboard clipping** into benches, tables, counters, walls, or poles!
-
-## Originality & Readability
-- All characters are original procedural studio creations. Never trace external IP.
-- Keep `stickerOutline` available for thumbnails, banners, and profile avatars.
+## Mandatory Spatial Sweep Audit (`checkBillboardSweep`)
+Before G2, run **`checkBillboardSweep(actorPos, width, height, camPos, obstacles, 0.04, { build, leftArm, rightArm, tiltX })`** across all key shots & OTS angles to guarantee **0% clipping**!

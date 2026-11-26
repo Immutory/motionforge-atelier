@@ -3,7 +3,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PropertyBinding } from 'three';
-import { KAMPUS_SPOTS, WARKOP_LAMP_NODES, WARKOP_SPOTS } from '../engine/sets';
+import {
+  KAMPUNG_SPOTS,
+  KAMPUNG_SPOT_META,
+  KAMPUS_SPOTS,
+  KOST_SPOTS,
+  KOST_SPOT_META,
+  WARKOP_LAMP_NODES,
+  WARKOP_SPOTS,
+} from '../engine/sets';
 
 /**
  * Uji spot interior terhadap GLB hasil ekspor (bukan angka salinan): kotak AABB per primitive dibaca dari
@@ -93,7 +101,7 @@ test('spot Warkop berdiri: telapak di lantai dan badan ≥ 0,25 m dari geometri'
   for (const key of ['center', 'counterKeeper'] as const) {
     const p = WARKOP_SPOTS[key];
     assert.ok(Math.abs(p[1] - floor.max[1]) <= 0.06, `${key} tidak menapak WK_Floor (y=${p[1]})`);
-    const c = clearance(WK, p, 0.05, 1.8, (n) => n === 'WK_Floor');
+    const c = clearance(WK, p, 0.05, 1.8, (n) => n === 'WK_Floor' || (key === 'counterKeeper' && n === 'WK_CounterPallet'));
     assert.ok(c.d >= BODY, `${key} hanya ${c.d.toFixed(3)} m dari ${c.name}`);
   }
 });
@@ -185,4 +193,28 @@ test('node lampu gantung Warkop ditemukan setelah GLTFLoader menyaring nama (ayu
       assert.ok(loaded.has(raw) || loaded.has(PropertyBinding.sanitizeNodeName(raw)), `${raw} ada di warkop.glb`);
     }
   }
+});
+
+test('v2.1 regresi KOST_SPOTS: menapak KS_Floor, di dalam dinding kamar, dan ≥ 0,25 m dari furnitur kost.glb', () => {
+  const KS = loadBoxes('kost.glb');
+  const floor = one(KS, 'KS_Floor');
+  const wallL = one(KS, 'KS_SideWall_L');
+  const wallR = one(KS, 'KS_SideWall_R');
+  const wallB = one(KS, 'KS_BackWall');
+  for (const [key, p] of Object.entries(KOST_SPOTS)) {
+    assert.ok(Math.abs(p[1] - floor.max[1]) <= 0.06, `KOST_SPOTS.${key} tidak menapak KS_Floor (y=${p[1]})`);
+    assert.ok(p[0] > wallL.max[0] + BODY && p[0] < wallR.min[0] - BODY, `KOST_SPOTS.${key} terlalu dekat dinding samping`);
+    assert.ok(p[2] > wallB.max[2] + BODY, `KOST_SPOTS.${key} terlalu dekat dinding belakang`);
+    const c = clearance(KS, p, 0.05, 1.8, (n) => ['KS_Floor', 'KS_Rug', 'KS_Ceiling'].includes(n));
+    assert.ok(c.d >= BODY, `KOST_SPOTS.${key} hanya ${c.d.toFixed(3)} m dari ${c.name}`);
+  }
+  assert.equal(KOST_SPOT_META.desk?.seatY, 0.49);
+  assert.equal(KOST_SPOT_META.desk?.tableTopY, 0.79);
+  assert.equal(KOST_SPOT_META.bedside?.seatY, 0.54);
+});
+
+test('v2.1/v3.0 regresi KAMPUNG_SPOT_META.warkopCounter sesuai posisi depan etalase (tanpa ergonomicBaseY konter belakang)', () => {
+  assert.deepEqual([...KAMPUNG_SPOTS.warkopCounter], [0.85, 0, 0.35]);
+  assert.equal(KAMPUNG_SPOT_META.warkopCounter?.ergonomicBaseY, undefined);
+  assert.equal(KAMPUNG_SPOT_META.warkopCounter?.tableTopY, 0.97);
 });

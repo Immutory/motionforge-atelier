@@ -15,7 +15,7 @@ import {
 import { BEATS, EP02_FRAMES, lineById, nonverbalOf, type Beat } from './words';
 
 /**
- * Milik agent set-designer. EP02 "Konsultan Oyen" (Director's Cut Polish v4.0):
+ * Milik agent set-designer. EP02 "Konsultan Oyen" (FINAL MASTER v6.1):
  * - `warkop`  : `<WarkopSet lightId="noon" bulbSwings={...} />` (B1–B4) — 3 bohlam gantung berayun fisik pasca-PLAK
  * - `kampung` : `<KampungSet mode="siang" />` (B5) — jalur transit kurva mulus tanpa sudut patah 90° (`sampleTransitCurve`)
  * - `lab`     : `<KampusSet lightId="noon" />` + `<LabProjectorScreen />` (B6–B7)
@@ -25,7 +25,7 @@ import { BEATS, EP02_FRAMES, lineById, nonverbalOf, type Beat } from './words';
 
 export type Ep02Location = 'warkop' | 'kampung' | 'lab';
 
-/** Beat (1-based) per lokasi (7 Beat Sebab-Akibat Ketat v4.0). */
+/** Beat (1-based) per lokasi (7 Beat Sebab-Akibat Ketat, FINAL MASTER v6.1). */
 export const EP02_LOCATION_BEATS: ReadonlyArray<{ location: Ep02Location; beats: readonly number[] }> = [
   { location: 'warkop', beats: [1, 2, 3, 4] },
   { location: 'kampung', beats: [5] },

@@ -14,7 +14,7 @@ import {
   type PostParams,
   type Vec3,
 } from '../../engine';
-import { SetPieces } from '../_starter/set';
+import { SetPieces } from './LabStageSet';
 import { CharCard } from './CharCard';
 import type { ProtoId } from './prototypes';
 

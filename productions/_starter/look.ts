@@ -1,16 +1,23 @@
-import { DEFAULT_POST, GRADE_PRESETS, LIGHTS, type LightPreset, type PostParams } from '../../engine';
+import { GRADE_PRESETS, LIGHTS, POST_HYBRID_25D, indoorLight, type LightPreset, type PostParams } from '../../engine';
 
-/** Milik agent light-colorist. Preset cahaya dipilih per shot lewat Shot.light. */
+/** Milik agent light-colorist (standar Atelier v3.0 — 2.5D Reference Edition). */
 export const LOOK = {
   ground: '#d9c59b',
 };
 
-export const lightFor = (id: string): LightPreset =>
-  (LIGHTS as Record<string, LightPreset>)[id] ?? LIGHTS.noon;
+export const lightFor = (id: string): LightPreset => {
+  const base = indoorLight((LIGHTS as Record<string, LightPreset>)[id] ?? LIGHTS.noon);
+  return {
+    ...base,
+    tone: { ...base.tone, localLight: 1.0 },
+    // Aktifkan full silhouette castShadow (lantai + dinding belakang gaya (1).mp4) pada preset default starter.
+    card: { ...base.card, castShadow: true },
+  };
+};
 
-/** Parameter post dasar. */
+/** Parameter post dasar v3.0: hybrid 2,5D (outline dunia tipis, karakter 2D pop, shallow DOF lembut). */
 export const POST: PostParams = {
-  ...DEFAULT_POST,
+  ...POST_HYBRID_25D,
 };
 
 /** Parameter post per shot: sinkronkan warna kabut tinta dan preset grade dengan cahaya aktif. */

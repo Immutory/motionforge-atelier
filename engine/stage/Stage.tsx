@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Vec3 } from '../core/easing';
 import { NOINK } from '../post/layers';
@@ -115,15 +116,27 @@ export const Stage: React.FC<StageProps> = ({
   shadowRange,
   children,
 }) => {
+  const { camera } = useThree();
+
+  // Pastikan kamera selalu melihat layer NOINK walau scene dirender tanpa <PostStack />.
+  useLayoutEffect(() => {
+    camera.layers.enable(NOINK);
+  }, [camera]);
+
   // Sinkronkan uniform two-tone & cardShade sebelum frame dirender.
   syncShadeUniforms(light);
 
-  const sun =
+  const tx = camLook?.[0] ?? 0;
+  const tz = camLook?.[2] ?? 0;
+  const sunOffset = sunPosition(light.key.azimuth, light.key.elevation, 55);
+  const sun: Vec3 =
     light.key.cameraRelative && camPos && camLook
       ? cameraRelativeSun(camPos, camLook, light.key.azimuth, light.key.elevation, 55)
-      : sunPosition(light.key.azimuth, light.key.elevation, 55);
+      : [tx + sunOffset[0], sunOffset[1], tz + sunOffset[2]];
+  const fillPos: Vec3 = [tx - (sun[0] - tx), 14, tz - (sun[2] - tz)];
 
   const keyRef = useRef<THREE.DirectionalLight>(null);
+  const fillRef = useRef<THREE.DirectionalLight>(null);
   const range = shadowRange ?? light.shadow.range;
 
   const groundMat = useTwoToneMaterial(
@@ -131,12 +144,26 @@ export const Stage: React.FC<StageProps> = ({
     [ground, groundMap],
   );
 
-  useEffect(() => {
+  // useLayoutEffect berjalan sebelum ManualFrameRenderer (@remotion/three) memanggil advance(),
+  // sehingga target bayangan & frustum ortografis selalu sinkron di frame yang sama (nol lag 1-frame).
+  useLayoutEffect(() => {
     const dir = keyRef.current;
-    if (!dir) return;
-    dir.target.position.set(camLook?.[0] ?? 0, 0, camLook?.[2] ?? 0);
-    dir.target.updateMatrixWorld();
-  }, [camLook?.[0], camLook?.[2]]);
+    if (dir) {
+      dir.target.position.set(tx, 0, tz);
+      dir.target.updateMatrixWorld();
+      const sc = dir.shadow.camera;
+      sc.left = -range;
+      sc.right = range;
+      sc.top = range;
+      sc.bottom = -range;
+      sc.updateProjectionMatrix();
+    }
+    const fill = fillRef.current;
+    if (fill) {
+      fill.target.position.set(tx, 0, tz);
+      fill.target.updateMatrixWorld();
+    }
+  }, [tx, tz, range]);
 
   return (
     <>
@@ -160,8 +187,9 @@ export const Stage: React.FC<StageProps> = ({
         shadow-camera-bottom={-range}
         shadow-bias={light.shadow.bias}
         shadow-normalBias={light.shadow.normalBias}
+        shadow-radius={light.shadow.radius ?? 3.0}
       />
-      <directionalLight color={light.fill.color} intensity={light.fill.intensity} position={[-sun[0], 14, -sun[2]]} />
+      <directionalLight ref={fillRef} color={light.fill.color} intensity={light.fill.intensity} position={fillPos} />
       {showGround ? (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow material={groundMat}>
           <planeGeometry args={[600, 600]} />

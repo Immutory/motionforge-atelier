@@ -1,0 +1,961 @@
+{
+  "_doc": "Dihasilkan build_voice.py. JANGAN edit tangan; ubah lines.json lalu build ulang.",
+  "fps": 30,
+  "totalFrames": 1800,
+  "totalSec": 60.0,
+  "loopCutFrame": 1785,
+  "voiceWavSec": 60.0,
+  "lastAudibleEnd": 58.75,
+  "placeholderLines": [],
+  "beats": [
+    {
+      "beat": 1,
+      "name": "Hook: kalah sama kucing",
+      "from": 0,
+      "to": 197,
+      "fromSec": 0.0,
+      "toSec": 6.567
+    },
+    {
+      "beat": 2,
+      "name": "Filosofi mie",
+      "from": 197,
+      "to": 618,
+      "fromSec": 6.567,
+      "toSec": 20.6
+    },
+    {
+      "beat": 3,
+      "name": "Dia di belakangmu",
+      "from": 618,
+      "to": 936,
+      "fromSec": 20.6,
+      "toSec": 31.2
+    },
+    {
+      "beat": 4,
+      "name": "Pelanggan tetap",
+      "from": 936,
+      "to": 1077,
+      "fromSec": 31.2,
+      "toSec": 35.9
+    },
+    {
+      "beat": 5,
+      "name": "Cerita tulus Tio",
+      "from": 1077,
+      "to": 1457,
+      "fromSec": 35.9,
+      "toSec": 48.567
+    },
+    {
+      "beat": 6,
+      "name": "Tagihan + loop",
+      "from": 1457,
+      "to": 1785,
+      "fromSec": 48.567,
+      "toSec": 59.5
+    }
+  ],
+  "nonverbal": [
+    {
+      "kind": "sigh",
+      "label": "helaan napas bijak",
+      "start": 10.78,
+      "end": 10.82,
+      "voiced": false,
+      "detect": "silence",
+      "line": "T2",
+      "speaker": "tio",
+      "startFrame": 323,
+      "endFrame": 325
+    },
+    {
+      "kind": "pause",
+      "label": "jeda bijak",
+      "start": 13.14,
+      "end": 13.76,
+      "voiced": false,
+      "detect": "silence",
+      "line": "T2",
+      "speaker": "tio",
+      "startFrame": 394,
+      "endFrame": 413
+    },
+    {
+      "kind": "chuckle",
+      "label": "kekeh",
+      "start": 33.3,
+      "end": 34.01,
+      "voiced": true,
+      "detect": "asr-laugh",
+      "line": "T5",
+      "speaker": "tio",
+      "startFrame": 998,
+      "endFrame": 1021
+    },
+    {
+      "kind": "pause",
+      "label": "jeda tulus",
+      "start": 40.67,
+      "end": 41.95,
+      "voiced": false,
+      "detect": "silence",
+      "line": "T6",
+      "speaker": "tio",
+      "startFrame": 1220,
+      "endFrame": 1259
+    },
+    {
+      "kind": "chuckle",
+      "label": "tawa kecil",
+      "start": 44.33,
+      "end": 45.08,
+      "voiced": true,
+      "detect": "breathy",
+      "line": "U6",
+      "speaker": "bangUtoh",
+      "startFrame": 1329,
+      "endFrame": 1353
+    }
+  ],
+  "lines": [
+    {
+      "id": "U1",
+      "beat": 1,
+      "speaker": "bangUtoh",
+      "text": "Bang... gue kalah sama kucing.",
+      "performance": "Bang... gue kalah sama kucing.",
+      "start": 0.47,
+      "end": 3.72,
+      "startFrame": 14,
+      "endFrame": 112,
+      "audibleStart": 0.42,
+      "audibleEnd": 3.83,
+      "audibleStartFrame": 12,
+      "audibleEndFrame": 115,
+      "clipStart": 0.35,
+      "clipEnd": 3.98,
+      "clipDur": 3.63,
+      "srcDur": 3.63,
+      "lufs": -21.2,
+      "beatWindow": [
+        0.0,
+        6.567
+      ],
+      "cue": "Dahi Utoh jatuh ke meja gerobak {duk}; suara sedikit teredam",
+      "gapIdeal": 0.0,
+      "source": "REKAMAN FINAL voice/utoh_01.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Bang, gue kalah sama kucing.",
+        "passDeltaMaxFrames": 0.0,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            1.41,
+            1.82
+          ],
+          [
+            2.09,
+            2.18
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 0.3
+    },
+    {
+      "id": "T1",
+      "beat": 1,
+      "speaker": "tio",
+      "text": "Mie ayam satu, curhat gratis.",
+      "performance": "[tetap mengaduk] Mie ayam satu, curhat gratis.",
+      "start": 4.02,
+      "end": 6.31,
+      "startFrame": 120,
+      "endFrame": 190,
+      "audibleStart": 4.01,
+      "audibleEnd": 6.42,
+      "audibleStartFrame": 120,
+      "audibleEndFrame": 193,
+      "clipStart": 3.91,
+      "clipEnd": 6.535,
+      "clipDur": 2.625,
+      "srcDur": 2.625,
+      "lufs": -20.0,
+      "beatWindow": [
+        0.0,
+        6.567
+      ],
+      "cue": "Tio tidak menoleh, mengaduk dandang; menulis MIE AYAM 15RB di papan bon",
+      "gapIdeal": 0.3,
+      "source": "REKAMAN FINAL voice/tio_01.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 0.898,
+        "recall": 0.8,
+        "heard": "Minyak ayam satu, curhat gratis!",
+        "passDeltaMaxFrames": 2.4,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            1.07,
+            1.33
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "ayam(2.4f)"
+        ]
+      },
+      "issues": [],
+      "gapAfter": 0.6
+    },
+    {
+      "id": "U2",
+      "beat": 2,
+      "speaker": "bangUtoh",
+      "text": "Kucing warkop dapet nilai A. Gue disuruh ngulang dari nol.",
+      "performance": "Kucing warkop dapet nilai A. Gue disuruh ngulang dari nol.",
+      "start": 6.91,
+      "end": 10.41,
+      "startFrame": 207,
+      "endFrame": 313,
+      "audibleStart": 6.91,
+      "audibleEnd": 10.5,
+      "audibleStartFrame": 207,
+      "audibleEndFrame": 315,
+      "clipStart": 6.79,
+      "clipEnd": 10.665,
+      "clipDur": 3.875,
+      "srcDur": 4.065,
+      "lufs": -21.0,
+      "beatWindow": [
+        6.567,
+        20.6
+      ],
+      "cue": "Curhat cepat, kesal; Tio menyajikan mangkok dengan khidmat",
+      "gapIdeal": 0.6,
+      "source": "REKAMAN FINAL voice/utoh_02.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Kucing Warkop dapet nilai ah, gue disuruh ngulang dari nol.",
+        "passDeltaMaxFrames": 0.6,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            1.73,
+            2.09
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 0.4
+    },
+    {
+      "id": "T2",
+      "beat": 2,
+      "speaker": "tio",
+      "text": "Hidup itu kayak mie, To. Kelamaan direbus... lembek.",
+      "performance": "[helaan napas bijak \"haa\"] Hidup itu kayak mie, To. [jeda] Kelamaan direbus... lembek.",
+      "start": 10.81,
+      "end": 15.85,
+      "startFrame": 324,
+      "endFrame": 476,
+      "audibleStart": 10.78,
+      "audibleEnd": 15.95,
+      "audibleStartFrame": 323,
+      "audibleEndFrame": 479,
+      "clipStart": 10.69,
+      "clipEnd": 16.17,
+      "clipDur": 5.48,
+      "srcDur": 5.6,
+      "lufs": -20.9,
+      "beatWindow": [
+        6.567,
+        20.6
+      ],
+      "cue": "Kacamata berkilau bohlam; mi diangkat sumpit lalu melorot lemas di 'lembek'",
+      "gapIdeal": 0.4,
+      "source": "REKAMAN FINAL voice/tio_02.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "sigh",
+          "label": "helaan napas bijak",
+          "start": 10.78,
+          "end": 10.82,
+          "voiced": false,
+          "detect": "silence",
+          "line": "T2",
+          "speaker": "tio",
+          "startFrame": 323,
+          "endFrame": 325
+        },
+        {
+          "kind": "pause",
+          "label": "jeda bijak",
+          "start": 13.14,
+          "end": 13.76,
+          "voiced": false,
+          "detect": "silence",
+          "line": "T2",
+          "speaker": "tio",
+          "startFrame": 394,
+          "endFrame": 413
+        }
+      ],
+      "check": {
+        "score": 0.974,
+        "recall": 0.75,
+        "heard": "Ah, hidup itu kayak mito. Kelamaan direbus lembek.",
+        "passDeltaMaxFrames": 8.4,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            2.45,
+            3.07
+          ],
+          [
+            4.4,
+            4.69
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "To.(8.4f)"
+        ]
+      },
+      "issues": [],
+      "gapAfter": 0.8
+    },
+    {
+      "id": "U3",
+      "beat": 2,
+      "speaker": "bangUtoh",
+      "text": "...Maksudnya apa, Bang?",
+      "performance": "...Maksudnya apa, Bang?",
+      "start": 16.65,
+      "end": 17.91,
+      "startFrame": 499,
+      "endFrame": 538,
+      "audibleStart": 16.65,
+      "audibleEnd": 17.99,
+      "audibleStartFrame": 499,
+      "audibleEndFrame": 540,
+      "clipStart": 16.53,
+      "clipEnd": 18.105,
+      "clipDur": 1.575,
+      "srcDur": 1.645,
+      "lufs": -20.8,
+      "beatWindow": [
+        6.567,
+        20.6
+      ],
+      "cue": "Utoh menatap kosong",
+      "gapIdeal": 0.8,
+      "source": "REKAMAN FINAL voice/utoh_03.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Maksudnya apa, bang?",
+        "passDeltaMaxFrames": 0.0,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 0.45
+    },
+    {
+      "id": "T3",
+      "beat": 2,
+      "speaker": "tio",
+      "text": "Nggak tau. Tambah pangsit?",
+      "performance": "Nggak tau. Tambah pangsit?",
+      "start": 18.36,
+      "end": 20.0,
+      "startFrame": 550,
+      "endFrame": 600,
+      "audibleStart": 18.34,
+      "audibleEnd": 20.09,
+      "audibleStartFrame": 550,
+      "audibleEndFrame": 603,
+      "clipStart": 18.24,
+      "clipEnd": 20.2,
+      "clipDur": 1.96,
+      "srcDur": 2.06,
+      "lufs": -21.4,
+      "beatWindow": [
+        6.567,
+        20.6
+      ],
+      "cue": "Datar total; langsung menulis + PANGSIT 5RB",
+      "gapIdeal": 0.45,
+      "source": "REKAMAN FINAL voice/tio_03.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Enggak tau, tambah pangsit?",
+        "passDeltaMaxFrames": 1.8,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.76,
+            1.16
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 1.2
+    },
+    {
+      "id": "U4",
+      "beat": 3,
+      "speaker": "bangUtoh",
+      "text": "Tiap gue ngoding, kucing itu nongol terus!",
+      "performance": "Tiap gue ngoding, kucing itu nongol terus!",
+      "start": 21.2,
+      "end": 23.54,
+      "startFrame": 636,
+      "endFrame": 707,
+      "audibleStart": 21.2,
+      "audibleEnd": 23.59,
+      "audibleStartFrame": 636,
+      "audibleEndFrame": 708,
+      "clipStart": 21.08,
+      "clipEnd": 23.73,
+      "clipDur": 2.65,
+      "srcDur": 2.66,
+      "lufs": -20.9,
+      "beatWindow": [
+        20.6,
+        31.2
+      ],
+      "cue": "Utoh mengoceh heboh; Oyen pelan naik ke bangku di belakangnya",
+      "gapIdeal": 1.2,
+      "source": "REKAMAN FINAL voice/utoh_04.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "tiap gue ngoding, kucing itu nongol terus",
+        "passDeltaMaxFrames": 0.0,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            1.17,
+            1.26
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 0.5
+    },
+    {
+      "id": "T4",
+      "beat": 3,
+      "speaker": "tio",
+      "text": "Kayak... sekarang?",
+      "performance": "[melirik ke balik bahu Utoh] Kayak... sekarang?",
+      "start": 24.04,
+      "end": 25.36,
+      "startFrame": 721,
+      "endFrame": 761,
+      "audibleStart": 24.03,
+      "audibleEnd": 25.43,
+      "audibleStartFrame": 720,
+      "audibleEndFrame": 763,
+      "clipStart": 23.92,
+      "clipEnd": 25.435,
+      "clipDur": 1.515,
+      "srcDur": 1.595,
+      "lufs": -19.2,
+      "beatWindow": [
+        20.6,
+        31.2
+      ],
+      "cue": "Tio melirik, keringat menetes",
+      "gapIdeal": 0.5,
+      "source": "REKAMAN FINAL voice/tio_04.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Kayak sekarang?",
+        "passDeltaMaxFrames": 0.0,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 2.2
+    },
+    {
+      "id": "Y1",
+      "beat": 3,
+      "speaker": "mbakYuni",
+      "text": "Curhat mulu, ngodingnya kapan?",
+      "performance": "Curhat mulu, ngodingnya kapan?",
+      "start": 27.56,
+      "end": 29.99,
+      "startFrame": 826,
+      "endFrame": 900,
+      "audibleStart": 27.56,
+      "audibleEnd": 30.04,
+      "audibleStartFrame": 826,
+      "audibleEndFrame": 902,
+      "clipStart": 27.48,
+      "clipEnd": 30.29,
+      "clipDur": 2.81,
+      "srcDur": 4.127,
+      "lufs": -19.9,
+      "beatWindow": [
+        20.6,
+        31.2
+      ],
+      "cue": "Sebelumnya: Utoh menoleh, face-to-face slow-blink Oyen 14f, lompat kaget (strikeEnvelope). Yuni menutup terpal gerobak tanpa menoleh",
+      "gapIdeal": 2.2,
+      "source": "REKAMAN FINAL voice/yuni_01.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 0.958,
+        "recall": 0.75,
+        "heard": "curhat mulu, ngodinya kapan?",
+        "passDeltaMaxFrames": 1.8,
+        "passDeltaMedianFrames": 0.3,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            1.21,
+            1.41
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 1.6
+    },
+    {
+      "id": "U5",
+      "beat": 4,
+      "speaker": "bangUtoh",
+      "text": "Bang! Dia nggak pesen!",
+      "performance": "Bang! Dia nggak pesen!",
+      "start": 31.59,
+      "end": 33.08,
+      "startFrame": 947,
+      "endFrame": 993,
+      "audibleStart": 31.59,
+      "audibleEnd": 33.23,
+      "audibleStartFrame": 947,
+      "audibleEndFrame": 997,
+      "clipStart": 31.47,
+      "clipEnd": 33.265,
+      "clipDur": 1.795,
+      "srcDur": 1.805,
+      "lufs": -20.5,
+      "beatWindow": [
+        31.2,
+        35.9
+      ],
+      "cue": "Tio menaruh piring topping ayam pertama untuk Oyen",
+      "gapIdeal": 1.6,
+      "source": "REKAMAN FINAL voice/utoh_05.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Bang, dia enggak pesen!",
+        "passDeltaMaxFrames": 0.6,
+        "passDeltaMedianFrames": 0.3,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.44,
+            0.71
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [],
+      "gapAfter": 0.93
+    },
+    {
+      "id": "T5",
+      "beat": 4,
+      "speaker": "tio",
+      "text": "Pelanggan tetap.",
+      "performance": "[kekeh] Pelanggan tetap.",
+      "start": 34.01,
+      "end": 34.92,
+      "startFrame": 1020,
+      "endFrame": 1048,
+      "audibleStart": 33.31,
+      "audibleEnd": 34.96,
+      "audibleStartFrame": 999,
+      "audibleEndFrame": 1049,
+      "clipStart": 33.3,
+      "clipEnd": 35.2,
+      "clipDur": 1.9,
+      "srcDur": 1.9,
+      "lufs": -20.6,
+      "beatWindow": [
+        31.2,
+        35.9
+      ],
+      "cue": "Piring ke-2 dan ke-3; + AYAM (OYEN) x3 45RB di bon Utoh",
+      "gapIdeal": 0.3,
+      "source": "REKAMAN FINAL voice/tio_05.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "chuckle",
+          "label": "kekeh",
+          "start": 33.3,
+          "end": 34.01,
+          "voiced": true,
+          "detect": "asr-laugh",
+          "line": "T5",
+          "speaker": "tio",
+          "startFrame": 998,
+          "endFrame": 1021
+        }
+      ],
+      "check": {
+        "score": 0.824,
+        "recall": 1.0,
+        "heard": "hahaha pelanggan tetap",
+        "passDeltaMaxFrames": 0.3,
+        "passDeltaMedianFrames": 0.15,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.02,
+            0.17
+          ],
+          [
+            1.33,
+            1.44
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": [
+        "transkripsi kurang cocok naskah (skor 0.824): 'hahaha pelanggan tetap'"
+      ],
+      "gapAfter": 2.6
+    },
+    {
+      "id": "T6",
+      "beat": 5,
+      "speaker": "tio",
+      "text": "Gue juga pernah ngulang, To. Gerobak pertama kebakar. Sekarang? ...Masih sepi sih.",
+      "performance": "Gue juga pernah ngulang, To. Gerobak pertama kebakar. [jeda] Sekarang? ...Masih sepi sih.",
+      "start": 37.52,
+      "end": 44.09,
+      "startFrame": 1125,
+      "endFrame": 1323,
+      "audibleStart": 37.5,
+      "audibleEnd": 44.21,
+      "audibleStartFrame": 1125,
+      "audibleEndFrame": 1327,
+      "clipStart": 37.4,
+      "clipEnd": 44.39,
+      "clipDur": 6.99,
+      "srcDur": 7.075,
+      "lufs": -21.7,
+      "beatWindow": [
+        35.9,
+        48.567
+      ],
+      "cue": "Momen hangat: Tio bersandar menatap bohlam, DOF tipis; melirik bangku kosong di 'masih sepi sih'",
+      "gapIdeal": 2.6,
+      "source": "REKAMAN FINAL voice/tio_06.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "pause",
+          "label": "jeda tulus",
+          "start": 40.67,
+          "end": 41.95,
+          "voiced": false,
+          "detect": "silence",
+          "line": "T6",
+          "speaker": "tio",
+          "startFrame": 1220,
+          "endFrame": 1259
+        }
+      ],
+      "check": {
+        "score": 0.952,
+        "recall": 0.833,
+        "heard": "Gue juga pernah mulang tuh, gerobak pertama kebakar. Sekarang masih sepi sih.",
+        "passDeltaMaxFrames": 5.4,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            1.46,
+            1.83
+          ],
+          [
+            2.96,
+            3.07
+          ],
+          [
+            3.27,
+            4.55
+          ],
+          [
+            5.34,
+            5.8
+          ],
+          [
+            6.15,
+            6.31
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "ngulang,(2.4f)",
+          "To.(5.4f)",
+          "sepi(2.4f)"
+        ]
+      },
+      "issues": [],
+      "gapAfter": 0.99
+    },
+    {
+      "id": "U6",
+      "beat": 5,
+      "speaker": "bangUtoh",
+      "text": "Oke, Bang. Besok gue mulai dari nol.",
+      "performance": "[tawa kecil] Oke, Bang. Besok gue mulai dari nol.",
+      "start": 45.08,
+      "end": 47.86,
+      "startFrame": 1352,
+      "endFrame": 1436,
+      "audibleStart": 44.29,
+      "audibleEnd": 47.9,
+      "audibleStartFrame": 1328,
+      "audibleEndFrame": 1437,
+      "clipStart": 44.18,
+      "clipEnd": 48.105,
+      "clipDur": 3.925,
+      "srcDur": 3.925,
+      "lufs": -20.8,
+      "beatWindow": [
+        35.9,
+        48.567
+      ],
+      "cue": "Bahu naik, menyeruput mi; Tio menuang es teh, + ES TEH 5RB",
+      "gapIdeal": 0.5,
+      "source": "REKAMAN FINAL voice/utoh_06.wav",
+      "placeholder": false,
+      "nonverbal": [
+        {
+          "kind": "chuckle",
+          "label": "tawa kecil",
+          "start": 44.33,
+          "end": 45.08,
+          "voiced": true,
+          "detect": "breathy",
+          "line": "U6",
+          "speaker": "bangUtoh",
+          "startFrame": 1329,
+          "endFrame": 1353
+        }
+      ],
+      "check": {
+        "score": 0.963,
+        "recall": 0.857,
+        "heard": "Oke bang, besok gue mulai dari now.",
+        "passDeltaMaxFrames": 7.8,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.43,
+            0.55
+          ],
+          [
+            1.53,
+            1.87
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "Bang.(7.8f)"
+        ]
+      },
+      "issues": [],
+      "gapAfter": 1.6
+    },
+    {
+      "id": "T7",
+      "beat": 6,
+      "speaker": "tio",
+      "text": "Totalnya sembilan puluh ribu.",
+      "performance": "Totalnya sembilan puluh ribu.",
+      "start": 49.46,
+      "end": 50.82,
+      "startFrame": 1483,
+      "endFrame": 1525,
+      "audibleStart": 49.45,
+      "audibleEnd": 50.89,
+      "audibleStartFrame": 1483,
+      "audibleEndFrame": 1527,
+      "clipStart": 49.34,
+      "clipEnd": 51.1,
+      "clipDur": 1.76,
+      "srcDur": 3.282,
+      "lufs": -20.0,
+      "beatWindow": [
+        48.567,
+        59.5
+      ],
+      "cue": "Insert bon: + CURHAT 20RB -> TOTAL 90RB",
+      "gapIdeal": 1.6,
+      "source": "REKAMAN FINAL voice/tio_07.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 0.615,
+        "recall": 0.5,
+        "heard": "Totalnya 90 ribu",
+        "passDeltaMaxFrames": 4.8,
+        "passDeltaMedianFrames": 2.4,
+        "interpolatedWords": 0,
+        "pauses": [],
+        "chosenPass": "prompted",
+        "valleyRefined": [
+          "ribu.(4.8f)"
+        ]
+      },
+      "issues": [
+        "transkripsi kurang cocok naskah (skor 0.615): 'Totalnya 90 ribu'"
+      ],
+      "gapAfter": 3.0
+    },
+    {
+      "id": "O1",
+      "beat": 6,
+      "speaker": "oyen",
+      "text": "Meong.",
+      "performance": "Meong.",
+      "start": 53.82,
+      "end": 54.57,
+      "startFrame": 1614,
+      "endFrame": 1638,
+      "audibleStart": 53.82,
+      "audibleEnd": 54.67,
+      "audibleStartFrame": 1614,
+      "audibleEndFrame": 1641,
+      "clipStart": 53.71,
+      "clipEnd": 54.87,
+      "clipDur": 1.16,
+      "srcDur": 1.451,
+      "lufs": -17.0,
+      "beatWindow": [
+        48.567,
+        59.5
+      ],
+      "cue": "Sebelumnya: dompet kosong, ngengat terbang; Oyen mendorong 2 ikan asin ke atas bon",
+      "gapIdeal": 3.0,
+      "source": "rekaman kucing asli (assets/voices/oyen.wav)",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": null,
+        "recall": null,
+        "heard": "(kucing, tidak di-ASR; batas dari RMS)"
+      },
+      "issues": [],
+      "gapAfter": 1.2
+    },
+    {
+      "id": "U7",
+      "beat": 6,
+      "speaker": "bangUtoh",
+      "text": "Bang... gue kalah lagi sama kucing.",
+      "performance": "Bang... gue kalah lagi sama kucing.",
+      "start": 55.77,
+      "end": 58.67,
+      "startFrame": 1673,
+      "endFrame": 1761,
+      "audibleStart": 55.76,
+      "audibleEnd": 58.75,
+      "audibleStartFrame": 1672,
+      "audibleEndFrame": 1763,
+      "clipStart": 55.65,
+      "clipEnd": 58.96,
+      "clipDur": 3.31,
+      "srcDur": 4.735,
+      "lufs": -21.2,
+      "beatWindow": [
+        48.567,
+        59.5
+      ],
+      "cue": "Kacamata Tio melorot; papan DICARI KARYAWAN; dahi Utoh jatuh ke meja (pose = B1) -> hard cut loop f1785",
+      "gapIdeal": 1.2,
+      "source": "REKAMAN FINAL voice/utoh_07.wav",
+      "placeholder": false,
+      "nonverbal": [],
+      "check": {
+        "score": 1.0,
+        "recall": 1.0,
+        "heard": "Bang, gue kalah lagi sama kucing.",
+        "passDeltaMaxFrames": 0.0,
+        "passDeltaMedianFrames": 0.0,
+        "interpolatedWords": 0,
+        "pauses": [
+          [
+            0.95,
+            1.19
+          ]
+        ],
+        "chosenPass": "prompted",
+        "valleyRefined": []
+      },
+      "issues": []
+    }
+  ]
+}

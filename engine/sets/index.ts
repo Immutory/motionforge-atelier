@@ -1,6 +1,15 @@
 import type { LightPreset } from '../stage/lights';
 
-export { GlbSet, type GlbSetProps, type TimeOfDayMode } from './GlbSet';
+export {
+  GlbSet,
+  classifyGlbSurface,
+  shouldHideGlbNode,
+  type GlbSetProps,
+  type GlbSurfaceClass,
+  type GlbSurfaceParams,
+  type TimeOfDayMode,
+} from './GlbSet';
+export { filterSetBoxes, findSetBox, type SetBoxesManifest } from './boxes';
 export {
   WarkopSet,
   WARKOP_SPOTS,

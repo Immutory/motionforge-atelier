@@ -5,7 +5,7 @@ Setiap agent adalah file di `.claude/agents/`. Skill yang dipakai ada di `.claud
 | # | Agent | Model | Tugas ringkas | Skill utama |
 |---|-------|-------|---------------|-------------|
 | 1 | showrunner | opus | Mengatur fase, memanggil agent, menjaga gate, mencatat log | semua (pembaca) |
-| 2 | story-architect | sonnet | Memilih cerita, memverifikasi fakta, menulis naskah sembilan beat | atelier-story-forge |
+| 2 | story-architect | sonnet | Memilih cerita, memverifikasi fakta, menulis naskah 7–9 beat (Short 9:16 & Episode 16:9) | atelier-story-forge |
 | 3 | voice-director | sonnet | Menyiapkan suara 48 kHz dan `words.json` | atelier-voice-sync |
 | 4 | cinematographer | opus | Merancang shot, kamera, kick, flash, DOF | atelier-shot-plan |
 | 5 | set-designer | opus | Membangun set 3D di Blender (ekspor `.glb`), props, dan tekstur PBR | atelier-set-craft |

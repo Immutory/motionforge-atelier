@@ -1,36 +1,25 @@
 ---
 name: atelier-story-forge
-description: Turn one true, visual story into a sourced 55-70 second script with a nine-beat structure. Use whenever the user wants a topic, a hook, a naskah, a fact-checked script, or a rewrite of a script for a vertical animated short, even if they do not say "beat" or "structure".
+description: Develops original stories, Indonesian comedy/hybrid scripts, and sourced factual narratives in the Kampung Rawa Sari RT 04 universe for 9:16 Shorts/Reels/TikTok (58–75 s, up to 90 s user VO, multiple of 90f) and 16:9 YouTube Episodes (60–120 s) — Atelier v3.0.
 ---
 
-# Story Forge
+# Story Forge (Atelier v3.0 — 2.5D Reference Edition)
 
-A short has about 60 seconds, so every sentence must earn its place. Facts come first because a wrong fact ruins trust faster than a weak joke.
+Every sentence must earn its place on screen. Write tight, funny, visually driven Indonesian scripts grounded in the **Kampung Rawa Sari RT 04** universe, leveraging **pure 3D diegetic storytelling** (ZERO 2D HUD boxes) and **2.5D character physical comedy** (`(1).mp4` & `download.mp4`).
 
-## Pick the story
-Choose one event with a physical cause and effect, so the picture can carry it. Find one everyday analogy that explains the mechanism (a swing, a queue, a wobbly table). If you cannot picture the key moment as a single image, pick another story.
+## Canon Studio Universe (Kampung Rawa Sari RT 04)
+- **13 Official Cast (`CAST_PRESETS`)**: Lead **Bolohoutoh (Bang Utoh)**, **`ebot`** (pemuda kasual lokal ber-outer rajut earth-tone), **Bu Siti** (Warkop 24 Jam), **Pak Ujang** (Satpam Pos Ronda RT 04, logat Jawa, *straight man*), **Tio** (Bakmie Ayam Tio), **Mbak Yuni** (Es Buah & Campur), **Pak Budi** (Pak RT), **Bang Dimas**, **Raka** (pelajar SMA), **Mbak Rara**, **Mas Arya**, **Saka Nusantara**, **Bang Udin** (ojol).
+- **3 Official 2D Cats (`CAT_PRESETS`)**: **Si Oyen** (Maskot Warkop & Mandor QC / Kepala Mandor Bakmie Tio), **Mpus Abu**, **Si Belang**.
+- **Canon Episode Continuity**: EP01 ("Error 47 Baris?!"), EP02 ("Konsultan Oyen"), EP03 ("Curhat ke Abang Bakmie", bon 90rb), EP04 ("Karyawan Baru Bakmie Tio, Bosnya Si Oyen?!", utang jadi 120rb, voting EP05 `LEMBUR` vs `RESIGN`).
 
-## Facts block
-At the top of `SCRIPT.md` list every fact with a source URL and access date. Prefer primary or encyclopedic sources. Remove anything you cannot trace. Never invent quotes, numbers or dates.
+## Format, Duration, Loop & Thumbnail Targets
+- **9:16 Vertical Short / Reels / TikTok**: **`58–75 detik`** (fleksibel hingga **`90 detik`** khusus rekaman VO asli pengguna, selalu dikunci kelipatan **`90 frame`** agar loop matematis & audio seamless).
+- **16:9 YouTube Episode / Vlog**: **`60–120 detik`**.
+- **Speech Pacing**: **`3.5–3.8 kata/detik`** (cek `kata ÷ 3.65` + akting non-verbal).
+- **4-Platform Thumbnail Concept**: Sertakan rencana visual thumbnail di `brief.md` dalam zona aman **`y = 295..1630 px`**, **`x < 920 px`** (YT Shorts 2:3, IG/TikTok 3:4, FB/IG 4:5, bebas tombol UI kanan).
 
-## Nine beats (target ~3.7 words per second)
-1. Hook: the absurd fact in one sentence.
-2. Setting: where, when, why it mattered.
-3. to 4. Escalation: each step a little bigger than the last.
-5. Snap: the moment it goes wrong.
-6. Deadpan pair: two short lines of "luckily / unluckily" style contrast.
-7. Explanation: one idea through the analogy.
-8. Consequence: what changed afterwards.
-9. Callback: end by echoing the hook with a twist.
-
-## Writing rules
-- Short sentences. One idea each.
-- Do not describe what the viewer already sees.
-- Jokes are real facts or real consequences.
-- Count words, divide by 3.7, and confirm 55-70 seconds.
-
-## Originality
-Story, characters and voice are yours. Study references for rhythm only. Never reuse a reference script or character.
-
-## Handoff
-Gate G1: show the table and the word count to the user and wait for approval. Then pass to `voice-director`.
+## Story Structure & Diegetic 3D Rules
+- **Mid-Action Hook (`0–3 s`)**: Buka langsung di tengah aksi yang terhubung mulus ke callback loop penutup (`loopCutFrame → f0`).
+- **Diegetic 3D Props (`(1).mp4`)**: Rancang prop 3D nyata yang bisa dipegang karakter via `actorHandWorldPos` atau disorot `topDownInsert` (nota tulisan tangan, slip gaji, mangkok mie, papan `NOINK`) — **ZERO 2D HUD boxes**!
+- **Sourced Facts (bila faktual)**: Cantumkan URL sumber & tanggal akses di atas `SCRIPT.md`.
+- **Handoff (Gate G1)**: Tulis `brief.md` & `SCRIPT.md` lengkap (tabel 7–9 beat, jumlah kata, estimasi durasi kelipatan `90f`, daftar prop 3D, rencana thumbnail 4-platform, & umpan voting komentar), lalu tunggu persetujuan eksplisit **Gate G1**.

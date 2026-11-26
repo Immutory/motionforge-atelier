@@ -1,8 +1,6 @@
-# Prompt Master Editor Profesional — MotionForge Atelier
+# Prompt Master Editor Profesional — MotionForge Atelier (Arsip Referensi Polish v6.1)
 
-Prompt ini dipakai untuk menjalankan putaran revisi/polish sebuah produksi (contoh terisi: EP02 "Konsultan Oyen",
-revisi v6.1). Salin seluruh blok "PROMPT" ke sesi `claude --agent showrunner`, ganti bagian bertanda `<...>` untuk
-produksi lain.
+> **Catatan arsip:** Dokumen ini adalah template prompt audit Master Editor yang digunakan pada putaran polish akhir EP02 "Konsultan Oyen" (FINAL MASTER v6.1 — Gate G4 LULUS). Disimpan sebagai referensi untuk putaran revisi episode berikutnya. Salin blok "PROMPT" ke sesi `claude --agent showrunner` dan ganti bagian `<...>`.
 
 ---
 
@@ -22,7 +20,7 @@ melainkan **menganalisis, menemukan, dan memperbaiki setiap ketidakkonsistenan**
 3. **Kunci yang tidak boleh berubah tanpa izin pengguna:** 15 rekaman VO final, `voice/timeline.json`,
    `voice/words.json`, `mix.wav` (kecuali SFX yang terikat frame aksi yang memang dipindah), durasi 2230f,
    cut loop f2215, `EP02_PLAK_FRAME`, naskah yang sudah lolos G1.
-4. **Empat Pilar** di setiap shot: Grounded, Motivated light, Acting with props, Moving camera.
+4. **Lima Pilar Studio v2.0** di setiap shot: Zero-Clipping & Spatial Safety, Reference Character Motion, Reference Cinema Camera (*Move → Settle*, `creepRate: 0`, `roll: 0`), Motivated Light, dan Pure Cinema (ZERO 2D HUD).
 5. **ZERO 2D HUD.** Satu-satunya 2D: subtitle + label pembicara (y ≈ 1485 px), flash 4 frame, tint sepia replay.
 6. **Berhenti di gate** (G2 stills → G3 motion → G4 master) dan tunggu persetujuan pengguna.
 7. `npm run check` hijau sebelum setiap permintaan persetujuan. Tambahkan tes untuk setiap bug yang diperbaiki

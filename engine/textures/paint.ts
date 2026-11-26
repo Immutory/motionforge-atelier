@@ -117,6 +117,12 @@ export type CtexOptions = {
   anisotropy?: number;
 };
 
+/** Lepaskan seluruh CanvasTexture di cache prosedural dari VRAM dan kosongkan cache. */
+export function disposeTextureCache() {
+  for (const tex of CACHE.values()) tex.dispose();
+  CACHE.clear();
+}
+
 /** Buat dan cache CanvasTexture deterministik di ruang sRGB. */
 export function ctex(
   key: string,
@@ -125,7 +131,8 @@ export function ctex(
   draw: (ctx: Ctx, r: Rng) => void,
   opts: CtexOptions = {},
 ): THREE.CanvasTexture {
-  const cacheKey = `${key}_${w}x${h}_${opts.repeat?.join('x') ?? '1x1'}_${opts.clamp ? 'c' : 'r'}`;
+  const aniso = opts.anisotropy ?? 8;
+  const cacheKey = `${key}_${w}x${h}_${opts.repeat?.join('x') ?? '1x1'}_${opts.clamp ? 'c' : 'r'}_a${aniso}`;
   const hit = CACHE.get(cacheKey);
   if (hit) return hit;
 
@@ -152,7 +159,7 @@ export function ctex(
 export function planksTexture(opts: { key?: string; fills?: string[]; repeat?: [number, number] } = {}) {
   const fills = opts.fills ?? ['#efbd82', '#e8b47a', '#f4c58b', '#e3ae74', '#ecb97e'];
   return ctex(
-    opts.key ?? 'atelier_planks',
+    opts.key ?? `atelier_planks_${fills.join(',')}`,
     1024,
     1024,
     (g, r) => {
@@ -238,7 +245,7 @@ export function planksTexture(opts: { key?: string; fills?: string[]; repeat?: [
 export function beamTexture(opts: { key?: string; fills?: string[]; repeat?: [number, number] } = {}) {
   const fills = opts.fills ?? ['#b67e47', '#a8743f', '#c28a52'];
   return ctex(
-    opts.key ?? 'atelier_beam',
+    opts.key ?? `atelier_beam_${fills.join(',')}`,
     1024,
     512,
     (g, r) => {
@@ -290,8 +297,9 @@ export function beamTexture(opts: { key?: string; fills?: string[]; repeat?: [nu
 /** Dinding plester hand-painted: bidang warna hangat, bercak lembut lebar, plinth bawah, dan retak halus. */
 export function plasterTexture(opts: { key?: string; wall?: string; plinth?: boolean; repeat?: [number, number] } = {}) {
   const wall = opts.wall ?? '#f0dfc8';
+  const plinth = opts.plinth !== false ? 1 : 0;
   return ctex(
-    opts.key ?? `atelier_plaster_${wall}`,
+    opts.key ?? `atelier_plaster_${wall}_p${plinth}`,
     1024,
     1024,
     (g, r) => {
@@ -337,7 +345,7 @@ export function stoneTexture(
   const colors = opts.colors ?? ['#e3d7c6', '#d8cab8', '#ebe0d1', '#cfc1ae'];
   const mortar = opts.mortar ?? '#a89a89';
   return ctex(
-    opts.key ?? 'atelier_stone',
+    opts.key ?? `atelier_stone_${mortar}_${colors.join(',')}`,
     1024,
     1024,
     (g, r) => {
@@ -572,7 +580,7 @@ export const CLOUD_GOLD: CloudPalette = { lit: '#ffd2a8', mid: '#f2a08f', shade:
 /** Sprite awan cumulus 3-nada (mahkota terang, badan sedang, perut lavender) dengan dasar rata lembut. */
 export function cloudTexture(seed = 1, pal: CloudPalette = CLOUD_DAY) {
   return ctex(
-    `atelier_cloud_${pal.lit}_${seed}`,
+    `atelier_cloud_${pal.lit}_${pal.mid}_${pal.shade}_${seed}`,
     1024,
     512,
     (g) => {

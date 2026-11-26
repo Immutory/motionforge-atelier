@@ -25,18 +25,18 @@ export const KAMPUS_SPOTS = {
   catDesk: [2.3, 0.76, -2.55] as Vec3,
 };
 
-/** Metadata spasial & ergonomi spot Lab Komputer Kampus (v2.0). */
+/** Metadata spasial & ergonomi spot Lab Komputer Kampus (v3.0, terkalibrasi AABB kampus.glb). */
 export const KAMPUS_SPOT_META: Partial<Record<keyof typeof KAMPUS_SPOTS, SpotMeta>> = {
   lecturerDesk: {
     tableTopY: 0.76,
-    note: 'Berdiri 0,35 m di sisi kiri KP2_LectDesk (y=0,76 m); cek checkBillboardSweep agar lengan tidak menyapu meja.',
+    note: 'Berdiri 0,35 m di sisi kiri KP2_LectDesk (permukaan tulis 0,76 m, bibir tepi 0,80 m); cek checkBillboardSweep.',
   },
   catDesk: {
     tableTopY: 0.76,
     note: 'Tepat di atas daun meja KP2_LectDesk (y=0,76 m), ≥ 0,25 m dari kertas dan tepi meja.',
   },
   presenter: {
-    note: 'Lorong tengah depan papan tulis; cek checkSafeFraming agar papan nama LAB KOMPUTER FIK 2.1 tidak terpotong.',
+    note: 'Lorong tengah depan KP2_Whiteboard (z=-3,7, terpisah bersih dari KP2_ProjectorMount di z=+0,2); cek checkSafeFraming papan LAB KOMPUTER FIK 2.1.',
   },
 };
 

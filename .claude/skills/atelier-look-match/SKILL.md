@@ -1,33 +1,20 @@
 ---
 name: atelier-look-match
-description: Measure a reference style (`contohvideo/` & `references/reports/`) with numbers and tune your own look toward it in parallel sandboxes with one owner per file. Use when the user says "make it look like X", wants to match a style, or asks to improve overall visual quality across several areas at once.
+description: Measure reference style (`contohvideo/download.mp4`, `(1).mp4`, & `references/reports/`) with numbers and tune your look toward Atelier v3.5 (2D-grade walk + soft-lit matte 3D polish) in parallel sandboxes with one owner per file.
 ---
 
-# Look Match (Atelier v2.0)
+# Look Match (Atelier v3.5 — 2D-Grade Walk + Soft-Lit 3D Polish)
 
 Adjectives like "warmer" or "punchier" do not converge. Numbers and side-by-side images do.
 
 ## Primary Studio References
-- **Video References (`contohvideo/`)**: `contohvideo/Panduan Analisis dan Produksi Video Animasi - Google Gemini (1).mp4` (organic character animation, 180° back turn, top-down flat-lay insert, deadpan-to-peak contrast) and `(4).mp4` (purposeful 3D camera move → settle, symmetrical staging, aerial crane-to-horizontal-track, cross-dissolve, ergonomic counter framing).
-- **Measured Reports (`references/reports/`)**: `motion.md`, `characters.md`, `lighting.md`, `outlines.md`, `textures.md`, `depth.md`, `grade.md`.
+1. **`contohvideo/download.mp4`** (99.9 s): clean 2D vector characters walking/acting inside a **soft-lit matte 3D world** (zero plastic sheen, `classifyGlbSurface` matte `shininess: 0`, `Roughness >= 0.82`, soft `shadow.radius = 3.0`, `POST_HYBRID_25D` thin world ink, seamless 2D-in-3D `receiveShadow` integration, *frame-within-a-frame*, motivated `storyDolly`).
+2. **`contohvideo/Panduan Analisis dan Produksi Video Animasi - Google Gemini (1).mp4`** (65.3 s): 1 whole 2.5D character silhouette with articulated 2-bone IK walk & 4-pose foot roll, spherical face parallax, weighted asymmetric ink, pure 3D prop grip (`engine/props/`), floor & wall silhouette shadows, `strikeEnvelope` + camera-local harmonic shake, `topDownInsert` on 3D props, and high-angle `tiltX`.
+3. **Measured Reports (`references/reports/`)**: `CONTEXT.md`, `motion.md`, `characters.md`, `lighting.md`, `outlines.md`, `textures.md`, `depth.md`, `grade.md`.
 
-## 1. Measure First
-For each topic (motion, depth, textures, characters, lighting, outlines, grade) write or update a short report with measured values in `references/reports/<topic>.md` using `references/measure-template.md`. Measured reports + `contohvideo/` are the shared source of truth for every agent.
-
-## 2. Own the Files
-One agent owns each file group. See `docs/04-file-ownership.md`. Agents edit only their own files.
-
-## 3. Sandboxes
-Copy `productions/<slug>` to `productions/<slug>_cam`, `_world`, `_mat`, `_char`, `_post`. Each owner works in a sandbox and renders stills.
-
-## 4. Merge
-Merge owned files back into the main folder, run `npm run check` (typecheck + spatial/unit tests), then re-sync every sandbox from main before the next round.
-
-## 5. Verify
-A fresh `qa-inspector` runs `engine/core/spatial.ts` audits + compares side-by-side sheets (yours vs `contohvideo/` reference), scores each area, and returns a numbered fix list routed to each owner.
-
-## 6. Contracts
-Shared constants are contracts (`NOINK` layer, `DEFAULT_CREEP = 0`, `SpotMeta`, DOF table, light presets). If you change one, update every reader and test.
-
-## Study, Not Copy
-References teach the look, camera grammar, and motion craft. Your story, characters, voice, and shots stay 100% original. Reference frames are private study material — never publish them.
+## Workflow
+1. **Measure First**: Update `references/reports/<topic>.md` with concrete measured metrics.
+2. **Own the Files**: Strictly follow `docs/04-file-ownership.md` — one agent per file group.
+3. **Sandboxes & Merge**: Tune per owner, merge cleanly, and verify `npm run check` (typecheck + spatial/engine/Python tests).
+4. **Verify**: Fresh `qa-inspector` runs `spatial.ts` + walk-cycle 4-pose & anti-plastic matte audits + compares stills pixel-by-pixel against `download.mp4` & `(1).mp4`.
+5. **Study, Not Copy**: References teach craft and numbers; story, characters, voice, and shots stay 100% original. Never publish private reference material.

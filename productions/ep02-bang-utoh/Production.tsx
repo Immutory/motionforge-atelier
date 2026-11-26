@@ -562,6 +562,8 @@ const WARKOP_CAM_CLEAR_HIDE = [
   'WK_SignBoxFrame',
   'WK_SignMain',
   'WK_SignSub',
+  // EP02 membangun EP02_SitiCounterRiser (0,40 m) sendiri -> sembunyikan pallet permanen v3.0 (0,44 m) agar nol tumpang tindih!
+  'WK_CounterPallet',
 ];
 
 /** Sepia murni untuk Replay B7 (filter CSS pada kanvas 3D, bukan kotak overlay). */

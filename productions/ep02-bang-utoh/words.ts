@@ -4,7 +4,7 @@ import timeline from './voice/timeline.json';
 import rms from './voice/rms.json';
 
 /**
- * Jam utama produksi EP02 (Master Cut v5.0). Diisi voice-director, dibaca semua agent lain.
+ * Jam utama produksi EP02 (FINAL MASTER v6.1). Diisi voice-director, dibaca semua agent lain.
  *
  * Semua baris memakai 15 REKAMAN FINAL pengguna (`voice/utoh_01-09`, `buSiti_01-03`, `rara_01-03`)
  * pada kecepatan natural 1.0x, plus meong asli Oyen. Tidak ada placeholder (`VOICE_IS_PLACEHOLDER === false`).
@@ -16,7 +16,7 @@ export const WORDS: Word[] = raw;
 export type VoiceSpeaker = 'bangUtoh' | 'buSiti' | 'rara' | 'oyen';
 
 export type VoiceLine = {
-  /** U1..U9 Bang Utoh, S1..S3 Bu Siti, R1..R5 Rara, O1 meong Oyen */
+  /** U1..U9 Bang Utoh, S1..S3 Bu Siti, R1..R3 Rara, O1 meong Oyen */
   id: string;
   beat: number;
   speaker: string;

@@ -1,4 +1,4 @@
-// Temukan biner Python 3.10+ yang benar-benar bisa dijalankan (lewati stub WindowsApps di Windows).
+// Temukan biner Python 3.10+ yang benar-benar bisa dijalankan (hormati VIRTUAL_ENV & PATH, lewati stub WindowsApps).
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -7,6 +7,14 @@ import { fileURLToPath } from 'node:url';
 function candidates() {
   const list = [];
   if (process.env.PYTHON) list.push(process.env.PYTHON);
+  if (process.env.VIRTUAL_ENV) {
+    list.push(
+      process.platform === 'win32'
+        ? path.join(process.env.VIRTUAL_ENV, 'Scripts', 'python.exe')
+        : path.join(process.env.VIRTUAL_ENV, 'bin', 'python'),
+    );
+  }
+  list.push('python3', 'python');
   if (process.platform === 'win32') {
     const local = process.env.LOCALAPPDATA;
     if (local) {
@@ -20,7 +28,6 @@ function candidates() {
       }
     }
   }
-  list.push('python3', 'python');
   return [...new Set(list)];
 }
 
@@ -42,6 +49,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error('Python 3.10+ tidak ditemukan di PATH maupun folder instalasi standar.');
     process.exit(1);
   }
-  const r = spawnSync(py.cmd, process.argv.slice(2), { stdio: 'inherit' });
+  const r = spawnSync(py.cmd, process.argv.slice(2), {
+    stdio: 'inherit',
+    env: { ...process.env, PYTHONUTF8: '1' },
+  });
+  if (r.error) {
+    console.error(`Gagal menjalankan Python (${py.cmd}): ${r.error.message}`);
+    process.exit(1);
+  }
   process.exit(r.status ?? 1);
 }

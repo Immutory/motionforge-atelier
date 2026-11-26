@@ -15,16 +15,16 @@ export const KOST_SPOTS = {
   rightSide: [1.22, 0, 0.05] as Vec3,
 };
 
-/** Metadata spasial & ergonomi spot Kamar Kost (v2.0). */
+/** Metadata spasial & ergonomi spot Kamar Kost (v3.0, terkalibrasi AABB kost.glb). */
 export const KOST_SPOT_META: Partial<Record<keyof typeof KOST_SPOTS, SpotMeta>> = {
   desk: {
-    seatY: 0.46,
-    tableTopY: 0.75,
-    note: 'Depan meja dual-monitor (y=0,75 m) dan kursi gaming (seatY=0,46 m).',
+    seatY: 0.49,
+    tableTopY: 0.79,
+    note: 'Depan meja dual-monitor KS_DeskTop (maxY=0,79 m) dan kursi gaming KS_ChairSeat (maxY=0,49 m).',
   },
   bedside: {
-    seatY: 0.44,
-    note: 'Tepi kasur sisi kiri (tinggi kasur ≈ 0,44 m).',
+    seatY: 0.54,
+    note: 'Tepi kasur sisi kiri (terkalibrasi AABB kost.glb: KS_Mattress maxY = 0,54 m, KS_Blanket maxY = 0,58 m).',
   },
 };
 

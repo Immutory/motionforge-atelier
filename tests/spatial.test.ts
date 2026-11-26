@@ -68,11 +68,11 @@ test('checkCounterVisibility mendeteksi kepala tenggelam di balik konter dan mel
   const counterTopY = WARKOP_SPOT_META.counterKeeper?.counterTopY ?? 1.04;
   const ergoY = WARKOP_SPOT_META.counterKeeper?.ergonomicBaseY ?? 0.44;
 
-  // Bug klasik Bu Siti di y = 0 (hanya kepala mengintip di atas konter 1,04 m)
+  // Bug klasik Bu Siti di y = 0 (hanya kepala mengintip di atas konter WK_CounterTop = 0,97 m)
   const sunken = checkCounterVisibility([0.1, 0, -2.22], 1.65, counterTopY, 0.32);
   assert.equal(sunken.ok, false);
   assert.ok(sunken.torsoAboveCounter < 0, 'bahu berada di bawah permukaan konter');
-  assert.ok(sunken.recommendedBaseY > 0.42 && sunken.recommendedBaseY < 0.45);
+  assert.ok(sunken.recommendedBaseY > 0.35 && sunken.recommendedBaseY <= ergoY);
 
   // Posisi ergonomis resmi (ergonomicBaseY = 0.44 m): bahu, dada atas & lengan tampak utuh ≥ 0,32 m
   const fixed = checkCounterVisibility([0.1, ergoY, -2.22], 1.65, counterTopY, 0.32);

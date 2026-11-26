@@ -13,6 +13,8 @@ export type ToneConfig = {
   sideK: number;
   /** Lebar terminator N·L menuju penuh terang. */
   term: number;
+  /** Bobot kontribusi cahaya lokal (`<pointLight>`/`<spotLight>`) dengan Reinhard soft-clamp (default `1.0`). */
+  localLight?: number;
 };
 
 export type CardLightConfig = {
@@ -47,7 +49,7 @@ export type LightPreset = {
   ambient: { color: string; intensity: number };
   tone: ToneConfig;
   card: CardLightConfig;
-  shadow: { bias: number; normalBias: number; range: number };
+  shadow: { bias: number; normalBias: number; range: number; radius?: number };
   /** Warna cakram matahari emissive (opsional, untuk golden/sunset). */
   sunDisc?: string;
 };
@@ -73,9 +75,9 @@ export const LIGHTS: Record<'noon' | 'amber' | 'dusk' | 'night' | 'neon', LightP
       lit: [1.42, 1.36, 1.26],
       shade: [0.76, 0.7, 0.84],
       lift: [0.01, 0.01, 0.02],
-      lambert: 0.35,
+      lambert: 0.46,
       sideK: 0.85,
-      term: 0.2,
+      term: 0.3,
     },
     card: {
       tint: [1.02, 0.99, 0.97],
@@ -84,9 +86,9 @@ export const LIGHTS: Record<'noon' | 'amber' | 'dusk' | 'night' | 'neon', LightP
       bodyGrad: 0.16,
       sideTint: [0.92, 0.9, 0.96],
       blob: [0.6, 0.56, 0.62],
-      castShadow: false,
+      castShadow: true,
     },
-    shadow: { bias: -0.0003, normalBias: 0.018, range: 16 },
+    shadow: { bias: -0.0003, normalBias: 0.018, range: 16, radius: 3.0 },
   },
   amber: {
     id: 'amber',
@@ -118,7 +120,7 @@ export const LIGHTS: Record<'noon' | 'amber' | 'dusk' | 'night' | 'neon', LightP
       blob: [0.54, 0.5, 0.72],
       castShadow: true,
     },
-    shadow: { bias: -0.0006, normalBias: 0.03, range: 18 },
+    shadow: { bias: -0.0006, normalBias: 0.03, range: 18, radius: 3.0 },
     sunDisc: '#ffd9a0',
   },
   dusk: {
@@ -150,7 +152,7 @@ export const LIGHTS: Record<'noon' | 'amber' | 'dusk' | 'night' | 'neon', LightP
       blob: [0.48, 0.44, 0.66],
       castShadow: true,
     },
-    shadow: { bias: -0.0005, normalBias: 0.025, range: 18 },
+    shadow: { bias: -0.0005, normalBias: 0.025, range: 18, radius: 3.0 },
   },
   night: {
     id: 'night',
@@ -182,7 +184,7 @@ export const LIGHTS: Record<'noon' | 'amber' | 'dusk' | 'night' | 'neon', LightP
       blob: [0.32, 0.34, 0.52],
       castShadow: false,
     },
-    shadow: { bias: -0.0004, normalBias: 0.022, range: 18 },
+    shadow: { bias: -0.0004, normalBias: 0.022, range: 18, radius: 2.8 },
   },
   neon: {
     id: 'neon',
@@ -213,7 +215,7 @@ export const LIGHTS: Record<'noon' | 'amber' | 'dusk' | 'night' | 'neon', LightP
       blob: [0.42, 0.36, 0.62],
       castShadow: false,
     },
-    shadow: { bias: -0.0004, normalBias: 0.02, range: 14 },
+    shadow: { bias: -0.0004, normalBias: 0.02, range: 14, radius: 2.8 },
   },
 };
 

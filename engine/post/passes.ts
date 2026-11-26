@@ -151,10 +151,12 @@ export class InkPass extends Pass {
   }
 
   setSize(w: number, h: number) {
-    this.worldRT.setSize(w, h);
-    this.maskRT.setSize(w, h);
-    this.tmpRT.setSize(w, h);
-    (this.maskMat.uniforms.uTexel.value as THREE.Vector2).set(1 / w, 1 / h);
+    const sw = Math.max(1, Math.round(w));
+    const sh = Math.max(1, Math.round(h));
+    this.worldRT.setSize(sw, sh);
+    this.maskRT.setSize(sw, sh);
+    this.tmpRT.setSize(sw, sh);
+    (this.maskMat.uniforms.uTexel.value as THREE.Vector2).set(1 / sw, 1 / sh);
   }
 
   render(renderer: THREE.WebGLRenderer, _writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget) {
@@ -259,7 +261,9 @@ export class LensPass extends Pass {
   }
 
   setSize(w: number, h: number) {
-    (this.u.uTexel.value as THREE.Vector2).set(1 / w, 1 / h);
+    const sw = Math.max(1, Math.round(w));
+    const sh = Math.max(1, Math.round(h));
+    (this.u.uTexel.value as THREE.Vector2).set(1 / sw, 1 / sh);
   }
 
   render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget) {

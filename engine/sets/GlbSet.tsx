@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import { continueRender, delayRender, staticFile } from 'remotion';
 import * as THREE from 'three';
@@ -18,7 +18,10 @@ function loadGlbScene(url: string): Promise<THREE.Group> {
       url,
       (gltf) => resolve(gltf.scene),
       undefined,
-      (err) => reject(err),
+      (err) => {
+        gltfCache.delete(url);
+        reject(err);
+      },
     );
   });
   gltfCache.set(url, p);
@@ -67,6 +70,33 @@ function hashName(str: string): number {
 }
 
 export type TimeOfDayMode = 'day' | 'golden' | 'night';
+
+export type GlbSurfaceClass = 'metal' | 'semiGloss' | 'transition' | 'matte';
+
+export type GlbSurfaceParams = {
+  kind: GlbSurfaceClass;
+  shininess: number;
+  specularHex: number;
+  normalScale: number;
+};
+
+/**
+ * Klasifikasi permukaan PBR GLB -> parameter shading soft-lit anti-plastik (Atelier v3.5).
+ * Mematikan specular sepenuhnya pada permukaan matte (aspal, plester, kayu, paving, rumput, kain)
+ * agar selaras dengan referensi dunia 3D matte `contohvideo/download.mp4`.
+ */
+export function classifyGlbSurface(metalness: number, roughness: number): GlbSurfaceParams {
+  if (metalness > 0.35) {
+    return { kind: 'metal', shininess: 48, specularHex: 0x333842, normalScale: 0.5 };
+  }
+  if (roughness < 0.45) {
+    return { kind: 'semiGloss', shininess: 22, specularHex: 0x181a1e, normalScale: 0.42 };
+  }
+  if (roughness < 0.55) {
+    return { kind: 'transition', shininess: 8, specularHex: 0x080808, normalScale: 0.38 };
+  }
+  return { kind: 'matte', shininess: 0, specularHex: 0x000000, normalScale: 0.35 };
+}
 
 function isStreetLampMesh(name: string): boolean {
   return (
@@ -169,14 +199,23 @@ function convertMaterial(
     };
   }
 
-  // 2. Material Kaca / Transparan (etalase gorengan, galon air biru): masuk layer NOINK agar tembus pandang bersih!
-  if (src.transparent || src.opacity < 0.95) {
+  // 2. Material Kaca / Transparan (etalase gorengan/bakmie/es buah, galon air biru):
+  // Hanya untuk material yang memang transparan di GLB (`BLEND`/`opacity < 0.95`) atau kaca etalase khusus;
+  // jendela gedung & cermin opaque (`WinGlass`/`WinGlassDark`, `alpha = 1.0`) tetap solid agar tidak tembus ke rongga dinding!
+  const isShowcaseGlassName = /(etglass|caseglass|m_grb_glass|wk_glass)/i;
+  if (
+    src.transparent ||
+    src.opacity < 0.95 ||
+    isShowcaseGlassName.test(meshName) ||
+    isShowcaseGlassName.test(src.name ?? '')
+  ) {
     return {
       mat: new THREE.MeshLambertMaterial({
         color: src.color.clone(),
         transparent: true,
-        opacity: Math.max(0.18, src.opacity),
+        opacity: Math.max(0.18, Math.min(0.45, src.opacity)),
         depthWrite: false,
+        side: THREE.DoubleSide,
       }),
       noInk: true,
       castShadow: false,
@@ -198,7 +237,7 @@ function convertMaterial(
     };
   }
 
-  // 4. Material Dunia 3D Solid & PBR Textured: konversi ke shader twoTone() dengan dukungan penuh Albedo Map + Normal Map!
+  // 4. Material Dunia 3D Solid & PBR Textured: konversi ke shader twoTone() soft-lit anti-plastik (Atelier v3.5)
   const hasTex = Boolean(src.map);
   if (src.map) {
     src.map.colorSpace = THREE.SRGBColorSpace;
@@ -206,16 +245,22 @@ function convertMaterial(
   }
   const safeCol = clampAlbedoForBloom(src.color, hasTex ? 0.76 : 0.62);
   const ceil = isCeiling(meshName);
-  if (src.metalness > 0.35 || src.normalMap || hasTex) {
+  const surf = classifyGlbSurface(src.metalness, src.roughness);
+
+  if (surf.kind !== 'matte' || src.normalMap) {
     const params: THREE.MeshPhongMaterialParameters = {
       color: safeCol,
-      shininess: src.metalness > 0.35 ? 48 : 16,
-      specular: new THREE.Color(src.metalness > 0.35 ? 0x333842 : 0x141210),
+      shininess: surf.shininess,
+      specular: new THREE.Color(surf.specularHex),
     };
     if (src.map) params.map = src.map;
+    if (src.aoMap) {
+      params.aoMap = src.aoMap;
+      params.aoMapIntensity = 0.65;
+    }
     if (src.normalMap) {
       params.normalMap = src.normalMap;
-      params.normalScale = new THREE.Vector2(0.85, 0.85);
+      params.normalScale = new THREE.Vector2(surf.normalScale, surf.normalScale);
     }
     return {
       mat: twoTone(new THREE.MeshPhongMaterial(params)),
@@ -225,11 +270,36 @@ function convertMaterial(
   }
 
   const params: THREE.MeshLambertMaterialParameters = { color: safeCol };
+  if (src.map) params.map = src.map;
+  if (src.aoMap) {
+    params.aoMap = src.aoMap;
+    params.aoMapIntensity = 0.65;
+  }
   return {
     mat: twoTone(new THREE.MeshLambertMaterial(params)),
     noInk: false,
     castShadow: !ceil,
   };
+}
+
+/**
+ * Cocokkan nama node GLB terhadap daftar `hideNames`:
+ * - Abaikan string kosong / spasi agar tidak pernah menyembunyikan seluruh dunia.
+ * - Mendukung nama mentah Blender maupun nama tersanitasi GLTFLoader (`PropertyBinding.sanitizeNodeName`, mis. `.` dibuang).
+ */
+export function shouldHideGlbNode(nodeName: string, hideNames?: readonly string[]): boolean {
+  if (!hideNames || hideNames.length === 0) return false;
+  const sanitizedNode = THREE.PropertyBinding.sanitizeNodeName(nodeName);
+  for (const raw of hideNames) {
+    const h = raw.trim();
+    if (!h) continue;
+    if (nodeName === h || nodeName.startsWith(h)) return true;
+    const sh = THREE.PropertyBinding.sanitizeNodeName(h);
+    if (sh && (nodeName === sh || nodeName.startsWith(sh) || sanitizedNode === sh || sanitizedNode.startsWith(sh))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export type GlbSetProps = {
@@ -278,22 +348,16 @@ export const GlbSet: React.FC<GlbSetProps> = ({
   const url = staticFile(src);
   const hideKey = hideNames?.join(',') ?? '';
 
-  // Registrasi delayRender secara sinkron saat render pertama agar Remotion tidak memotret frame kosong!
-  const pendingKeyRef = useRef<string | null>(null);
-  const handleRef = useRef<number | null>(null);
-  const key = `${url}|${glowScale}|${timeOfDay}|${errorAlert ? 1 : 0}|${hideKey}`;
-  if (pendingKeyRef.current !== key) {
-    if (handleRef.current !== null) {
-      continueRender(handleRef.current);
-      handleRef.current = null;
-    }
-    pendingKeyRef.current = key;
-    handleRef.current = delayRender(`GlbSet:${src}`);
-  }
-
-  useEffect(() => {
+  // Registrasi & pelepasan delayRender di dalam useLayoutEffect (aman di StrictMode & tanpa leak render dibatalkan).
+  useLayoutEffect(() => {
     let alive = true;
-    const handle = handleRef.current;
+    const handle = delayRender(`GlbSet:${src}`);
+    let released = false;
+    const done = () => {
+      if (released) return;
+      released = true;
+      continueRender(handle);
+    };
     const createdMats: THREE.Material[] = [];
     let attached: THREE.Group | null = null;
 
@@ -301,9 +365,8 @@ export const GlbSet: React.FC<GlbSetProps> = ({
       .then((template) => {
         if (!alive) return;
         const clone = template.clone(true);
-        const hideSet = hideNames && hideNames.length > 0 ? new Set(hideNames) : null;
         clone.traverse((node) => {
-          if (hideSet && (hideSet.has(node.name) || [...hideSet].some((h) => node.name.startsWith(h)))) {
+          if (shouldHideGlbNode(node.name, hideNames)) {
             node.visible = false;
             return;
           }
@@ -326,22 +389,26 @@ export const GlbSet: React.FC<GlbSetProps> = ({
           if (Array.isArray(orig)) {
             let anyNoInk = false;
             let anyCast = false;
+            let anyGlass = false;
             node.material = orig.map((m) => {
               const res = convertMaterial(node.name, m, glowScale, textFlag, timeOfDay);
               createdMats.push(res.mat);
               if (res.noInk) anyNoInk = true;
               if (res.castShadow) anyCast = true;
+              if (res.mat.transparent) anyGlass = true;
               return res.mat;
             });
             node.castShadow = anyCast;
-            node.receiveShadow = !textFlag;
+            node.receiveShadow = !textFlag && !anyGlass;
+            if (anyGlass) node.renderOrder = 2;
             if (anyNoInk) node.layers.set(NOINK);
           } else if (orig) {
             const res = convertMaterial(node.name, orig, glowScale, textFlag, timeOfDay);
             createdMats.push(res.mat);
             node.material = res.mat;
             node.castShadow = res.castShadow;
-            node.receiveShadow = !textFlag;
+            node.receiveShadow = !textFlag && !res.mat.transparent;
+            if (res.mat.transparent) node.renderOrder = 2;
             if (res.noInk) node.layers.set(NOINK);
           }
         });
@@ -363,18 +430,12 @@ export const GlbSet: React.FC<GlbSetProps> = ({
           if (!alive) return;
           advance(performance.now());
           invalidate();
-          if (handle !== null && handleRef.current === handle) {
-            handleRef.current = null;
-            continueRender(handle);
-          }
+          done();
         });
       })
       .catch((err) => {
         console.error(`GlbSet gagal memuat ${src}:`, err);
-        if (handle !== null && handleRef.current === handle) {
-          handleRef.current = null;
-          continueRender(handle);
-        }
+        done();
       });
 
     return () => {
@@ -386,10 +447,7 @@ export const GlbSet: React.FC<GlbSetProps> = ({
         mountRef.current.remove(attached);
       }
       for (const m of createdMats) m.dispose();
-      if (handle !== null && handleRef.current === handle) {
-        handleRef.current = null;
-        continueRender(handle);
-      }
+      done();
     };
   }, [url, src, glowScale, timeOfDay, errorAlert, hideKey, advance, invalidate]);
 

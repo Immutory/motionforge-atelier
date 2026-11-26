@@ -8,6 +8,7 @@ import {
   DEFAULT_POST,
   GRADE_PRESETS,
   KAMPUNG_MODES,
+  KAMPUNG_SPOT_META,
   KAMPUNG_SPOTS,
   KampungSet,
   PostStack,
@@ -64,9 +65,9 @@ export const KAMPUNG_V2_SLIDES: Slide[] = [
     actors: [{ id: 'bangUtoh', at: S.warungKelontong, pose: { face: 'happy' } }] },
   { mode: 'sore', pose: P([-18.15, 1.8, 4.8], [-18.15, 1.6, -18], 55), title: 'GANG GAPURA → JL. KAMPUNG 2 (SORE)' },
   { mode: 'siang', pose: P([-10.4, 1.9, 22.2], [-13.2, 1.35, 18.1], 50), title: 'AREA PEDAGANG — TIO (REVISI) DI GEROBAK BAKMIE',
-    actors: [{ id: 'tio', at: S.bakmieTioVendor, pose: { face: 'happy', leftArm: 'hold', leftProp: 'sodet', rightArm: 'hold', rightProp: 'bakmie' } }] },
+    actors: [{ id: 'tio', at: [S.bakmieTioVendor[0], KAMPUNG_SPOT_META.bakmieTioVendor?.ergonomicBaseY ?? 0.3, S.bakmieTioVendor[2]], pose: { face: 'happy', leftArm: 'hold', leftProp: 'sodet', rightArm: 'hold', rightProp: 'bakmie' } }] },
   { mode: 'malam', pose: P([-10.4, 1.9, 22.2], [-13.2, 1.35, 18.1], 50), title: 'AREA PEDAGANG — TIO (MALAM)',
-    actors: [{ id: 'tio', at: S.bakmieTioVendor, pose: { face: 'happy', talk: 0.6, leftArm: 'hold', leftProp: 'sodet', rightArm: 'hold', rightProp: 'bakmie' } }] },
+    actors: [{ id: 'tio', at: [S.bakmieTioVendor[0], KAMPUNG_SPOT_META.bakmieTioVendor?.ergonomicBaseY ?? 0.3, S.bakmieTioVendor[2]], pose: { face: 'happy', talk: 0.6, leftArm: 'hold', leftProp: 'sodet', rightArm: 'hold', rightProp: 'bakmie' } }] },
 ];
 
 const CameraRig: React.FC<{ pose: CamPose }> = ({ pose }) => {
@@ -92,7 +93,7 @@ export const KampungV2Production: React.FC = () => {
     ink: { ...DEFAULT_POST.ink, fogColor: light.fog.color, fogNear: light.fog.near, fogFar: light.fog.far },
     blur: 0,
     focus: dist(s.pose.pos, s.pose.look),
-    grade: GRADE_PRESETS[s.mode === 'siang' ? 'noon' : 'amber'],
+    grade: GRADE_PRESETS[s.mode === 'siang' ? 'noon' : s.mode === 'malam' ? 'night' : 'amber'],
   };
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
@@ -121,9 +122,20 @@ export const KampungV2Production: React.FC = () => {
       </ThreeCanvas>
       <div
         style={{
-          position: 'absolute', left: 32, right: 32, bottom: 24, padding: '12px 22px', borderRadius: 16,
-          background: 'rgba(15,20,32,0.82)', border: '2px solid rgba(242,193,68,0.7)', color: '#f9d66b',
-          fontFamily: 'system-ui, sans-serif', fontSize: 24, fontWeight: 900, display: 'flex', justifyContent: 'space-between',
+          position: 'absolute',
+          left: 32 * (height / 1080),
+          right: 32 * (height / 1080),
+          bottom: 24 * (height / 1080),
+          padding: `${12 * (height / 1080)}px ${22 * (height / 1080)}px`,
+          borderRadius: 16 * (height / 1080),
+          background: 'rgba(15,20,32,0.82)',
+          border: `${2 * (height / 1080)}px solid rgba(242,193,68,0.7)`,
+          color: '#f9d66b',
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: 24 * (height / 1080),
+          fontWeight: 900,
+          display: 'flex',
+          justifyContent: 'space-between',
         }}
       >
         <span>{s.title}</span>

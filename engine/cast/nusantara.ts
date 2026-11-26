@@ -1,15 +1,20 @@
+import type { Vec3 } from '../core/easing';
 import {
+  computeEyeGeom,
   drawComicFx,
   drawFaceFeatures,
+  type BeautyMark,
+  type BrowStyle,
   type ComicFx,
   type Expression,
   type EyeStyle,
+  type NoseStyle,
 } from './expressions';
 import type { TalkSample } from './lipsync';
 import { drawHandProp, type HandProp, type HandPropOptions } from './props2d';
 
 export type HeadShape = 'sculpted' | 'squircle' | 'faceted' | 'round';
-export type HairStyle = 'short' | 'quiff' | 'hijab' | 'curtain' | 'bun' | 'parted' | 'spiky' | 'messy';
+export type HairStyle = 'short' | 'quiff' | 'hijab' | 'curtain' | 'bun' | 'parted' | 'spiky' | 'messy' | 'fadeCrop';
 export type Headgear = 'none' | 'peci' | 'cap' | 'iket' | 'helmet' | 'headphones' | 'satpamCap';
 export type OutfitStyle =
   | 'batik'
@@ -23,6 +28,7 @@ export type OutfitStyle =
   | 'hoodieTech'
   | 'satpam'
   | 'pedagangApron'
+  | 'lokalKnit'
   | 'casual';
 export type ShoeStyle = 'loafer' | 'sneaker' | 'sandal' | 'boot';
 /** `pray` = kedua telapak menangkup di depan dada (memohon / berdoa). */
@@ -34,7 +40,7 @@ export type ArmPose = 'rest' | 'hip' | 'point' | 'raise' | 'hold' | 'wave' | 'cr
  */
 export type ActorGait = 'swing' | 'planted';
 export type ActorStance = 'stand' | 'walk' | 'sit' | 'sitCross' | 'squat' | 'jump';
-export type ActorView = 'front' | 'threeQuarter' | 'side' | 'back';
+export type ActorView = 'front' | 'threeQuarter' | 'side' | 'backThreeQuarter' | 'back';
 export type BodyBuild = 'slim' | 'regular' | 'big';
 
 export type CharacterSpec = {
@@ -45,6 +51,8 @@ export type CharacterSpec = {
   headShape: HeadShape;
   eyeStyle: EyeStyle;
   skin: string;
+  /** Highlight terang opsional di sisi pipi/dahi terkena cahaya agar gradasi kulit sawo matang natural seperti foto. */
+  skinHighlight?: string;
   skinShadow: string;
   ink: string;
   hairStyle: HairStyle;
@@ -59,15 +67,24 @@ export type CharacterSpec = {
   /** 'round' = bingkai emas tipis, 'tech' = kotak tipis, 'thick' = bingkai gelap tebal (pedagang). */
   glassesStyle?: 'round' | 'tech' | 'thick';
   mustache?: boolean;
+  faintMustache?: boolean;
   earrings?: boolean;
+  earDetail?: boolean;
   nose?: boolean;
+  noseStyle?: NoseStyle;
+  beautyMark?: BeautyMark;
   browThick?: number;
+  browStyle?: BrowStyle;
+  browColor?: string;
   /** Warna rongga mulut saat terbuka (default '#5c222d'). Gelapkan untuk kulit gelap agar tetap kontras. */
   mouthColor?: string;
   /** Warna lidah di dalam mulut (default '#e57373'). */
   tongueColor?: string;
   /** Pita bibir tipis di bawah garis mulut tertutup (default: tidak digambar). */
   lipColor?: string;
+  /** Bibir dua-katup natural (katup atas & bawah lembut dengan cupid's bow halus). */
+  fullLips?: boolean;
+  upperLipColor?: string;
   /** Rona pipi lembut (default: tidak digambar). */
   blushColor?: string;
   /** Titik kilau putih di pupil agar mata tetap terbaca di kulit gelap / adegan malam (default false). */
@@ -133,10 +150,12 @@ export type ActorPose = {
   fx?: ComicFx;
   /** 0..1 fase siklus langkah saat `stance === 'walk'`. */
   walkPhase?: number;
-  /** Jenis siklus kaki saat `walk` (default `swing`). Pakai `planted` untuk jalan/lari yang berpindah tempat. */
+  /** Jenis siklus kaki saat `walk` (default `'planted'` di v3.5 agar bebas ice-skating). */
   gait?: ActorGait;
   /** Pengali panjang langkah saat `walk` (default 1; 1,6–1,9 untuk lari). */
   stride?: number;
+  /** 0..1 faktor ease-in/out amplitudo langkah & ayunan saat transisi `stand ↔ walk` (default `1`). */
+  strideBlend?: number;
   /** Kemiringan badan (derajat). */
   lean?: number;
   /** Kemiringan kepala independen dari `lean` badan (derajat; + miring kanan, - miring kiri). Default 0. */
@@ -146,6 +165,11 @@ export type ActorPose = {
    * Mengatur posisi pinggul & tekukan lutut agar benar-benar duduk di permukaan dudukan.
    */
   sitHeight?: number;
+  /**
+   * Tinggi billboard dunia aktual aktor (meter) untuk kalibrasi `sitHeight` saat `stance: 'sit'`.
+   * Opsional; default tetap `1.8` m agar produksi lama (EP02/EP03) tidak berubah diam-diam.
+   */
+  actorHeight?: number;
   /** -1..1 arah hadap wajah (+ kanan, - kiri). */
   facing?: number;
   /**
@@ -238,16 +262,88 @@ export function actorWalkCycleMeters(height: number, view: ActorView = 'threeQua
  * Posisi kaki (px relatif, arah gerak positif) dan tinggi angkat untuk gait `planted`.
  * Fase tumpu u ∈ [0, 0,5): +amp → −amp linear. Fase ayun u ∈ [0,5, 1): −amp → +amp halus sambil terangkat.
  */
-export function plantedFoot(walkPhase: number, side: -1 | 1, amp: number, liftAmp: number): { dx: number; lift: number } {
+export function plantedFoot(walkPhase: number, side: -1 | 1, amp: number, liftAmp: number): { dx: number; lift: number; u: number } {
   const u = (((walkPhase + (side === 1 ? 0 : 0.5)) % 1) + 1) % 1;
-  if (u < 0.5) return { dx: amp * (1 - 4 * u), lift: 0 };
+  if (u < 0.5) return { dx: amp * (1 - 4 * u), lift: 0, u };
   const s = (u - 0.5) * 2;
   const e = s * s * (3 - 2 * s);
-  return { dx: amp * (-1 + 2 * e), lift: Math.sin(Math.PI * s) * liftAmp };
+  return { dx: amp * (-1 + 2 * e), lift: Math.sin(Math.PI * s) * liftAmp, u };
+}
+
+/**
+ * 2-Bone Analytic Leg IK (Atelier v3.5): menghitung titik lutut dan sudut tekukan lutut (derajat)
+ * dengan panjang paha (`thighLen`) & betis (`shinLen`) selalu konstan (anti lutut karet / NaN).
+ * `bendDir`: `+1` = lutut menekuk ke +X (hadap kanan), `-1` = lutut menekuk ke -X (hadap kiri).
+ */
+export function solveLegIK(
+  hip: readonly [number, number],
+  ankle: readonly [number, number],
+  thighLen: number,
+  shinLen: number,
+  bendDir: -1 | 1,
+): { knee: [number, number]; angleDeg: number } {
+  const vx = ankle[0] - hip[0];
+  const vy = ankle[1] - hip[1];
+  const rawD = Math.hypot(vx, vy);
+  const minD = Math.abs(thighLen - shinLen) + 1;
+  const maxD = Math.max(minD + 1, thighLen + shinLen - 0.5);
+  const d = Math.max(minD, Math.min(maxD, rawD));
+  const ux = rawD > 1e-6 ? vx / rawD : 0;
+  const uy = rawD > 1e-6 ? vy / rawD : 1;
+  const a = (thighLen * thighLen - shinLen * shinLen + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, thighLen * thighLen - a * a));
+  const mx = hip[0] + ux * a;
+  const my = hip[1] + uy * a;
+  // Di kanvas (+Y ke bawah), vektor tegak lurus `(uy, -ux)` selalu menunjuk +X ketika ankle di bawah hip.
+  const px = bendDir * uy;
+  const py = -bendDir * ux;
+  const knee: [number, number] = [mx + px * h, my + py * h];
+  const cosKnee = Math.max(-1, Math.min(1, (thighLen * thighLen + shinLen * shinLen - d * d) / (2 * thighLen * shinLen)));
+  const angleDeg = 180 - (Math.acos(cosKnee) * 180) / Math.PI;
+  return { knee, angleDeg };
+}
+
+/**
+ * Kurva 4-Pose Foot Roll / Ankle Pitch klasik 2D (Atelier v3.5, dalam radian):
+ * - Heel-Strike (`u ≈ 0.00`): `+18°` (ujung sepatu terangkat, tumit kontak lantai)
+ * - Down / Flat Contact (`u ∈ [0.08, 0.36]`): `0°` (telapak rata penuh di tanah)
+ * - Toe-Off / Push-Off (`u ∈ [0.38, 0.52]`): hingga `-24°` (tumit terangkat mendorong maju)
+ * - Passing / Swing (`u ∈ [0.55, 0.92]`): transisi rileks `-12° → +14°`.
+ */
+export function footRollPitchRad(uRaw: number): number {
+  const u = ((uRaw % 1) + 1) % 1;
+  let deg: number;
+  if (u < 0.08) {
+    deg = 18 * (1 - u / 0.08);
+  } else if (u <= 0.36) {
+    deg = 0;
+  } else if (u <= 0.5) {
+    deg = -24 * ((u - 0.36) / 0.14);
+  } else if (u <= 0.58) {
+    deg = -24 + 12 * ((u - 0.5) / 0.08);
+  } else if (u <= 0.92) {
+    deg = -12 + 26 * ((u - 0.58) / 0.34);
+  } else {
+    deg = 14 + 4 * ((u - 0.92) / 0.08);
+  }
+  return (deg * Math.PI) / 180;
+}
+
+/** Gelapkan warna hex #rrggbb sebesar `factor` (mis. `0.16` = 16% lebih gelap untuk far-leg depth shading). */
+export function darkenHex(hex: string, factor = 0.16): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const k = Math.max(0, Math.min(1, 1 - factor));
+  const r = Math.round(((n >> 16) & 255) * k);
+  const g = Math.round(((n >> 8) & 255) * k);
+  const b = Math.round((n & 255) * k);
+  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
 }
 
 export type CastPresetId =
   | 'bangUtoh'
+  | 'ebot'
   | 'arya'
   | 'rara'
   | 'dimas'
@@ -260,7 +356,7 @@ export type CastPresetId =
   | 'tio'
   | 'mbakYuni';
 
-/** 12 Preset Karakter Orisinal Ala Indonesia siap pakai di produksi mana pun (Pemeran Utama #1: Bolohoutoh alias Bang Utoh). */
+/** 13 Preset Karakter Orisinal Ala Indonesia siap pakai di produksi mana pun (Pemeran Utama #1: Bolohoutoh alias Bang Utoh). */
 export const CAST_PRESETS: Record<CastPresetId, CharacterSpec> = {
   bangUtoh: {
     id: 'bangUtoh',
@@ -292,6 +388,44 @@ export const CAST_PRESETS: Record<CastPresetId, CharacterSpec> = {
     backpack: true,
     backpackColor: '#26334d',
     defaultProp: 'laptop',
+  },
+  ebot: {
+    id: 'ebot',
+    name: 'Ebot',
+    role: 'Kreator & Pemuda Lokal · Gaya Kasual Earth-Tone',
+    headShape: 'round',
+    eyeStyle: 'almond',
+    // Warna kulit kuning langsat - sawo matang muda hangat sesuai pencahayaan alami foto asli Ebot:
+    // pipi terkena cahaya lembut (#e5bca2), midtone sawo matang cerah (#d9ab8e), kontur rahang hangat (#ba886c).
+    skinHighlight: '#e5bca2',
+    skin: '#d9ab8e',
+    skinShadow: '#ba886c',
+    ink: '#1c1518',
+    eyeShine: true,
+    hairStyle: 'fadeCrop',
+    hairColor: '#1a1a24',
+    hairHighlight: '#33364a',
+    headgear: 'none',
+    earDetail: true,
+    nose: true,
+    browThick: 10.5,
+    browStyle: 'natural',
+    browColor: '#231c20',
+    faintMustache: true,
+    fullLips: true,
+    upperLipColor: '#ab7271',
+    lipColor: '#c98e89',
+    mouthColor: '#42161e',
+    tongueColor: '#de7875',
+    outfit: 'lokalKnit',
+    outfitColor: '#ab947c',
+    outfitShade: '#8c755e',
+    outfitSecondary: '#5c4a44',
+    accentColor: '#e2d5c1',
+    pantsColor: '#2b2f3a',
+    shoeStyle: 'sneaker',
+    shoeColor: '#f4f0e8',
+    defaultProp: 'coffeeCup',
   },
   arya: {
     id: 'arya',
@@ -660,8 +794,27 @@ function drawBatikKawung(ctx: Ctx, x0: number, y0: number, w: number, h: number,
   ctx.restore();
 }
 
-function drawShoe(ctx: Ctx, x: number, y: number, dir: number, spec: CharacterSpec) {
-  const { ink, shoeStyle, shoeColor, outfitColor } = spec;
+function drawShoe(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  dir: number,
+  spec: CharacterSpec,
+  pitchRad = 0,
+  scale = 1,
+  shadeDark = false,
+) {
+  const { ink, shoeStyle, outfitColor } = spec;
+  const shoeColor = shadeDark ? darkenHex(spec.shoeColor, 0.16) : spec.shoeColor;
+  const stripeColor = shadeDark ? darkenHex(shoeColor === '#262838' ? '#ffffff' : outfitColor, 0.16) : shoeColor === '#262838' ? '#ffffff' : outfitColor;
+  const needsTransform = Math.abs(pitchRad) > 1e-4 || Math.abs(scale - 1) > 1e-4;
+  if (needsTransform) {
+    ctx.save();
+    ctx.translate(x, y - 6);
+    if (Math.abs(pitchRad) > 1e-4) ctx.rotate(-dir * pitchRad);
+    if (Math.abs(scale - 1) > 1e-4) ctx.scale(scale, scale);
+    ctx.translate(-x, -(y - 6));
+  }
   if (shoeStyle === 'sneaker') {
     inked(
       ctx,
@@ -675,7 +828,7 @@ function drawShoe(ctx: Ctx, x: number, y: number, dir: number, spec: CharacterSp
       2,
       3.5,
     );
-    ctx.fillStyle = shoeColor === '#262838' ? '#ffffff' : outfitColor;
+    ctx.fillStyle = stripeColor;
     ctx.fillRect(x - 18 + dir * 12, y - 10, 46, 5.5);
   } else if (shoeStyle === 'boot') {
     inked(
@@ -707,6 +860,7 @@ function drawShoe(ctx: Ctx, x: number, y: number, dir: number, spec: CharacterSp
       3.5,
     );
   }
+  if (needsTransform) ctx.restore();
 }
 
 function resolveArmTarget(
@@ -718,17 +872,36 @@ function resolveArmTarget(
   isWalk: boolean,
   isSide: boolean,
   armOut = 0,
+  view: ActorView = 'threeQuarter',
+  travelDir: -1 | 1 = 1,
 ) {
-  const sx = CX + (isSide ? side * 14 : side * tw * 0.44);
+  const sx = CX + (isSide ? (isWalk ? -travelDir * 4 : side * 14) : side * tw * 0.44);
   const sy = torsoTop + 52;
   let hx = CX + side * (isSide ? 42 : 134);
   let hy = torsoTop + 178;
   let bend = side * 24;
 
   if (armPose === 'rest' && isWalk) {
-    hx = CX + (isSide ? side * 90 * swing : side * (126 + swing * 52));
-    hy = torsoTop + 168 - Math.abs(swing) * 18;
-    bend = side * 20;
+    // Counter-swing ekspresif ala referensi (1).mp4: saat kaki kanan (side=+1) maju di u=0 (swing = +cos(0) = +1),
+    // lengan kiri (side=-1) mengayun jauh ke depan (+travelDir) DI LUAR siluet dada & lengan kanan (side=+1) ke belakang (-travelDir) DI LUAR punggung!
+    const fwdSigned = -side * swing;
+    if (isSide) {
+      const reachX = fwdSigned >= 0 ? fwdSigned * 132 : fwdSigned * 124;
+      hx = CX + travelDir * reachX;
+      hy = torsoTop + 168 - (fwdSigned >= 0 ? fwdSigned * 34 : -fwdSigned * 18);
+      bend = fwdSigned >= 0 ? -travelDir * (26 + fwdSigned * 22) : travelDir * (14 + -fwdSigned * 18);
+    } else if (view === 'threeQuarter' || view === 'backThreeQuarter') {
+      // Pada 3/4, kedua tangan mengayun berlawanan sepanjang sumbu gerak di luar siluet badan
+      hx = CX + side * 94 + travelDir * fwdSigned * 86;
+      hy = torsoTop + 170 - (fwdSigned >= 0 ? fwdSigned * 26 : -fwdSigned * 14);
+      bend = fwdSigned >= 0 ? -travelDir * (18 + fwdSigned * 18) + side * 10 : travelDir * (10 + -fwdSigned * 12) + side * 12;
+    } else {
+      // Tampak front/back: foreshortened vertical swing bergantian ekspresif
+      const depthSign = -side * swing;
+      hx = CX + side * (128 + depthSign * 14);
+      hy = torsoTop + 174 - depthSign * 26;
+      bend = side * (24 + Math.abs(swing) * 14);
+    }
   } else if (armPose === 'hip') {
     hx = CX + side * (isSide ? 16 : 108);
     hy = torsoTop + 172;
@@ -773,13 +946,15 @@ function resolveRiggedTarget(
   isWalk: boolean,
   isSide: boolean,
   armOut: number,
+  view: ActorView = 'threeQuarter',
+  travelDir: -1 | 1 = 1,
 ) {
-  const base = resolveArmTarget(side, armPose, torsoTop, tw, swing, isWalk, isSide, armOut);
+  const base = resolveArmTarget(side, armPose, torsoTop, tw, swing, isWalk, isSide, armOut, view, travelDir);
   if (!rig) return base;
   let { hx, hy, bend } = base;
   const t = rig.t === undefined ? 1 : Math.max(0, Math.min(1, rig.t));
   if (rig.from && t < 1) {
-    const f = resolveArmTarget(side, rig.from, torsoTop, tw, swing, isWalk, isSide, armOut);
+    const f = resolveArmTarget(side, rig.from, torsoTop, tw, swing, isWalk, isSide, armOut, view, travelDir);
     hx = f.hx + (hx - f.hx) * t;
     hy = f.hy + (hy - f.hy) * t;
     bend = f.bend + (bend - f.bend) * t;
@@ -854,16 +1029,32 @@ function drawArm(
   isSide: boolean,
   spec: CharacterSpec,
   rig?: HandRig,
+  view: ActorView = 'threeQuarter',
+  travelDir: -1 | 1 = 1,
+  darkenFar = false,
 ) {
   const bf = buildFactors(spec);
-  const { sx, sy, hx, hy, bend } = resolveRiggedTarget(side, armPose, rig, torsoTop, tw, swing, isWalk, isSide, bf.armOut);
+  const { sx, sy, hx, hy, bend } = resolveRiggedTarget(
+    side,
+    armPose,
+    rig,
+    torsoTop,
+    tw,
+    swing,
+    isWalk,
+    isSide,
+    bf.armOut,
+    view,
+    travelDir,
+  );
   const { ink, skin, outfit, outfitColor, outfitSecondary } = spec;
   const lk = bf.limb;
   const isShortSleeve = outfit === 'kotakSarung' || outfit === 'dasterCelemek' || outfit === 'seragamSma';
-  const sleeveColor =
+  const baseSleeve =
     outfit === 'coach' || outfit === 'tenun' || outfit === 'ojol'
       ? (outfitSecondary ?? outfitColor)
       : outfitColor;
+  const sleeveColor = darkenFar ? darkenHex(baseSleeve, 0.14) : baseSleeve;
 
   // Kurva Bezier 3-titik organik (shoulder -> organic elbow bend -> forearm -> hand)
   const c1x = sx + (hx - sx) * 0.38 + bend * 0.85;
@@ -1459,6 +1650,79 @@ function drawTorsoAndSkirt(
       ctx.lineTo(CX + w * 0.52, torsoTop + 138);
       ctx.stroke();
     }
+  } else if (outfit === 'lokalKnit') {
+    // Gaya kasual lokal Ebot sesuai foto: kaos crew-neck cokelat-kopi tua + outer cardigan rajut kerah rib earth-tone!
+    const innerTee = outfitSecondary ?? '#594742';
+    ctx.fillStyle = outfitShade;
+    ctx.fillRect(CX - w, torsoTop + th - 22, w * 2, 28);
+    if (!isBack) {
+      const openW = isSide ? 24 : 38;
+      // Panel kaos dalam crew-neck cokelat hangat
+      ctx.fillStyle = innerTee;
+      ctx.beginPath();
+      ctx.moveTo(CX - openW, torsoTop);
+      ctx.lineTo(CX + openW, torsoTop);
+      ctx.lineTo(CX + openW * 0.82, torsoTop + th - 20);
+      ctx.lineTo(CX - openW * 0.82, torsoTop + th - 20);
+      ctx.closePath();
+      ctx.fill();
+
+      // Garis kerah crew-neck kaos dalam
+      ctx.strokeStyle = '#433430';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(CX - openW * 0.88, torsoTop + 10);
+      ctx.quadraticCurveTo(CX, torsoTop + 28, CX + openW * 0.88, torsoTop + 10);
+      ctx.stroke();
+
+      // Pita kerah rajut rib (ribbed shawl collar) memanjang dari bahu ke bawah seperti di foto Ebot!
+      for (const s of [-1, 1]) {
+        const ribOuter = s * (openW + 20);
+        const ribInner = s * (openW - 2);
+        ctx.fillStyle = accentColor;
+        ctx.beginPath();
+        ctx.moveTo(CX + ribInner, torsoTop);
+        ctx.lineTo(CX + ribOuter, torsoTop);
+        ctx.quadraticCurveTo(CX + ribOuter * 0.92, torsoTop + th * 0.5, CX + ribOuter * 0.78, torsoTop + th);
+        ctx.lineTo(CX + ribInner * 0.8, torsoTop + th);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 3.8;
+        ctx.stroke();
+
+        // Tekstur garis rajut rib halus seperti di kerah foto asli
+        ctx.strokeStyle = 'rgba(72, 54, 42, 0.34)';
+        ctx.lineWidth = 2.4;
+        for (let ry = torsoTop + 18; ry < torsoTop + th - 22; ry += 13) {
+          const k = 1 - ((ry - torsoTop) / th) * 0.18;
+          ctx.beginPath();
+          ctx.moveTo(CX + ribInner * k + s * 2, ry);
+          ctx.lineTo(CX + ribOuter * k - s * 2, ry + 2);
+          ctx.stroke();
+        }
+      }
+
+      // Saku samping kasual rapi
+      if (!isSide) {
+        for (const s of [-1, 1]) {
+          ctx.strokeStyle = ink;
+          ctx.lineWidth = 3.4;
+          ctx.beginPath();
+          ctx.moveTo(CX + s * 64, torsoTop + 134);
+          ctx.lineTo(CX + s * 78, torsoTop + 178);
+          ctx.stroke();
+        }
+      }
+    } else {
+      // Jahitan yoke bahu belakang cardigan rajut
+      ctx.strokeStyle = 'rgba(64, 48, 36, 0.35)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(CX - w, torsoTop + 56);
+      ctx.quadraticCurveTo(CX, torsoTop + 68, CX + w, torsoTop + 56);
+      ctx.stroke();
+    }
   }
   ctx.restore();
 
@@ -1549,7 +1813,17 @@ function drawTorsoAndSkirt(
   }
 }
 
-function drawHeadgear(ctx: Ctx, spec: CharacterSpec, W: number, headTop: number, cy: number, pop: number, isBack: boolean) {
+function drawHeadgear(
+  ctx: Ctx,
+  spec: CharacterSpec,
+  W: number,
+  headTop: number,
+  cy: number,
+  pop: number,
+  isBack: boolean,
+  isBack34 = false,
+  headFacing = 0,
+) {
   const { ink, headgear, headgearColor, headgearAccent } = spec;
   if (headgear === 'none') return;
 
@@ -1585,7 +1859,7 @@ function drawHeadgear(ctx: Ctx, spec: CharacterSpec, W: number, headTop: number,
     ctx.save();
     ctx.translate(CX, headTop + 34 - pop * 44);
     ctx.rotate(pop > 0.2 ? 0.14 * pop : 0.04);
-    const brimDir = isBack ? 1 : -1;
+    const brimDir = isBack ? (headFacing >= 0 ? 1 : -1) : -1;
     const brim = () => {
       ctx.beginPath();
       ctx.moveTo(brimDir * 124, 2);
@@ -1666,8 +1940,18 @@ function drawHeadgear(ctx: Ctx, spec: CharacterSpec, W: number, headTop: number,
     ctx.rotate(pop > 0.2 ? -0.1 * pop : 0);
     const helm = () => {
       ctx.beginPath();
-      if (isBack) {
+      if (isBack && !isBack34) {
         ctx.arc(0, -14, 148, 0, TAU);
+      } else if (isBack34) {
+        // Bukaan sisi pipi halus pada tampak backThreeQuarter agar arah pandang & pipi tidak tertutup total
+        const bDir = headFacing >= 0 ? 1 : -1;
+        ctx.moveTo(bDir * 116, 62);
+        ctx.quadraticCurveTo(bDir * 94, 4, bDir * 124, -42);
+        ctx.bezierCurveTo(bDir * 136, -124, bDir * 52, -162, 0, -162);
+        ctx.bezierCurveTo(-bDir * 96, -162, -bDir * 156, -86, -bDir * 148, 8);
+        ctx.bezierCurveTo(-bDir * 142, 98, -bDir * 64, 134, 0, 134);
+        ctx.bezierCurveTo(bDir * 52, 134, bDir * 96, 108, bDir * 116, 62);
+        ctx.closePath();
       } else {
         ctx.moveTo(-144, 34);
         ctx.bezierCurveTo(-158, -74, -92, -152, 0, -150);
@@ -1855,23 +2139,48 @@ function drawHeadgear(ctx: Ctx, spec: CharacterSpec, W: number, headTop: number,
 function actorLayout(spec: CharacterSpec, pose: ActorPose) {
   const view: ActorView = pose.view ?? 'threeQuarter';
   const stance: ActorStance = pose.stance ?? 'stand';
-  const isBack = view === 'back';
+  const isBack34 = view === 'backThreeQuarter';
+  const isBack = view === 'back' || isBack34;
   const isSide = view === 'side';
   const isWalk = stance === 'walk';
 
+  const fSign = (pose.facing ?? 1) >= 0 ? 1 : -1;
   const facing =
-    view === 'front' ? 0 : isSide ? Math.sign(pose.facing ?? 1) * 0.85 : (pose.facing ?? (pose.face === 'shock' ? 0.08 : 0.34));
+    view === 'front'
+      ? (pose.facing ?? 0)
+      : isSide
+        ? fSign * 0.85
+        : isBack34
+          ? fSign * 0.72
+          : (pose.facing ?? (pose.face === 'shock' ? 0.08 : 0.34));
 
   const ph = (pose.walkPhase ?? 0) * TAU;
-  const swing = isWalk ? Math.sin(ph) : 0;
+  const strideBlend = isWalk ? Math.max(0, Math.min(1, pose.strideBlend ?? 1)) : 0;
+  const travelDir: -1 | 1 = facing >= 0 ? 1 : -1;
+  // Counter-swing sinkron dengan plantedFoot (u=0 -> kaki kanan maju penuh -> cos(0)=+1 -> lengan kiri maju).
+  const swing = isWalk ? Math.cos(ph) * strideBlend : 0;
+  const W = spec.headShape === 'squircle' ? 276 : spec.hairStyle === 'hijab' ? 238 : spec.hairStyle === 'fadeCrop' ? 252 : 250;
+  const H = spec.headShape === 'squircle' ? 240 : spec.hairStyle === 'fadeCrop' ? 244 : 236;
+  const th = 228;
   // Duduk ergonomis: jika `sitHeight` (m) diisi, pinggul tepat duduk di atas permukaan bangku/kursi.
+  // Default tinggi referensi tetap 1.8 m (kecuali `pose.actorHeight` diisi) agar produksi lama tetap identik.
+  const sitRefHeight = Math.max(0.8, pose.actorHeight ?? 1.8);
+  const baseHipAtBob0 = 192 + H - 6 + th - 12; // 638 (non-squircle) / 642 (squircle)
   const sitBob =
     pose.sitHeight !== undefined
-      ? Math.max(20, Math.min(240, ACTOR_SOLE_Y - (Math.max(0.25, Math.min(0.72, pose.sitHeight)) / 1.8) * ACTOR_H - 638))
+      ? Math.max(
+          20,
+          Math.min(
+            240,
+            ACTOR_SOLE_Y - (Math.max(0.25, Math.min(0.72, pose.sitHeight)) / sitRefHeight) * ACTOR_H - baseHipAtBob0,
+          ),
+        )
       : 105;
-  // Walk body bob = ~4,2% tinggi tubuh (standar motion.md: 3-6%, terendah di kontak langkah).
+  // Walk body bob 4-pose referensi (1).mp4 & motion.md (3-7% tinggi):
+  // terendah di Down (u ≈ 0.125/0.625, +14px), naik mantap di Passing (u ≈ 0.25/0.75, -4px), puncak bounce di Up (u ≈ 0.375/0.875, -22px -> 36px p-p ≈ 4.3% tinggi!).
+  const walkBob = (Math.sin(ph * 2) * 18 - 4) * strideBlend;
   const bob = isWalk
-    ? -Math.abs(Math.sin(ph)) * 36
+    ? walkBob
     : stance === 'sit'
       ? sitBob
       : stance === 'sitCross'
@@ -1881,28 +2190,53 @@ function actorLayout(spec: CharacterSpec, pose: ActorPose) {
           : stance === 'jump'
             ? -82
             : 0;
-  // Siklus torso lean saat walk = 1°–7° seirama langkah (motion.md).
+  // Siklus torso lean saat walk ala (1).mp4: condong dinamis 3.4°..9.0° ke arah jalan + head counter-lag lembut!
   const lean =
     pose.lean !== undefined
       ? pose.lean
       : isWalk
-        ? 4.0 + 3.0 * Math.cos(ph * 2)
+        ? travelDir * (6.2 + 2.8 * Math.cos(ph * 2)) * strideBlend
         : pose.face === 'shock'
           ? -4.5
           : 1.2;
-  const headTilt = pose.headTilt ?? 0;
+  const headTilt =
+    pose.headTilt !== undefined
+      ? pose.headTilt
+      : isWalk
+        ? -travelDir * 2.4 * Math.sin(ph * 2) * strideBlend
+        : 0;
 
-  const W = spec.headShape === 'squircle' ? 276 : spec.hairStyle === 'hijab' ? 238 : 250;
-  const H = spec.headShape === 'squircle' ? 240 : 236;
   const headTop = 192 + bob;
   const cy = headTop + H / 2;
   const chin = headTop + H;
   const torsoTop = chin - 6;
   const bf = buildFactors(spec);
   const tw = (spec.headShape === 'squircle' ? 220 : spec.outfit === 'kotakSarung' ? 222 : 196) * bf.torso;
-  const th = 228;
   const hipY = torsoTop + th - 12;
-  return { view, stance, isBack, isSide, isWalk, facing, ph, swing, bob, lean, headTilt, W, H, headTop, cy, chin, torsoTop, tw, hipY };
+  return {
+    view,
+    stance,
+    isBack,
+    isBack34,
+    isSide,
+    isWalk,
+    facing,
+    travelDir,
+    strideBlend,
+    ph,
+    swing,
+    bob,
+    lean,
+    headTilt,
+    W,
+    H,
+    headTop,
+    cy,
+    chin,
+    torsoTop,
+    tw,
+    hipY,
+  };
 }
 
 /** Arah kepala efektif (memperhitungkan `lookBack`), sama seperti yang dipakai drawActor untuk wajah. */
@@ -1927,7 +2261,19 @@ export function actorHandPoint(
     (side < 0 ? pose.leftArm : pose.rightArm) ??
     (pose.face === 'shock' ? 'raise' : (side < 0 ? pose.leftProp : pose.rightProp) && (side < 0 ? pose.leftProp : pose.rightProp) !== 'none' ? 'hold' : 'rest');
   const rig = side < 0 ? pose.leftHand : pose.rightHand;
-  const { hx, hy } = resolveRiggedTarget(side, armPose, rig, L.torsoTop, L.tw, L.swing, L.isWalk, L.isSide, buildFactors(spec).armOut);
+  const { hx, hy } = resolveRiggedTarget(
+    side,
+    armPose,
+    rig,
+    L.torsoTop,
+    L.tw,
+    L.swing,
+    L.isWalk,
+    L.isSide,
+    buildFactors(spec).armOut,
+    L.view,
+    L.travelDir,
+  );
   const a = (L.lean * Math.PI) / 180;
   const c = Math.cos(a);
   const s = Math.sin(a);
@@ -1945,27 +2291,39 @@ export function actorFaceAnchors(
   const spec = resolveActorSpec(actor, overrides);
   const L = actorLayout(spec, pose);
   const hf = headFacingOf(pose, L.isSide, L.facing);
-  const shift = (L.isSide ? Math.sign(hf) * 0.65 : hf) * L.W * 0.085;
-  const eyeY = L.cy + 12;
+  const hfSign = hf >= 0 ? 1 : -1;
+  const shift = (L.isSide ? hfSign * 0.65 : hf) * L.W * 0.085;
+  const rawEyeY = L.cy + (spec.eyeStyle === 'almond' ? 8 : 12);
+  const rawNoseY = rawEyeY + (spec.noseStyle === 'rounded' ? 32 : 26);
   const rawMouthX = CX + shift;
-  const rawMouthY = L.cy + 70;
+  const rawMouthY = L.cy + (spec.eyeStyle === 'almond' ? 66 : 70);
   let mouthX = rawMouthX;
   let mouthY = rawMouthY;
+  let eyeY = rawEyeY;
+  let noseY = rawNoseY;
+  let headTop = L.headTop;
   if (L.headTilt !== 0) {
     const a = (L.headTilt * Math.PI) / 180;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
     const pivotY = L.chin - 4;
-    const dx = rawMouthX - CX;
-    const dy = rawMouthY - pivotY;
-    mouthX = CX + dx * Math.cos(a) - dy * Math.sin(a);
-    mouthY = pivotY + dx * Math.sin(a) + dy * Math.cos(a);
+    const rotPt = (px: number, py: number): [number, number] => {
+      const dx = px - CX;
+      const dy = py - pivotY;
+      return [CX + dx * c - dy * s, pivotY + dx * s + dy * c];
+    };
+    [mouthX, mouthY] = rotPt(rawMouthX, rawMouthY);
+    [, eyeY] = rotPt(rawMouthX, rawEyeY);
+    [, noseY] = rotPt(rawMouthX, rawNoseY);
+    [, headTop] = rotPt(CX, L.headTop);
   }
   return {
     mouthX,
     mouthY,
-    noseY: eyeY + 26,
+    noseY,
     eyeY,
     chinY: L.chin,
-    headTop: L.headTop,
+    headTop,
     headW: L.W,
     torsoTop: L.torsoTop,
   };
@@ -1977,13 +2335,277 @@ export function actorCanvasToWorldY(py: number, height: number, baseY = 0): numb
 }
 
 /**
+ * Elevasi dunia (meter relatif `baseY`) pusat kepala aktor — sinkron 100% dengan `actorLayout`
+ * (menghormati `sit`, `sitHeight`, `actorHeight`, `sitCross`, `squat`, `jump`, dan `headShape`).
+ */
+export function actorHeadCenterY(
+  height: number,
+  pose?: Partial<ActorPose>,
+  actor: CastPresetId | CharacterSpec = 'bangUtoh',
+): number {
+  const spec = resolveActorSpec(actor);
+  const L = actorLayout(spec, { face: 'neutral', ...pose });
+  return actorCanvasToWorldY(L.cy, height, 0);
+}
+
+/**
+ * Helper resmi 2,5D (Atelier v3.0): memetakan arah hadap dunia aktor terhadap posisi kamera aktif
+ * menjadi sudut 8-arah mulus (`front`, `threeQuarter`, `side`, `backThreeQuarter`, `back`) beserta nilai `facing`.
+ * `forwardOrYaw` dapat berupa vektor `Vec3` menghadap depan atau sudut `yaw` derajat (`0° = +Z`, `+90° = +X`).
+ */
+export function resolve25DView(
+  actorPos: Vec3,
+  forwardOrYaw: Vec3 | number,
+  camPos: Vec3,
+): { view: ActorView; facing: number; angleDeg: number } {
+  const fwd: Vec3 =
+    typeof forwardOrYaw === 'number'
+      ? [Math.sin((forwardOrYaw * Math.PI) / 180), 0, Math.cos((forwardOrYaw * Math.PI) / 180)]
+      : forwardOrYaw;
+  const tx = camPos[0] - actorPos[0];
+  const tz = camPos[2] - actorPos[2];
+  const tl = Math.hypot(tx, tz) || 1;
+  const fl = Math.hypot(fwd[0], fwd[2]) || 1;
+  const fx = fwd[0] / fl;
+  const fz = fwd[2] / fl;
+  const cos = Math.max(-1, Math.min(1, (fx * tx + fz * tz) / tl));
+  const angleDeg = (Math.acos(cos) * 180) / Math.PI;
+  // Cross product (toCam × fwd).y: positif = karakter menghadap ke kanan layar kamera.
+  const side = (fx * tz - fz * tx) / tl;
+  const sign = side >= 0 ? 1 : -1;
+  if (angleDeg < 32) {
+    return { view: 'front', facing: Math.max(-0.45, Math.min(0.45, side * 1.6)), angleDeg };
+  }
+  if (angleDeg < 72) {
+    return { view: 'threeQuarter', facing: Math.min(0.75, 0.34 + Math.abs(side) * 0.42) * sign, angleDeg };
+  }
+  if (angleDeg < 112) {
+    return { view: 'side', facing: 0.85 * sign, angleDeg };
+  }
+  if (angleDeg < 148) {
+    return { view: 'backThreeQuarter', facing: 0.72 * sign, angleDeg };
+  }
+  return { view: 'back', facing: 0.35 * sign, angleDeg };
+}
+
+/**
+ * Posisi kartu billboard tokoh yang duduk (native engine v3.0): menggeser titik pusat kursi
+ * sejauh `seatRadius + 0.02 m` ke tepi kursi menghadap kamera agar 0% menembus bangku/kursi.
+ */
+export function seatCardPos(seat: Vec3, seatRadius: number, faceTo?: Vec3): Vec3 {
+  if (!faceTo || seatRadius <= 0) return seat;
+  const dx = faceTo[0] - seat[0];
+  const dz = faceTo[2] - seat[2];
+  const l = Math.hypot(dx, dz) || 1;
+  const ux = dx / l;
+  const uz = dz / l;
+  const d = seatRadius / Math.max(Math.abs(ux), Math.abs(uz), 1e-3) + 0.02;
+  return [seat[0] + ux * d, seat[1], seat[2] + uz * d];
+}
+
+/**
+ * Kompensasi kemiringan X (*high-angle X-tilt*) berporos di telapak kaki (`y = 0`) saat kamera memandang dari atas (`pitch > 12°`).
+ * Hanya aktif untuk high-angle (`dy > 0`, tidak pernah memiringkan karakter tinggi ke depan pada shot rendah/makro),
+ * dan mengembalikan `0` untuk seluruh shot eye-level (`|camPitch| <= 12°` atau tinggi mata referensi) agar EP01–EP04 100% identik.
+ */
+export function computeBillboardTiltX(
+  position: Vec3,
+  faceTo: Vec3,
+  actorHeight = 1.96,
+  maxTiltDeg = 24,
+  camLook?: Vec3,
+): number {
+  const horiz = Math.hypot(faceTo[0] - position[0], faceTo[2] - position[2]);
+  if (horiz < 1e-4) return 0;
+  // Bila camLook diketahui dan kamera sendiri datar (|pitch kamera| <= 12°), jangan pernah miringkan kartu.
+  if (camLook) {
+    const ch = Math.hypot(faceTo[0] - camLook[0], faceTo[2] - camLook[2]);
+    if (ch > 1e-4) {
+      const camPitchDeg = Math.abs((Math.atan2(faceTo[1] - camLook[1], ch) * 180) / Math.PI);
+      if (camPitchDeg <= 12) return 0;
+    }
+  }
+  // Lantai referensi mata minimal 1,10 m di atas lantai agar kucing/subjek pendek pada shot eye-level manusia tetap tegak.
+  const refY = position[1] + Math.max(1.1, actorHeight * 0.72);
+  const dy = faceTo[1] - refY;
+  // Hanya kompensasi high-angle (kamera di atas subjek); shot low-angle/makro rendah tetap tegak lurus vertikal.
+  if (dy <= 0) return 0;
+  const pitchDeg = (Math.atan2(dy, horiz) * 180) / Math.PI;
+  if (pitchDeg <= 12) return 0;
+  const excess = pitchDeg - 12;
+  const tiltDeg = Math.min(maxTiltDeg, excess * 0.55);
+  // Kamera di atas (dy > 0) -> kartu miring ke belakang (-X rotasi lokal billboard menghadap +Z) agar menghadap kamera.
+  return (-tiltDeg * Math.PI) / 180;
+}
+
+/**
+ * Auto-Locomotion 3D → 2D (Atelier v3.5): menghitung status berjalan otomatis dari kurva posisi dunia `posAt(f)`.
+ * - Otomatis mengaktifkan `stance: 'walk'` saat bergerak XZ & *ease-out* halus via `strideBlend` ke `'stand'` saat berhenti.
+ * - Memproyeksikan perpindahan XZ ke bidang kamera (`sin θ` terhadap garis pandang) sebelum dibagi `actorWalkCycleMeters`
+ *   sehingga 0% *ice-skating* baik saat berjalan samping, 3/4, maupun diagonal.
+ * - Otomatis membebaskan lengan ke `'rest'` selama berjalan kecuali ada *override* memegang prop 3D.
+ */
+export type WalkStateOptions = {
+  /** Frame per detik (default `30`). */
+  fps?: number;
+  /** Frame awal integrasi jarak (default `0`). */
+  startFrame?: number;
+  /** Pengali panjang langkah (default `1`). */
+  stride?: number;
+  /** Apakah karakter mengenakan rok/sarung (default `false`). */
+  skirted?: boolean;
+  /** Arah hadap dunia (derajat, `0° = +Z`, `+90° = +X`) saat diam (`stand`). */
+  idleYawDeg?: number;
+  /** Ambang kecepatan berhenti (m/detik, default `0.04`). */
+  stopSpeed?: number;
+  /** Kecepatan penuh untuk `strideBlend = 1` (m/detik, default `0.35`). */
+  fullSpeed?: number;
+  /** Override lengan kiri/kanan saat memegang prop 3D. */
+  leftArmOverride?: ArmPose;
+  rightArmOverride?: ArmPose;
+};
+
+export type ComputedWalkState = {
+  moving: boolean;
+  speedMps: number;
+  stance: 'walk' | 'stand';
+  gait: 'planted';
+  walkPhase: number;
+  strideBlend: number;
+  view: ActorView;
+  facing: number;
+  leftArm: ArmPose;
+  rightArm: ArmPose;
+};
+
+export function computeWalkState(
+  posAt: (f: number) => Vec3,
+  frame: number,
+  height: number,
+  camPos: Vec3,
+  opts?: WalkStateOptions,
+): ComputedWalkState {
+  const fps = opts?.fps ?? 30;
+  const startFrame = Math.max(0, Math.floor(opts?.startFrame ?? 0));
+  const f = Math.max(startFrame, Math.floor(frame));
+  const strideMul = opts?.stride ?? 1;
+  const skirted = opts?.skirted ?? false;
+  const stopSpeed = opts?.stopSpeed ?? 0.04;
+  const fullSpeed = Math.max(stopSpeed + 0.05, opts?.fullSpeed ?? 0.35);
+
+  const cur = posAt(f);
+  const prev = posAt(Math.max(startFrame, f - 1));
+  const next = posAt(f + 1);
+  const vx = f > startFrame ? (next[0] - prev[0]) * 0.5 : next[0] - cur[0];
+  const vz = f > startFrame ? (next[2] - prev[2]) * 0.5 : next[2] - cur[2];
+  const stepDist = Math.hypot(vx, vz);
+  const speedMps = stepDist * fps;
+
+  const moving = speedMps > stopSpeed;
+  const rawBlend = Math.max(0, Math.min(1, (speedMps - stopSpeed) / (fullSpeed - stopSpeed)));
+  const strideBlend = rawBlend * rawBlend * (3 - 2 * rawBlend);
+
+  const forwardOrYaw: Vec3 | number = moving ? [vx, 0, vz] : (opts?.idleYawDeg ?? 0);
+  const resolved = resolve25DView(cur, forwardOrYaw, camPos);
+
+  let phase = 0;
+  let prevP = posAt(startFrame);
+  for (let k = startFrame + 1; k <= f; k++) {
+    const p = posAt(k);
+    const dx = p[0] - prevP[0];
+    const dz = p[2] - prevP[2];
+    const d = Math.hypot(dx, dz);
+    if (d > 1e-5) {
+      const tx = camPos[0] - p[0];
+      const tz = camPos[2] - p[2];
+      const tl = Math.hypot(tx, tz) || 1;
+      const toCamX = tx / tl;
+      const toCamZ = tz / tl;
+      // Vektor kanan bidang kamera di XZ (tegak lurus garis pandang) -> proyeksi `sin(θ)` agar langkah 3/4 & diagonal nol selip!
+      const camRightX = toCamZ;
+      const camRightZ = -toCamX;
+      const stepRes = resolve25DView(p, [dx, 0, dz], camPos);
+      const isDepthWalk = stepRes.view === 'front' || stepRes.view === 'back';
+      const projected = isDepthWalk
+        ? Math.abs(dx * toCamX + dz * toCamZ)
+        : Math.abs(dx * camRightX + dz * camRightZ);
+      const cycleM = actorWalkCycleMeters(height, isDepthWalk ? 'threeQuarter' : stepRes.view, strideMul, skirted);
+      phase += projected / Math.max(0.05, cycleM);
+    }
+    prevP = p;
+  }
+
+  const walkPhase = ((phase % 1) + 1) % 1;
+  return {
+    moving,
+    speedMps,
+    stance: moving ? 'walk' : 'stand',
+    gait: 'planted',
+    walkPhase,
+    strideBlend: moving ? strideBlend : 0,
+    view: resolved.view,
+    facing: resolved.facing,
+    leftArm: opts?.leftArmOverride ?? 'rest',
+    rightArm: opts?.rightArmOverride ?? 'rest',
+  };
+}
+
+/**
+ * Jembatan Hybrid 2D-Hand → 3D-Prop (Atelier v3.0): mengonversi koordinat tangan kanvas 2D (`actorHandPoint`)
+ * menjadi posisi dunia 3D (`Vec3`) tepat di ujung tangan aktor, memperhitungkan `yaw`, `seatRadius`, dan `tiltX`.
+ */
+export function actorHandWorldPos(
+  actor: CastPresetId | CharacterSpec,
+  pose: ActorPose,
+  side: -1 | 1,
+  actorPos: Vec3,
+  faceTo: Vec3,
+  height = 1.96,
+  opts?: {
+    overrides?: Partial<CharacterSpec>;
+    seatRadius?: number;
+    tiltComp?: boolean;
+    /** Offset maju ke arah kamera (meter, default 0.02) agar prop 3D bebas Z-fighting dengan telapak 2D. */
+    forwardOffset?: number;
+  },
+): Vec3 {
+  const effectivePose =
+    pose.sitHeight !== undefined && pose.actorHeight === undefined && (opts?.seatRadius ?? 0) > 0
+      ? { ...pose, actorHeight: height }
+      : pose;
+  const pt = actorHandPoint(actor, effectivePose, side, opts?.overrides);
+  const basePos = opts?.seatRadius ? seatCardPos(actorPos, opts.seatRadius, faceTo) : actorPos;
+  const yaw = Math.atan2(faceTo[0] - basePos[0], faceTo[2] - basePos[2]);
+  const tiltX = opts?.tiltComp === false ? 0 : computeBillboardTiltX(basePos, faceTo, height);
+
+  const w = height * (ACTOR_W / ACTOR_H);
+  const lx = ((pt.x - ACTOR_W / 2) / ACTOR_W) * w;
+  const ly0 = ((ACTOR_SOLE_Y - pt.y) / ACTOR_H) * height;
+  const lz0 = opts?.forwardOffset ?? 0.02;
+
+  // Rotasi tiltX di sekitar sumbu X lokal berporos telapak (y = 0)
+  const ct = Math.cos(tiltX);
+  const st = Math.sin(tiltX);
+  const ly = ly0 * ct - lz0 * st;
+  const lz = ly0 * st + lz0 * ct;
+
+  // Rotasi yaw di sekitar sumbu Y dunia
+  const cy = Math.cos(yaw);
+  const sy = Math.sin(yaw);
+  const wx = basePos[0] + lx * cy + lz * sy;
+  const wy = basePos[1] + ly;
+  const wz = basePos[2] - lx * sy + lz * cy;
+  return [wx, wy, wz];
+}
+
+/**
  * Gambar karakter Nusantara/Indonesia modular ke Canvas2D 700x1100 (telapak kaki di y = 1040).
  */
 export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: ActorPose, overrides?: Partial<CharacterSpec>) {
   const spec = resolveActorSpec(actor, overrides);
   const { ink, skin, skinShadow, hairStyle, hairColor, hairHighlight, pantsColor } = spec;
   const L = actorLayout(spec, pose);
-  const { view, stance, isBack, isSide, isWalk, facing, swing, lean, headTilt, W, H, headTop, cy, chin, torsoTop, tw, hipY } = L;
+  const { view, stance, isBack, isBack34, isSide, isWalk, facing, travelDir, strideBlend, ph, swing, lean, headTilt, W, H, headTop, cy, chin, torsoTop, tw, hipY } = L;
   const blink = pose.blink === true ? 1 : pose.blink === false ? 0 : (pose.blink ?? 0);
   const hatPop = pose.hatPop !== undefined ? pose.hatPop : pose.face === 'shock' ? 1 : 0;
 
@@ -2005,7 +2627,12 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
 
   // --- 1. KAKI (mendukung stand, walk, sit, sitCross/bersila, jump & side profile) ---
   const isSkirted = spec.outfit === 'kotakSarung' || spec.outfit === 'dasterCelemek';
-  const legSides: (-1 | 1)[] = isSide ? [-1, 1] : [-1, 1];
+  // Urutan render kaki: pada tampak samping / 3-4, kaki jauh (*far leg*) digambar LEBIH DULU dengan warna digelapkan 16%
+  // agar siluet langkah 2D terbaca jernih (tidak menyatu seperti gunting).
+  const farSide: -1 | 1 = travelDir >= 0 ? -1 : 1;
+  const nearSide: -1 | 1 = farSide === -1 ? 1 : -1;
+  const legSides: readonly (-1 | 1)[] =
+    isSide || view === 'threeQuarter' || isBack34 ? [farSide, nearSide] : [-1, 1];
   if (stance === 'sitCross') {
     // Duduk bersila santai di lantai (kaki kiri terlipat di bawah, kaki kanan menyilang di depan!)
     const drawCrossedLeg = (side: -1 | 1, inFront: boolean) => {
@@ -2110,38 +2737,82 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
       } else {
         const strideMul = pose.stride ?? 1;
         const stride = actorStridePx(view, strideMul, isSkirted);
-        const planted = isWalk && pose.gait === 'planted';
-        const travelDir = facing >= 0 ? 1 : -1;
+        // v3.5: default gait adalah 'planted' (hanya 'swing' bila diminta eksplisit).
+        const planted = isWalk && (pose.gait ?? 'planted') === 'planted';
+        const isDepthWalk = view === 'front' || view === 'back';
+        const isFarLeg = (isSide || view === 'threeQuarter' || isBack34) && side === farSide;
+        const legPants = isFarLeg ? darkenHex(pantsColor, 0.16) : pantsColor;
+        // Angkatan kaki ekspresif ala referensi (1).mp4 (~74px pada side/3/4 agar langkah bouncy & hidup, bukan diseret!)
+        const liftAmp = (isDepthWalk ? 54 : 74) * Math.min(1.6, Math.sqrt(strideMul)) * strideBlend;
         const pf = planted
-          ? view === 'front' || isBack
-            ? { dx: 0, lift: plantedFoot(pose.walkPhase ?? 0, side, 1, 34).lift }
-            : plantedFoot(pose.walkPhase ?? 0, side, stride, 34 * Math.min(1.8, Math.sqrt(strideMul)))
+          ? isDepthWalk
+            ? plantedFoot(pose.walkPhase ?? 0, side, 1, liftAmp)
+            : plantedFoot(pose.walkPhase ?? 0, side, stride * strideBlend, liftAmp)
           : null;
-        const stepX = pf ? travelDir * pf.dx : swing * side * stride;
-        const liftY = pf ? pf.lift : isWalk ? Math.max(0, -swing * side) * 34 : 0;
+
         const baseSpread = isSide ? side * 20 : side * ((pose.face === 'shock' ? 74 : isSkirted ? 48 : 54) + ho);
-        const fx = CX + baseSpread + stepX;
-        const fy = ACTOR_SOLE_Y - liftY;
-        const hx = CX + (isSide ? side * 8 : side * (36 + ho));
+        const hipShiftX = isWalk && isDepthWalk ? Math.cos(ph) * 10 * strideBlend : 0;
+        const hx = CX + hipShiftX + (isSide ? side * 8 : side * (36 + ho));
         const startY = isSkirted ? hipY + 90 : hipY;
 
-        // Kurva Bezier 3-titik organik (hip -> natural knee bend -> ankle/foot)
-        const kneeForward = isWalk ? travelDir * (14 + liftY * 0.35) : -side * 5;
-        const k1x = hx + (fx - hx) * 0.42 + kneeForward;
-        const k1y = startY + (fy - startY) * 0.42;
-        const k2x = hx + (fx - hx) * 0.72 + kneeForward * 0.45;
-        const k2y = startY + (fy - startY) * 0.74;
+        let fx: number;
+        let fy: number;
+        let shoePitch = 0;
+        let shoeScale = 1;
+        if (isWalk && isDepthWalk) {
+          // Tampak front/back: foreshortened depth stride bouncy (pergeseran Y + skala sepatu 0.90..1.10)
+          const u = pf ? pf.u : (((pose.walkPhase ?? 0) + (side === 1 ? 0 : 0.5)) % 1 + 1) % 1;
+          const depthWave = Math.cos(u * TAU);
+          const liftY = pf ? pf.lift : Math.max(0, -Math.sin(ph) * side) * 46 * strideBlend;
+          fx = CX + hipShiftX + baseSpread;
+          fy = ACTOR_SOLE_Y - liftY + depthWave * 16 * strideBlend;
+          shoeScale = 1 + depthWave * 0.1 * strideBlend;
+          shoePitch = footRollPitchRad(u) * 0.4 * strideBlend;
+        } else {
+          const stepX = pf ? travelDir * pf.dx : isWalk ? Math.cos(ph) * side * stride * strideBlend : 0;
+          const liftY = pf ? pf.lift : isWalk ? Math.max(0, -Math.sin(ph) * side) * 64 * strideBlend : 0;
+          fx = CX + baseSpread + stepX;
+          fy = ACTOR_SOLE_Y - liftY;
+          if (isWalk) {
+            const u = pf ? pf.u : (((pose.walkPhase ?? 0) + (side === 1 ? 0 : 0.5)) % 1 + 1) % 1;
+            shoePitch = footRollPitchRad(u) * strideBlend;
+          }
+        }
 
+        // Hybrid 2-Bone Analytic Leg IK + Organic Curved Cartoon Spline ala referensi (1).mp4:
+        // Solver IK menghitung posisi lutut fisik yang akurat (kaki tumpu tegak saat Passing, kaki ayun menekuk tajam),
+        // lalu dirender sebagai kurva Bezier lembut melalui lutut (TANPA sudut tajam kaku '<' seperti robot!).
+        const ankleY = fy - 22;
+        const baseHipY = 192 + H - 6 + th - 12;
+        const standReach = Math.max(120, ACTOR_SOLE_Y - 22 - (isSkirted ? baseHipY + 90 : baseHipY));
+        const thighLen = standReach * 0.522;
+        const shinLen = standReach * 0.522;
+        const bendDir: -1 | 1 = isDepthWalk ? side : travelDir;
+        const { knee } = isWalk
+          ? solveLegIK([hx, startY], [fx, ankleY], thighLen, shinLen, bendDir)
+          : { knee: [hx + (fx - hx) * 0.5 - side * 4, startY + (ankleY - startY) * 0.5] as [number, number] };
+
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
         ctx.strokeStyle = ink;
         ctx.lineWidth = (isSkirted ? 22 : 28) * lk;
         ctx.beginPath();
         ctx.moveTo(hx, startY);
-        ctx.bezierCurveTo(k1x, k1y, k2x, k2y, fx, fy - 22);
+        if (isWalk) {
+          const kPull = 0.78;
+          const c1x = hx + (knee[0] - hx) * kPull;
+          const c1y = startY + (knee[1] - startY) * kPull;
+          const c2x = fx + (knee[0] - fx) * kPull;
+          const c2y = ankleY + (knee[1] - ankleY) * kPull;
+          ctx.bezierCurveTo(c1x, c1y, c2x, c2y, fx, ankleY);
+        } else {
+          ctx.quadraticCurveTo(knee[0], knee[1], fx, ankleY);
+        }
         ctx.stroke();
-        ctx.strokeStyle = pantsColor;
+        ctx.strokeStyle = legPants;
         ctx.lineWidth = (isSkirted ? 12 : 17) * lk;
         ctx.stroke();
-        drawShoe(ctx, fx, fy, dir, spec);
+        drawShoe(ctx, fx, fy, isDepthWalk ? side : travelDir, spec, shoePitch, shoeScale, isFarLeg);
       }
     }
   }
@@ -2153,9 +2824,16 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
 
   // --- 2. ELEMEN BELAKANG (cepol rambut Bu Siti / ransel Raka di tampak depan) ---
   if (hairStyle === 'bun' && !isBack) {
+    if (headTilt !== 0) {
+      ctx.save();
+      ctx.translate(CX, chin - 4);
+      ctx.rotate((headTilt * Math.PI) / 180);
+      ctx.translate(-CX, -(chin - 4));
+    }
     const bunY = headTop - 36 - hatPop * 10;
     inked(ctx, () => { ctx.beginPath(); ctx.arc(CX - 10, bunY, 44, 0, TAU); }, hairColor, ink, 5.5, 3, 4);
     inked(ctx, () => { ctx.beginPath(); ctx.roundRect(CX - 44, bunY + 20, 68, 16, 8); }, '#e04848', ink, 4, 2, 2.5);
+    if (headTilt !== 0) ctx.restore();
   }
   if (spec.backpack && !isBack) {
     inked(
@@ -2172,14 +2850,15 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
     );
   }
 
-  // --- 3. LENGAN KIRI (belakang) ---
-  const leftHandPt = drawArm(ctx, -1, leftArm, leftProp, torsoTop, tw, swing, isWalk, isSide, spec, pose.leftHand);
+  // --- 3. LENGAN KIRI (belakang, sedikit digelapkan pada side/3-4 agar kedalaman lengan terbaca jelas) ---
+  const isSideOr34 = isSide || view === 'threeQuarter' || isBack34;
+  const leftHandPt = drawArm(ctx, -1, leftArm, leftProp, torsoTop, tw, swing, isWalk, isSide, spec, pose.leftHand, view, travelDir, isSideOr34);
 
   // --- 4. TORSO & BAWAHAN (Sarung / Daster / Batik / Denim / Ojol / SMA / Tenun) ---
   drawTorsoAndSkirt(ctx, torsoTop, tw, th, isBack, isSide, spec);
 
   // --- 5. LENGAN KANAN (depan) ---
-  const rightHandPt = drawArm(ctx, 1, rightArm, rightProp, torsoTop, tw, swing, isWalk, isSide, spec, pose.rightHand);
+  const rightHandPt = drawArm(ctx, 1, rightArm, rightProp, torsoTop, tw, swing, isWalk, isSide, spec, pose.rightHand, view, travelDir, false);
 
   // Menoleh ke belakang (kepala saja): badan, lengan & langkah tetap mengikuti `facing`.
   const headFacing = headFacingOf(pose, isSide, facing);
@@ -2243,17 +2922,56 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
       ctx.strokeStyle = ink;
       ctx.lineWidth = 5;
       ctx.stroke();
+    } else if (isBack34) {
+      // Intipan sisi pipi di tepi hijab saat tampak backThreeQuarter
+      const bDir = headFacing >= 0 ? 1 : -1;
+      ctx.save();
+      hijabOuter();
+      ctx.clip();
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.ellipse(CX + bDir * 96, cy + 12, 34, 58, bDir * 0.08, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 4.5;
+      ctx.stroke();
+      ctx.restore();
+      hijabOuter();
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 5.5;
+      ctx.stroke();
     }
   } else {
     // Telinga (tertutup helm atau earcup headphone saat dipakai normal)
     if (spec.headgear !== 'helmet' && !(spec.headgear === 'headphones' && hatPop < 0.25)) {
-      const earX = isBack ? CX - W * 0.48 : CX - (headFacing >= 0 ? 1 : -1) * W * 0.49;
-      inked(ctx, () => { ctx.beginPath(); ctx.ellipse(earX, cy + 13, 18, 23, -0.12, 0, TAU); }, skin, ink, 4.5, 2, 3);
+      const drawOneEar = (exPos: number, tiltRad: number, flip: number) => {
+        inked(ctx, () => { ctx.beginPath(); ctx.ellipse(exPos, cy + 13, 18, 24, tiltRad, 0, TAU); }, skin, ink, 4.5, 2, 3);
+        if (spec.earDetail && !isBack) {
+          ctx.save();
+          ctx.strokeStyle = spec.skinShadow;
+          ctx.lineWidth = 3.4;
+          ctx.beginPath();
+          ctx.arc(exPos + flip * 2, cy + 13, 9.5, flip > 0 ? Math.PI * 0.65 : -Math.PI * 0.35, flip > 0 ? Math.PI * 1.45 : Math.PI * 0.45);
+          ctx.stroke();
+          ctx.restore();
+        }
+      };
+      const earSide = headFacing >= 0 ? -1 : 1;
+      const earX = isBack ? CX - W * 0.48 : CX + earSide * W * 0.49;
+      drawOneEar(earX, -0.12, -earSide);
+      // Tampak depan / 3-4 halus untuk earDetail menampilkan sedikit telinga sisi jauh agar siluet wajah bulat proporsional
+      if (!isBack && !isSide && spec.earDetail && Math.abs(headFacing) < 0.55) {
+        const farEarX = CX - earSide * W * 0.475;
+        inked(ctx, () => { ctx.beginPath(); ctx.ellipse(farEarX, cy + 14, 13, 21, 0.12 * -earSide, 0, TAU); }, spec.skinShadow, ink, 4.2, 1.5, 2.5);
+      }
       if (isBack) {
-        inked(ctx, () => { ctx.beginPath(); ctx.ellipse(CX + W * 0.48, cy + 13, 18, 23, 0.12, 0, TAU); }, skin, ink, 4.5, 2, 3);
+        drawOneEar(CX + W * 0.48, 0.12, -1);
       }
       if (spec.earrings) {
         inked(ctx, () => { ctx.beginPath(); ctx.arc(earX, cy + 34, 7, 0, TAU); }, '#fff8e8', ink, 3, 1, 1.5);
+        if (isBack) {
+          inked(ctx, () => { ctx.beginPath(); ctx.arc(CX + W * 0.48, cy + 34, 7, 0, TAU); }, '#fff8e8', ink, 3, 1, 1.5);
+        }
       }
     }
 
@@ -2294,24 +3012,56 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         ctx.closePath();
       }
     };
-    const skG = ctx.createLinearGradient(CX - W * 0.35, headTop, CX + W * 0.45, chin);
-    skG.addColorStop(0, isBack ? hairColor : skin);
-    skG.addColorStop(0.58, isBack ? hairColor : skin);
-    skG.addColorStop(1, isBack ? hairColor : skinShadow);
+    const skG = ctx.createLinearGradient(CX - W * 0.38, headTop + 12, CX + W * 0.46, chin);
+    if (!isBack && spec.skinHighlight) {
+      skG.addColorStop(0, spec.skinHighlight);
+      skG.addColorStop(0.46, skin);
+      skG.addColorStop(1, skinShadow);
+    } else {
+      skG.addColorStop(0, isBack ? hairColor : skin);
+      skG.addColorStop(0.58, isBack ? hairColor : skin);
+      skG.addColorStop(1, isBack ? hairColor : skinShadow);
+    }
     inked(ctx, headPath, skG, ink, 5.5, 3.5, 5.5);
 
     if (isBack) {
-      // Tampak belakang kepala: kulit tengkuk bawah + rambut/cepol
+      // Tampak belakang kepala (termasuk backThreeQuarter): kulit tengkuk bawah + rambut/cepol
       ctx.save();
       headPath();
       ctx.clip();
       ctx.fillStyle = skinShadow;
       ctx.fillRect(CX - W, chin - 44, W * 2, 54);
+      if (hairStyle === 'fadeCrop') {
+        // Gradasi taper fade pendek rapi di tengkuk bawah khas barbershop lokal
+        const fg = ctx.createLinearGradient(0, chin - 78, 0, chin - 28);
+        fg.addColorStop(0, hairColor);
+        fg.addColorStop(0.55, 'rgba(54, 42, 44, 0.55)');
+        fg.addColorStop(1, skinShadow);
+        ctx.fillStyle = fg;
+        ctx.fillRect(CX - W, chin - 78, W * 2, 54);
+      }
+      if (isBack34) {
+        // Tampak belakang 3/4 (backThreeQuarter): sisi pipi dilukis DI ATAS tengkuk & fadeCrop agar tidak tertimpa
+        const bDir = headFacing >= 0 ? 1 : -1;
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(CX + bDir * W * 0.42, cy + 16, W * 0.24, H * 0.36, bDir * 0.1, 0, TAU);
+        ctx.fill();
+      }
       ctx.restore();
       headPath();
       ctx.strokeStyle = ink;
       ctx.lineWidth = 5.5;
       ctx.stroke();
+      if (isBack34) {
+        const bDir = headFacing >= 0 ? 1 : -1;
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 4.5;
+        ctx.beginPath();
+        ctx.moveTo(CX + bDir * W * 0.36, cy - 18);
+        ctx.lineTo(CX + bDir * W * 0.46, cy - 14);
+        ctx.stroke();
+      }
       if (hairStyle === 'bun') {
         inked(ctx, () => { ctx.beginPath(); ctx.arc(CX, headTop - 16, 48, 0, TAU); }, hairColor, ink, 5.5, 3, 4);
         inked(ctx, () => { ctx.beginPath(); ctx.roundRect(CX - 34, headTop + 20, 68, 16, 8); }, '#e04848', ink, 4, 2, 2.5);
@@ -2335,7 +3085,7 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
           ctx.closePath();
         };
         inked(ctx, backSpike, hairColor, ink, 4.5, 2, 3);
-      } else if (hairStyle === 'curtain' || hairStyle === 'parted') {
+      } else if (hairStyle === 'curtain' || hairStyle === 'parted' || hairStyle === 'fadeCrop') {
         // Siluet rambut belakang dengan garis belahan/kilau halus agar tampak belakang kaya dimensi
         ctx.strokeStyle = hairHighlight ?? 'rgba(255,255,255,0.22)';
         ctx.lineWidth = 5;
@@ -2370,8 +3120,9 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
     ctx.stroke();
   }
 
-  // --- 7. FITUR WAJAH (12 ekspresi + auto lip-sync + kacamata + kumis) ---
+  // --- 7. FITUR WAJAH (13 ekspresi + auto lip-sync + kacamata + kumis) ---
   if (!isBack) {
+    const effFacing = isSide ? (headFacing >= 0 ? 1 : -1) * 0.65 : headFacing;
     drawFaceFeatures(ctx, {
       cx: CX,
       cy,
@@ -2382,9 +3133,17 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
       face: pose.face,
       blink,
       talk: pose.talk,
-      facing: isSide ? Math.sign(headFacing) * 0.65 : headFacing,
+      facing: effFacing,
       browThick: spec.browThick,
+      browStyle: spec.browStyle,
+      browColor: spec.browColor,
       nose: spec.nose || isSide,
+      noseStyle: spec.noseStyle,
+      skinShadow: spec.skinShadow,
+      beautyMark: spec.beautyMark,
+      fullLips: spec.fullLips,
+      upperLipColor: spec.upperLipColor,
+      faintMustache: spec.faintMustache,
       mouthColor: spec.mouthColor,
       tongueColor: spec.tongueColor,
       lipColor: spec.lipColor,
@@ -2392,10 +3151,12 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
       eyeShine: spec.eyeShine,
     });
 
-    const shift = (isSide ? Math.sign(headFacing) * 0.65 : headFacing) * W * 0.085;
+    const eyeG = computeEyeGeom(CX, cy, W, spec.eyeStyle, effFacing);
+    const shift = eyeG.shift;
     if (spec.glasses) {
-      const ex = (s: number) => CX + shift + s * W * 0.148;
-      const eyeY = cy + 12 - hatPop * 9;
+      const ex = eyeG.ex;
+      const lensScaleX = eyeG.eyeScaleX;
+      const eyeY = eyeG.eyeY - hatPop * 9;
       ctx.save();
       if (spec.glassesStyle === 'tech') {
         // Kacamata kotak tipis anti-radiasi anak Teknik Informatika
@@ -2404,28 +3165,30 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         const gw = 58;
         const gh = 44;
         for (const s of [-1, 1]) {
-          const lx = ex(s) - gw / 2;
+          const sx = lensScaleX(s);
+          const wS = gw * sx;
+          const lx = ex(s) - wS / 2;
           const ly = eyeY - gh / 2;
           ctx.fillStyle = 'rgba(150, 224, 255, 0.19)';
           ctx.beginPath();
-          ctx.roundRect(lx, ly, gw, gh, 10);
+          ctx.roundRect(lx, ly, wS, gh, 10);
           ctx.fill();
           // Pantulan layar tipis diagonal di lensa
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.52)';
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.moveTo(lx + 10, ly + 14);
-          ctx.lineTo(lx + 20, ly + 6);
+          ctx.moveTo(lx + 10 * sx, ly + 14);
+          ctx.lineTo(lx + 20 * sx, ly + 6);
           ctx.stroke();
           ctx.strokeStyle = '#1f2638';
           ctx.lineWidth = 5;
           ctx.beginPath();
-          ctx.roundRect(lx, ly, gw, gh, 10);
+          ctx.roundRect(lx, ly, wS, gh, 10);
           ctx.stroke();
         }
         ctx.beginPath();
-        ctx.moveTo(ex(-1) + gw / 2, eyeY - 4);
-        ctx.lineTo(ex(1) - gw / 2, eyeY - 4);
+        ctx.moveTo(ex(-1) + (gw * lensScaleX(-1)) / 2, eyeY - 4);
+        ctx.lineTo(ex(1) - (gw * lensScaleX(1)) / 2, eyeY - 4);
         ctx.stroke();
       } else if (spec.glassesStyle === 'thick') {
         // Kacamata bingkai tebal gelap (pedagang): lensa kotak-bulat, bingkai bertepi ink + kilau tipis agar
@@ -2434,8 +3197,9 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         const gh = 48;
         const frame = '#1d1719';
         const lens = (s: number) => {
+          const wS = gw * lensScaleX(s);
           ctx.beginPath();
-          ctx.roundRect(ex(s) - gw / 2, eyeY - gh / 2, gw, gh, 16);
+          ctx.roundRect(ex(s) - wS / 2, eyeY - gh / 2, wS, gh, 16);
         };
         for (const s of [-1, 1]) {
           ctx.fillStyle = 'rgba(225, 240, 255, 0.07)';
@@ -2445,10 +3209,10 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         // Jembatan hidung & gagang samping
         const bridge = () => {
           ctx.beginPath();
-          ctx.moveTo(ex(-1) + gw / 2 - 2, eyeY - 8);
-          ctx.quadraticCurveTo(CX + shift, eyeY - 15, ex(1) - gw / 2 + 2, eyeY - 8);
+          ctx.moveTo(ex(-1) + (gw * lensScaleX(-1)) / 2 - 2, eyeY - 8);
+          ctx.quadraticCurveTo(CX + shift, eyeY - 15, ex(1) - (gw * lensScaleX(1)) / 2 + 2, eyeY - 8);
           const far = headFacing >= 0 ? -1 : 1;
-          ctx.moveTo(ex(far) + far * (gw / 2), eyeY - 10);
+          ctx.moveTo(ex(far) + far * ((gw * lensScaleX(far)) / 2), eyeY - 10);
           ctx.lineTo(CX + far * W * 0.47, eyeY - 14);
         };
         for (const [col, lw] of [[ink, 12], [frame, 8]] as const) {
@@ -2465,13 +3229,14 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
         ctx.lineWidth = 3;
         for (const s of [-1, 1]) {
-          const lx = ex(s) - gw / 2;
+          const wS = gw * lensScaleX(s);
+          const lx = ex(s) - wS / 2;
           const ly = eyeY - gh / 2;
           ctx.beginPath();
-          ctx.moveTo(lx + 12, ly - 1);
-          ctx.lineTo(lx + 28, ly - 1);
-          ctx.moveTo(lx + gw - 16, ly + 12);
-          ctx.lineTo(lx + gw - 24, ly + 22);
+          ctx.moveTo(lx + 12 * lensScaleX(s), ly - 1);
+          ctx.lineTo(lx + 28 * lensScaleX(s), ly - 1);
+          ctx.moveTo(lx + wS - 16 * lensScaleX(s), ly + 12);
+          ctx.lineTo(lx + wS - 24 * lensScaleX(s), ly + 22);
           ctx.stroke();
         }
       } else {
@@ -2479,15 +3244,16 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         ctx.lineWidth = 5;
         const gr = 30;
         for (const s of [-1, 1]) {
+          const rx = gr * lensScaleX(s);
           ctx.fillStyle = 'rgba(220, 245, 255, 0.16)';
           ctx.beginPath();
-          ctx.arc(ex(s), eyeY, gr, 0, TAU);
+          ctx.ellipse(ex(s), eyeY, rx, gr, 0, 0, TAU);
           ctx.fill();
           ctx.stroke();
         }
         ctx.beginPath();
-        ctx.moveTo(ex(-1) + gr - 2, eyeY);
-        ctx.quadraticCurveTo(CX + shift, eyeY - 5, ex(1) - gr + 2, eyeY);
+        ctx.moveTo(ex(-1) + gr * lensScaleX(-1) - 2, eyeY);
+        ctx.quadraticCurveTo(CX + shift, eyeY - 5, ex(1) - gr * lensScaleX(1) + 2, eyeY);
         ctx.stroke();
       }
       ctx.restore();
@@ -2606,6 +3372,44 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
         ctx.quadraticCurveTo(CX, headTop - 26, CX + 38, headTop - 10);
         ctx.stroke();
       }
+    } else if (hairStyle === 'fadeCrop') {
+      // Potongan rambut pendek bertekstur pria lokal sesuai foto Ebot:
+      // atas hitam tebal bervolume lembut menyapu ke kanan + garis rambut dahi organik + sideburn taper rapi bersih!
+      const lift = -hatPop * 10;
+      const hp = () => {
+        ctx.beginPath();
+        // Jambang/sideburn pendek meruncing bersih di depan telinga kiri
+        ctx.moveTo(CX - W * 0.485, cy + 4);
+        ctx.quadraticCurveTo(CX - W * 0.525, cy - 28, CX - W * 0.475, headTop + 4);
+        // Mahkota atas penuh bervolume lembut menyapu alami dari kiri ke kanan (persis siluet foto Ebot)
+        ctx.bezierCurveTo(CX - W * 0.42, headTop - 48 + lift, CX - W * 0.08, headTop - 62 + lift, CX + W * 0.24, headTop - 50 + lift);
+        ctx.bezierCurveTo(CX + W * 0.47, headTop - 38 + lift, CX + W * 0.525, headTop + 2, CX + W * 0.485, cy + 2);
+        // Masuk dari jambang kanan naik ke garis rambut dahi dengan sedikit lekuk tekstur gelombang natural
+        ctx.quadraticCurveTo(CX + W * 0.435, cy - 22, CX + W * 0.395, headTop + 34);
+        ctx.quadraticCurveTo(CX + W * 0.22, headTop + 20, CX + W * 0.05, headTop + 27);
+        ctx.quadraticCurveTo(CX - W * 0.14, headTop + 18, CX - W * 0.355, headTop + 32);
+        ctx.quadraticCurveTo(CX - W * 0.43, cy - 18, CX - W * 0.485, cy + 4);
+        ctx.closePath();
+      };
+      inked(ctx, hp, hairColor, ink, 5.2, 3, 4);
+
+      // Tekstur helai gelombang pendek di mahkota rambut agar hidup seperti foto asli
+      ctx.save();
+      hp();
+      ctx.clip();
+      ctx.strokeStyle = hairHighlight ?? '#33364a';
+      ctx.lineWidth = 4.8;
+      for (const [ox, oy, dx, dy] of [
+        [-0.26, -16, 0.38, -8],
+        [-0.1, -34, 0.36, 2],
+        [-0.16, 4, 0.42, -2],
+      ]) {
+        ctx.beginPath();
+        ctx.moveTo(CX + W * ox, headTop + oy + lift);
+        ctx.quadraticCurveTo(CX + W * (ox + dx * 0.5), headTop + oy - 14 + lift, CX + W * (ox + dx), headTop + oy + dy + lift);
+        ctx.stroke();
+      }
+      ctx.restore();
     } else if (hairStyle === 'spiky' || hairStyle === 'quiff') {
       const hp = () => {
         ctx.beginPath();
@@ -2626,7 +3430,7 @@ export function drawActor(ctx: Ctx, actor: CastPresetId | CharacterSpec, pose: A
   }
 
   // --- 8. HEADGEAR (Peci / Cap / Iket / Helmet) ---
-  drawHeadgear(ctx, spec, W, headTop, cy, hatPop, isBack);
+  drawHeadgear(ctx, spec, W, headTop, cy, hatPop, isBack, isBack34, headFacing);
 
   // --- 9. EFEK KOMIK 2D (ikut kemiringan kepala) ---
   const fx = pose.fx !== undefined ? pose.fx : isBack ? 'none' : defaultFxFor(pose.face);

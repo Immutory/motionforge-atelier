@@ -65,7 +65,7 @@ const ID_KY: [number, number, number, number, number, number, number] = [0, 0.1,
 const ID_KM: [number, number, number, number, number, number, number] = [1, 1, 1, 1, 1, 1, 1];
 
 /** Preset grade siap pakai berdasarkan references/reports/grade.md (disesuaikan untuk pipeline two-tone cerah). */
-export const GRADE_PRESETS: Record<'noon' | 'amber' | 'dusk' | 'neon', GradeParams> = {
+export const GRADE_PRESETS: Record<'noon' | 'amber' | 'dusk' | 'night' | 'neon', GradeParams> = {
   noon: {
     lift: [0.022, 0.012, 0.014],
     gain: [1.02, 1.01, 1.0],
@@ -102,6 +102,18 @@ export const GRADE_PRESETS: Record<'noon' | 'amber' | 'dusk' | 'neon', GradePara
     vignette: [0.2, 0.36],
     amount: 1,
   },
+  night: {
+    lift: [0.012, 0.014, 0.028],
+    gain: [1.01, 1.0, 1.03],
+    contrast: 1.07,
+    saturation: 1.06,
+    satZones: [0.94, 1.04, 1.12],
+    tintS: [-0.006, 0.0, 0.024],
+    tintM: [0.002, 0.0, 0.012],
+    tintH: [0.014, 0.006, -0.008],
+    vignette: [0.22, 0.35],
+    amount: 1,
+  },
   neon: {
     lift: [0.01, 0.008, 0.025],
     gain: [1.02, 1.02, 1.04],
@@ -135,29 +147,55 @@ export const DEFAULT_POST: PostParams = {
 };
 
 /**
+ * Preset Post-Processing v3.0 gaya hybrid 2,5D (`contohvideo/download.mp4` + `(1).mp4`):
+ * outline dunia 3D jauh lebih halus agar siluet karakter 2D ber-ink *pop* maksimal di depan latar 3D,
+ * dipadu atmospheric depth lembut dan shallow DOF foreground/background.
+ */
+export const POST_HYBRID_25D: PostParams = {
+  ink: {
+    thickness: 1.6,
+    widthFar: 0.9,
+    creaseScale: 0.48,
+    concaveGain: 0.35,
+    strength: 0.42,
+    color: '#1b1626',
+    fogColor: '#c4ddf4',
+    fogNear: 22,
+    fogFar: 320,
+  },
+  blur: 0.42,
+  nearScale: 1.6,
+  focus: 4.5,
+  bloom: { strength: 0.28, radius: 0.55, threshold: 1.0 },
+  grade: GRADE_PRESETS.noon,
+};
+
+/**
  * Urutan wajib: scene, ink (world-only, needsSwap=false), lens (thin-lens DOF), bloom, tone map netral, grade.
  * Mengambil alih render R3F lewat useFrame berprioritas 1. Di Remotion, ThreeCanvas memanggil
  * advance() per frame sehingga callback ini jalan tepat sekali per frame.
  */
 export const PostStack: React.FC<{ params: PostParams; debugInk?: 0 | 1 | 2 }> = ({ params, debugInk = 0 }) => {
-  const { gl, scene, camera, size } = useThree();
+  const { gl, scene, camera } = useThree();
   const latest = useRef({ params, debugInk });
   latest.current = { params, debugInk };
 
   const stack = useMemo(() => {
     const drawing = gl.getDrawingBufferSize(new THREE.Vector2());
-    const target = new THREE.WebGLRenderTarget(drawing.x, drawing.y, {
+    const w = Math.max(1, Math.round(drawing.x));
+    const h = Math.max(1, Math.round(drawing.y));
+    const target = new THREE.WebGLRenderTarget(w, h, {
       type: THREE.HalfFloatType,
       samples: 4,
-      depthTexture: new THREE.DepthTexture(drawing.x, drawing.y, THREE.UnsignedIntType),
+      depthTexture: new THREE.DepthTexture(w, h, THREE.UnsignedIntType),
     });
     const composer = new EffectComposer(gl, target);
     composer.setPixelRatio(1);
-    composer.setSize(drawing.x, drawing.y);
+    composer.setSize(w, h);
 
     const ink = new InkPass(scene, camera as THREE.PerspectiveCamera);
     const lens = new LensPass();
-    const bloom = new UnrealBloomPass(new THREE.Vector2(drawing.x, drawing.y), 0.35, 0.6, 1.0);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.35, 0.6, 1.0);
     const output = new OutputPass();
     const grade = new ShaderPass({
       uniforms: {
@@ -184,8 +222,7 @@ export const PostStack: React.FC<{ params: PostParams; debugInk?: 0 | 1 | 2 }> =
       composer.addPass(p);
     }
     return { composer, ink, lens, bloom, output, grade };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gl, scene, camera, size.width, size.height]);
+  }, [gl, scene, camera]);
 
   useEffect(
     () => () => {
@@ -203,7 +240,12 @@ export const PostStack: React.FC<{ params: PostParams; debugInk?: 0 | 1 | 2 }> =
     const { params: p, debugInk: dbg } = latest.current;
     const cam = camera as THREE.PerspectiveCamera;
     const drawing = gl.getDrawingBufferSize(new THREE.Vector2());
-    const s = pxScale(drawing.y);
+    const dw = Math.max(1, Math.round(drawing.x));
+    const dh = Math.max(1, Math.round(drawing.y));
+    if (dw !== stack.composer.renderTarget1.width || dh !== stack.composer.renderTarget1.height) {
+      stack.composer.setSize(dw, dh);
+    }
+    const s = pxScale(dh);
 
     gl.toneMapping = THREE.NeutralToneMapping;
 

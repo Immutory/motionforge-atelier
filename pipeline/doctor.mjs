@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { findPython } from './py.mjs';
 
 const checks = [
-  ['node', ['--version'], (v) => Number(v.replace('v', '').split('.')[0]) >= 18, 'Node 18 atau lebih baru'],
+  ['node', ['--version'], (v) => Number(v.replace('v', '').split('.')[0]) >= 22, 'Node 22 atau lebih baru'],
   ['ffmpeg', ['-version'], (v) => /ffmpeg version/.test(v), 'FFmpeg ada di PATH'],
   ['ffprobe', ['-version'], (v) => /ffprobe version/.test(v), 'ffprobe ada di PATH'],
 ];
@@ -23,10 +23,21 @@ if (py) {
   const okNp = np.status === 0;
   if (!okNp) bad++;
   console.log(`${okNp ? 'OK  ' : 'GAGAL'}  numpy untuk sound lab  ${okNp ? '(' + np.stdout.trim() + ')' : ''}`);
+  const sp = spawnSync(py.cmd, ['-c', 'import scipy; print(scipy.__version__)'], { encoding: 'utf8' });
+  const okSp = sp.status === 0;
+  if (!okSp) bad++;
+  console.log(`${okSp ? 'OK  ' : 'GAGAL'}  scipy untuk sound lab (loudness)  ${okSp ? '(' + sp.stdout.trim() + ')' : ''}`);
+  const pil = spawnSync(py.cmd, ['-c', 'import PIL; print(PIL.__version__)'], { encoding: 'utf8' });
+  console.log(
+    pil.status === 0
+      ? `OK    Pillow (PIL) untuk contact sheet  (${pil.stdout.trim()})`
+      : 'INFO  Pillow (PIL) belum terpasang (opsional; dibutuhkan oleh pipeline/make_sheet.py).',
+  );
 } else {
-  bad += 2;
+  bad += 3;
   console.log('GAGAL  Python 3.10 atau lebih baru');
   console.log('GAGAL  numpy untuk sound lab');
+  console.log('GAGAL  scipy untuk sound lab (loudness)');
 }
 
 console.log(

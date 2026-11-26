@@ -55,7 +55,8 @@ const HIDE_CENTER_POLES = [
   'KG_StreetFit_Travers_05',
   'KG_StreetFit_Insul_05',
   'KG_StreetFit_ArmBrace_05',
-  'KG_StreetFit_TrvBrace',
+  'KG_StreetFit_TrvBraceN_05',
+  'KG_StreetFit_TrvBraceS_05',
   'KG_StreetFit_LampNeck_05',
   'KG_P6_TrafficLight_West',
   'KG_P5_Umbul_Pole_2',
@@ -166,10 +167,10 @@ export const YoutubeBannerProduction: React.FC = () => {
               BARIS BELAKANG (Di belakang konter & berdiri rapat — 100% TANGAN KOSONG!)
           ================================================================== */}
 
-          {/* Bu Siti melambai ceria di belakang konter warkop */}
+          {/* Bu Siti melambai ceria di atas pallet permanen belakang konter warkop (y = 0.44 m, z = -2.22 m) */}
           <ActorBillboard
             actor="buSiti"
-            position={[0.56, 0, -1.65]}
+            position={[0.56, 0.44, -2.22]}
             faceTo={BANNER_CAM.pos}
             height={2.02}
             pose={{
@@ -469,7 +470,7 @@ export const YoutubeBannerProduction: React.FC = () => {
         <div
           style={{
             position: 'absolute',
-            left: 695 * s * (width / 2560),
+            left: 695 * (width / 2560),
             top: 562 * s,
             pointerEvents: 'none',
             fontFamily: '"Segoe UI", system-ui, -apple-system, sans-serif',

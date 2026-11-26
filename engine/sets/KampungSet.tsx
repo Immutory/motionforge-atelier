@@ -154,26 +154,27 @@ export const KAMPUNG_SPOTS = {
   musalaTaman: [-113.3, 0.08, -23.0] as Vec3,
 } as const;
 
-/** Metadata spasial & ergonomi spot kunci Kampung Rawa Sari RT 04 (v2.0). */
+/** Metadata spasial & ergonomi spot kunci Kampung Rawa Sari RT 04 (v3.0, terkalibrasi AABB kampung.glb). */
 export const KAMPUNG_SPOT_META: Partial<Record<keyof typeof KAMPUNG_SPOTS, SpotMeta>> = {
   warkopCounter: {
-    counterTopY: 1.04,
-    ergonomicBaseY: 0.44,
-    note: 'Konter luar Warkop di dunia Kampung; gunakan ergonomicBaseY saat penjaga berdiri di balik konter.',
+    tableTopY: 0.97,
+    note: 'Spot pelanggan berdiri di depan etalase gorengan Warkop ([0.85, 0, 0.35], y = 0; KG_WK_CounterTop maxY = 0,97 m). Tidak memakai ergonomicBaseY karena di sisi depan konter.',
   },
   bakmieTioVendor: {
-    counterTopY: 0.92,
-    ergonomicBaseY: 0.34,
-    note: 'Sisi dandang gerobak Bakmie Tio (bebas etalase); cek checkCounterVisibility jika berdiri di balik gerobak.',
+    counterTopY: 0.965,
+    tableTopY: 0.92,
+    ergonomicBaseY: 0.30,
+    note: 'Sisi dandang gerobak Bakmie Tio: Counter maxY=0,965 m, ServeLedge maxY=0,917 m (≈0,92 m), pijakan permanen KG_Grb_BakmieTio_VendorPallet topY=0,30 m, dandang pendek bibir y=1,205 m.',
   },
   esBuahYuniVendor: {
-    counterTopY: 0.92,
-    ergonomicBaseY: 0.34,
-    note: 'Sisi mesin serut gerobak Es Buah Mbak Yuni.',
+    counterTopY: 0.965,
+    tableTopY: 0.92,
+    ergonomicBaseY: 0.30,
+    note: 'Sisi mesin serut gerobak Es Buah Mbak Yuni: Counter maxY=0,965 m, ServeLedge maxY=0,916 m (≈0,92 m), pijakan permanen KG_Grb_EsBuahYuni_VendorPallet topY=0,30 m.',
   },
   halteKampus: {
-    seatY: 0.45,
-    note: 'Peron halte bus kampus depan plaza FIK (bangku tunggu seatY ≈ 0,45 m).',
+    seatY: 0.50,
+    note: 'Peron halte bus kampus depan plaza FIK (terkalibrasi AABB: KG_P5_Halte_Platform maxY = 0,16 m, KG_P5_Halte_Bench maxY = 0,50 m -> sitHeight relatif lantai peron = 0,34 m).',
   },
 };
 
@@ -186,7 +187,7 @@ function resolveMode(mode?: KampungTimeMode, lightId?: string): KampungTimeMode 
 }
 
 /**
- * Dunia 3D Terpadu `<KampungSet />` — **Kampung Rawa Sari RT 04** (`public/sets/kampung.glb`, `160m × 140m`):
+ * Dunia 3D Terpadu `<KampungSet />` — **Kampung Rawa Sari RT 04** (`public/sets/kampung.glb`, `264m × 220m`):
  * - Mendukung **3 mode pencahayaan penuh**: `mode="siang"` (Siang Cerah), `mode="sore"` (Golden Hour), & `mode="malam"` (Malam Hangat).
  * - Saat `sore` dan `malam`, lampu jalan, traffic light, lampu Warkop, neon sign, & jendela gedung otomatis menyala hangat
  *   dilengkapi *point light pools* yang menerangi jalan aspal, gerobak kaki lima, dan karakter 2D.
@@ -203,14 +204,18 @@ export const KampungSet: React.FC<KampungSetProps> = ({
   const activeTime = timeOfDay ?? preset.timeOfDay;
   const activeGlow = glowScale ?? preset.glowScale;
 
-  // Koordinat Three.js (Y = tinggi, Z = -BlenderY) untuk lampu praktis saat Golden Hour & Malam
+  // Koordinat Three.js (Y = tinggi, Z = -BlenderY) untuk lampu jalan koridor v2 (dalam batas aman uniform WebGL)
   const streetLampPositions: Vec3[] = [
+    [-90, 5.2, 4.4],
+    [-40, 5.2, 4.4],
     [-30, 5.2, 4.4],
     [-20, 5.2, 4.4],
     [-10, 5.2, 4.4],
     [0, 5.2, 4.4],
     [10, 5.2, 4.4],
     [20, 5.2, 4.4],
+    [40, 5.2, 4.4],
+    [88, 5.2, 4.4],
   ];
 
   return (

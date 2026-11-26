@@ -21,7 +21,7 @@ import {
   type PostParams,
   type Vec3,
 } from '../../engine';
-import { SetPieces } from '../_starter/set';
+import { SetPieces } from './LabStageSet';
 
 const FPS = 30;
 const SHOCK_AT = 215;
@@ -42,7 +42,7 @@ const ANIM_CAMS: CamKey[] = [
   { frame: SHOCK_AT, pose: { pos: [0.05, 1.56, 3.85], look: [0, 1.28, 0.3], fov: 35, roll: -1.6 }, cut: true },
 ];
 
-const ANIM_KICKS: Kick[] = [{ frame: SHOCK_AT, strength: 1.1, length: 8 }];
+const ANIM_KICKS: Kick[] = [{ frame: SHOCK_AT, strength: 0.06, length: 8 }];
 
 const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 

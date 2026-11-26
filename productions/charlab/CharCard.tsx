@@ -71,6 +71,7 @@ export const CharCard: React.FC<CharCardProps> = ({
         depthPacking: THREE.RGBADepthPacking,
         map: texture,
         alphaTest: 0.35,
+        side: THREE.DoubleSide,
       }),
     [],
   );

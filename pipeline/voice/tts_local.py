@@ -65,21 +65,29 @@ def load_chatterbox_indo(device: str = "cuda", use_indo_weights: bool = True):
     print(f"[vo:gen] Memuat ChatterboxTTS di {actual_device}...")
     try:
         model = ChatterboxTTS.from_pretrained(device=actual_device)
-    except Exception:
-        # Otomatis coba cache lokal bila lingkungan sedang offline
+    except (OSError, ConnectionError) as net_err:
+        print(f"[vo:gen] Koneksi HuggingFace gagal ({net_err}), mencoba cache lokal...")
+        prev_off = os.environ.get("HF_HUB_OFFLINE")
         os.environ["HF_HUB_OFFLINE"] = "1"
-        model = ChatterboxTTS.from_pretrained(device=actual_device)
+        try:
+            model = ChatterboxTTS.from_pretrained(device=actual_device)
+        finally:
+            if prev_off is None:
+                os.environ.pop("HF_HUB_OFFLINE", None)
+            else:
+                os.environ["HF_HUB_OFFLINE"] = prev_off
 
     if use_indo_weights:
         print(f"[vo:gen] Memuat bobot Bahasa Indonesia: {INDO_REPO_ID}/{INDO_T3_FILE} ...")
         try:
             ckpt_path = hf_hub_download(repo_id=INDO_REPO_ID, filename=INDO_T3_FILE)
-        except Exception:
-            os.environ["HF_HUB_OFFLINE"] = "1"
+        except (OSError, ConnectionError):
             ckpt_path = hf_hub_download(repo_id=INDO_REPO_ID, filename=INDO_T3_FILE, local_files_only=True)
         t3_state = load_file(ckpt_path, device="cpu")
         model.t3.load_state_dict(t3_state)
         if actual_device == "cuda":
+            if torch.cuda.is_bf16_supported():
+                model.t3.to(dtype=torch.bfloat16)
             torch.cuda.empty_cache()
 
     return model, actual_device
@@ -143,6 +151,7 @@ def synth_to_studio_wav(
     seed: int | None = None,
 ) -> Path:
     """Sintesis 1 kalimat ke WAV 48 kHz mono 16-bit PCM."""
+    import torch
     import torchaudio as ta
 
     _apply_seed(seed)
@@ -154,9 +163,20 @@ def synth_to_studio_wav(
     if audio_prompt_path:
         kwargs["audio_prompt_path"] = audio_prompt_path
 
-    wav = model.generate(text, **kwargs)
+    use_bf16 = (
+        torch.cuda.is_available()
+        and torch.cuda.is_bf16_supported()
+        and str(getattr(model, "device", "")).startswith("cuda")
+    )
+    with torch.inference_mode():
+        if use_bf16:
+            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+                wav = model.generate(text, **kwargs)
+        else:
+            wav = model.generate(text, **kwargs)
     if wav.dim() == 1:
         wav = wav.unsqueeze(0)
+    wav = wav.float()
 
     out_wav.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
@@ -189,7 +209,9 @@ def main() -> None:
 
     presets = load_voice_presets()
 
-    if args.text:
+    if args.text is not None:
+        if not args.text.strip():
+            raise SystemExit("Mode --text tidak boleh kosong.")
         if not args.out:
             raise SystemExit("Mode --text membutuhkan --out <path.wav>")
         model, actual_device = load_chatterbox_indo(device=args.device, use_indo_weights=not args.base_only)
@@ -237,6 +259,11 @@ def main() -> None:
     actual_device = args.device
     if needs_tts:
         model, actual_device = load_chatterbox_indo(device=args.device, use_indo_weights=not args.base_only)
+    else:
+        from align_words import detect_device
+
+        detected_dev, _ = detect_device()
+        actual_device = detected_dev if args.device == "cuda" and detected_dev != "cuda" else args.device
 
     clip_entries: list[tuple[Path, float, dict]] = []
     for idx, line in enumerate(lines, start=1):
@@ -271,21 +298,22 @@ def main() -> None:
     print(f"[vo:gen] Gabungan master -> {master_wav} ({len(clip_entries)} klip)")
 
     if not args.no_align:
-        from align_words import load_whisper_model, transcribe_words
-
-        w_model = load_whisper_model(args.whisper_model, device=actual_device)
         all_words = []
-        for (clip_path, _gap, line), (start_sec, _end_sec) in zip(clip_entries, spans):
-            if not line["align"]:
-                continue
-            w = transcribe_words(
-                clip_path,
-                model=w_model,
-                speaker=line["speaker"],
-                offset_sec=start_sec,
-                initial_prompt=line["text"] or None,
-            )
-            all_words.extend(w)
+        if any(line["align"] for _, _, line in clip_entries):
+            from align_words import load_whisper_model, transcribe_words
+
+            w_model = load_whisper_model(args.whisper_model, device=actual_device)
+            for (clip_path, _gap, line), (start_sec, _end_sec) in zip(clip_entries, spans):
+                if not line["align"]:
+                    continue
+                w = transcribe_words(
+                    clip_path,
+                    model=w_model,
+                    speaker=line["speaker"],
+                    offset_sec=start_sec,
+                    initial_prompt=line["text"] or None,
+                )
+                all_words.extend(w)
 
         words_path = out_dir / "words.json"
         words_path.write_text(json.dumps(all_words, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

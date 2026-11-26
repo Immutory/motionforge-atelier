@@ -15,7 +15,7 @@ import {
   type PostParams,
   type Vec3,
 } from '../../engine';
-import { SetPieces } from '../_starter/set';
+import { SetPieces } from './LabStageSet';
 
 const CameraRig: React.FC<{ pose: CamPose }> = ({ pose }) => {
   const cam = useThree().camera as THREE.PerspectiveCamera;
@@ -45,7 +45,7 @@ const SLIDES: RigSlide[] = [
     light: 'noon',
     pose: { pos: [0, 1.98, 10.9], look: [0, 1.32, 0], fov: 40, roll: 0 },
     blur: 0,
-    title: 'MODULAR RIG — 12 EKSPRESI & EFEK KOMIK',
+    title: 'MODULAR RIG — 13 EKSPRESI & EFEK KOMIK',
     subtitle: 'angry · laugh · skeptical · idea (terintegrasi penuh di engine/cast/)',
     labels: ['angry + anger', 'laugh', 'skeptical + ?', 'idea + sparkle'],
   },
@@ -65,7 +65,7 @@ const SLIDES: RigSlide[] = [
     light: 'noon',
     pose: { pos: [0, 1.98, 10.9], look: [0, 1.32, 0], fov: 40, roll: 0 },
     blur: 0,
-    title: 'MODULAR RIG — MULTI-ANGLE (4 SUDUT PANDANG)',
+    title: 'MODULAR RIG — MULTI-ANGLE (8-ARAH / 5 VIEW)',
     subtitle: 'front · threeQuarter · side (profil) · back (tampak punggung + ransel)',
     labels: ['front', 'threeQuarter', 'side', 'back'],
   },

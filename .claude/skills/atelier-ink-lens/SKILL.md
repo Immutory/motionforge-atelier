@@ -1,38 +1,27 @@
 ---
 name: atelier-ink-lens
-description: Configure the post-processing chain (`engine/post/`): ink outlines with `NOINK` mask, depth of field, bloom, neutral tone mapping, grade, and shot transitions (cross-dissolve, foreground wipe, flash). Use when outlines look wrong, blur overwrites lines, stills differ from final renders, or the user asks about DOF, bloom, or transitions.
+description: Configure the post-processing chain (`engine/post/`): `POST_HYBRID_25D` (recommended default for new v3.5 productions) & `DEFAULT_POST` ink outlines with `NOINK` mask, thin-lens DOF, bloom, neutral tone mapping, grade, canonical `<CameraRig />` wiring, `SUB_STACK = 'label-above'` subtitles, and shot transitions.
 ---
 
-# Ink and Lens (Atelier v2.0)
+# Ink and Lens (Atelier v3.5 — Soft-Lit 2.5D Polish)
 
-Post is where the 3D scene turns into a crisp hybrid 2D-in-3D illustration aligned with `contohvideo/` and `references/reports/outlines.md` + `depth.md` + `grade.md`. The order of passes matters more than any single parameter.
+Post turns the soft-lit matte 3D scene and 2.5D characters into a cohesive illustration aligned with `contohvideo/download.mp4`, `contohvideo/(1).mp4`, and `references/reports/{outlines,depth,grade}.md`.
 
 ## Order (Do Not Change)
-1. **Ink (`InkPass`)** — with **`NOINK` layer isolation** active!
-2. **Lens / Depth of Field (`LensPass`)**
-3. **Bloom (`UnrealBloomPass`)** — HDR emissives only, threshold ~1.0
-4. **Neutral Tone Mapping**
-5. **Color Grade**
+1. **Ink (`InkPass`)** — with **`NOINK` layer isolation** active (also 3×3 max `fogK` anti-halo on fogged silhouettes).
+2. **Lens / Depth of Field (`LensPass`)** — 16-sample spiral thin-lens DOF, focused via canonical `viewAxisFocus(pose.pos, pose.look, target)`.
+3. **Bloom (`UnrealBloomPass`)** — HDR emissives only, threshold `1.0` (protected by `uLocalLight` Reinhard soft-clamp).
+4. **Neutral Tone Mapping (`OutputPass`)**
+5. **Color Grade (`GRADE_PRESETS`: `noon`, `amber`, `dusk`, `night`, `neon`)**
 6. **Editorial Transitions** (`cut`, `dissolve` 8–14f, `wipe` 8–12f, `flash` 4–6f)
-MSAA 4 on the composer target.
+MSAA 4 on the composer target; automatic `composer.setSize` sync on DPR/buffer resize.
 
-## Why This Order
-- Ink runs in its own pass **before** blur so DOF never erases or smears 3D set linework.
-- Bloom runs **after** blur so practical lamp/neon/screen glow stays luminous and crisp.
-- Neutral tone mapping runs before grade so grading operates on predictable linear values.
+## Post Presets (`engine/post/PostStack.tsx`)
+- **`POST_HYBRID_25D` (Recommended v3.5 Default for New Episodes)**: Subtle world outlines (`strength: 0.42`, `thickness: 1.6`), atmospheric depth, and foreground/background shallow DOF (`nearScale: 1.6`) so 2D characters with Canvas2D ink *pop* cleanly against soft-lit matte 3D worlds (`download.mp4`).
+- **`DEFAULT_POST`**: Crisp comic world outlines (`strength: 0.96`, `thickness: 3.4`) — 100% preserved for EP01–EP04 backward compatibility.
 
-## Implementation (`engine/post/`)
-- Code lives in `engine/post/`: `PostStack.tsx` (composer), `passes.ts` (ink & lens), `shaders.ts`, `layers.ts` (`NOINK`), `scale.ts` (`pxScale`).
-- Per-production parameters live in `POST` (`look.ts`) and `DOF` (`shots.ts`).
-- `LensPass` uses a 16-sample spiral kernel; upgrade to 2-pass only if bokeh artifacts appear in close-ups.
-
-## Ink Rules (`NOINK` Active)
-- Near-black ink color, thicker close to camera and thinner with distance.
-- Lines on 3D silhouettes, depth discontinuities, and sharp creases only — no noisy lines on wall-floor joins or the horizon.
-- **2D characters (`<ActorBillboard />`, `<CatBillboard />`) and crisp 3D signage (`SignMain`, `MenuLine`, etc.) live on the `NOINK` layer (`engine/post/layers.ts`)**, which `InkPass` excludes cleanly so 2D sprites keep their exact Canvas2D ink without double outlines.
-
-## Resolution Scaling
-Every pixel-sized parameter multiplies by `pxScale(outputHeight)` (`outputHeight / 1920`). Stills at scale `0.5` and master renders at `1.0` (`1080×1920`) must match visually apart from resolution sharpness.
-
-## Grain
-Default off. Film grain inflates file sizes and degrades under YouTube/TikTok compression.
+## Wiring, Subtitles & Resolution Scaling (`Production.tsx`)
+- Import `<CameraRig />`, `viewAxisFocus`, `actorHandWorldPos`, and reusable 3D props (`engine/props/`) directly from `engine`.
+- Multiply every pixel-sized parameter by `pxScale(outputHeight)` (`outputHeight / 1920`) so 0.5x stills, native `1.0` (`1080×1920`) masters, and optional `--scale 1.3333` 2K renders match identically apart from sharpness.
+- **Pure Cinema & `SUB_STACK = 'label-above'`**: ZERO 2D HUD boxes/banners. Bottom subtitles sit strictly in `1485–1690 px` (`@1920`), speaker label above text, max 3 words/line, clear of mouths, and off during the closing loop tail (`loopCutFrame..TOTAL_FRAMES`).
+- **Film grain**: Default off.

@@ -1,8 +1,8 @@
-# 02. Alur produksi studio (Atelier v2.0)
+# 02. Alur produksi studio (Atelier v3.0 — 2.5D Reference Edition)
 
 | Fase | Nama | Agent utama | Keluaran | Gate |
 |------|------|-------------|----------|------|
-| 0 | Brief | showrunner | `brief.md` | |
+| 0 | Brief | story-architect (diorganisasi showrunner) | `brief.md` | |
 | 1 | Naskah | story-architect | `SCRIPT.md` dengan sumber & cast sheet | **G1** |
 | 2 | Suara | voice-director | `voice.wav`, `words.json`, `timeline.json`, `rms.json` | |
 | 3 | Blocking | cinematographer, set-designer, character-animator | `set.tsx`, `cast.ts`, `shots.ts` | |

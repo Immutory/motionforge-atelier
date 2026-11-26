@@ -31,16 +31,14 @@ def detect_device() -> tuple[str, str]:
 
 
 def load_whisper_model(model_size: str = "small", device: str | None = None, compute_type: str | None = None):
-    import os
     from faster_whisper import WhisperModel
 
-    dev, comp = detect_device()
-    dev = device or dev
+    det_dev, _ = detect_device()
+    dev = det_dev if (device == "cuda" and det_dev != "cuda") else (device or det_dev)
     comp = compute_type or ("float16" if dev == "cuda" else "int8")
     try:
         return WhisperModel(model_size, device=dev, compute_type=comp)
-    except Exception:
-        os.environ["HF_HUB_OFFLINE"] = "1"
+    except (OSError, ConnectionError):
         return WhisperModel(model_size, device=dev, compute_type=comp, local_files_only=True)
 
 

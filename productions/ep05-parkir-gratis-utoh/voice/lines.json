@@ -1,0 +1,40 @@
+{
+  "_doc": "Timeline suara EP05 'Parkir Gratis 0 Rupiah, Tapi Keluarnya Bayar 10 Ribu?!' (8 beat, 22 baris VO pengguna + 1 meong cuek Belang). Kelipatan 90f.",
+  "fps": 30,
+  "ttsTempo": 1.28,
+  "scriptBeats": [
+    {"beat": 1, "name": "Hook Mid-Action + Lateral Pan", "lead": 0.0},
+    {"beat": 2, "name": "Setup Loophole Kalibrasi Gravitasi", "lead": 0.16},
+    {"beat": 3, "name": "Eskalasi #1: Bang Udin Ojol (3 Tapak = 6RB)", "lead": 0.24},
+    {"beat": 4, "name": "Eskalasi #2: Raka SMA Freestyle (5 Tapak = 10RB)", "lead": 0.22},
+    {"beat": 5, "name": "Montage Kemenangan & Tally 80RB", "lead": 0.22},
+    {"beat": 6, "name": "Final Boss Pak Budi & Pematahan Loophole", "lead": 0.24},
+    {"beat": 7, "name": "Twist Surat Denda RT 200RB -> Total 320RB", "lead": 0.22},
+    {"beat": 8, "name": "Button Belang & Seamless Loop", "lead": 0.20}
+  ],
+  "lines": [
+    {"id": "U1",  "beat": 1, "speaker": "bangUtoh", "file": "user_vo/U1.mp3",          "start": 0.14, "gap": 0.0,  "text": "Resign dari bakmie! Modal kardus ini, utang seratus dua puluh ribu lunas sejam!"},
+    {"id": "E1",  "beat": 2, "speaker": "ebot",     "file": "user_vo/E1.mp3",          "gap": 0.14, "text": "Tapi tulisannya gratis, To. Duitnya dari mana?"},
+    {"id": "U2",  "beat": 2, "speaker": "bangUtoh", "file": "user_vo/U2.mp3",          "gap": 0.12, "text": "Baca bawahnya, Bot! Parkir nol rupiah, tapi kalau keluar kaki nyentuh aspal, kena biaya kalibrasi gravitasi dua ribu per tapak!"},
+    {"id": "E2",  "beat": 2, "speaker": "ebot",     "file": "user_vo/E2.mp3",          "gap": 0.12, "text": "Oh... pinter banget. Target seratus dua puluh ribu."},
+    {"id": "UD1", "beat": 3, "speaker": "bangUdin", "file": "user_vo/UD1.mp3",         "gap": 0.26, "text": "Sip, parkir gratis! Buruan nih, orderan mepet!"},
+    {"id": "E3",  "beat": 3, "speaker": "ebot",     "file": "user_vo/E3.mp3",          "gap": 0.12, "text": "Eits, Bang! Mundur tanpa kaki turun, ya."},
+    {"id": "UD2", "beat": 3, "speaker": "bangUdin", "file": "user_vo/UD2.mp3",         "gap": 0.12, "text": "Gampang! Gini doang mah—eh, eh, aduh! Kok oleng sih?!"},
+    {"id": "E4",  "beat": 3, "speaker": "ebot",     "file": "user_vo/E4.mp3",          "gap": 0.12, "text": "Satu, dua, tiga tapak. Jadi enam ribu."},
+    {"id": "UD3", "beat": 3, "speaker": "bangUdin", "file": "user_vo/UD3.mp3",         "gap": 0.12, "text": "Ck, ya udah nih! Parkir apaan sih!"},
+    {"id": "R1",  "beat": 4, "speaker": "raka",     "file": "user_vo/R1.mp3",          "gap": 0.24, "text": "Haha, gitu doang jatuh? Liat nih, skill anak sirkuit, Bang!"},
+    {"id": "R2",  "beat": 4, "speaker": "raka",     "file": "user_vo/R2.mp3",          "gap": 0.12, "text": "Tahan... tahan... eh kiri, eh kanan, waduh! Ampun, jatuh lagi!"},
+    {"id": "E5",  "beat": 4, "speaker": "ebot",     "file": "user_vo/E5.mp3",          "gap": 0.12, "text": "Lima tapak kali dua ribu... pas sepuluh ribu."},
+    {"id": "R3",  "beat": 4, "speaker": "raka",     "file": "user_vo/R3.mp3",          "gap": 0.12, "text": "Aduh, uang jajan gue melayang..."},
+    {"id": "E6",  "beat": 5, "speaker": "ebot",     "file": "user_vo/E6.mp3",          "gap": 0.24, "text": "Udah kekumpul delapan puluh ribu nih, To!"},
+    {"id": "U3",  "beat": 5, "speaker": "bangUtoh", "file": "user_vo/U3.mp3",          "gap": 0.12, "text": "Hahaha! Tinggal empat puluh ribu lagi, gue bebas total dari Mandor Oyen!"},
+    {"id": "U4",  "beat": 6, "speaker": "bangUtoh", "file": "user_vo/U4.mp3",          "gap": 0.26, "text": "Eh, Pak RT! Siap-siap catat tapaknya, Bot!"},
+    {"id": "PB1", "beat": 6, "speaker": "pakBudi",  "file": "user_vo/PB1.mp3",         "gap": 0.20, "text": "Kaki saya nggak turun dari motor, To—orang saya nggak naik!"},
+    {"id": "U5",  "beat": 6, "speaker": "bangUtoh", "file": "user_vo/U5.mp3",          "gap": 0.12, "text": "Lho?! Kok didorong jalan kaki, Pak?!"},
+    {"id": "PB2", "beat": 7, "speaker": "pakBudi",  "file": "user_vo/PB2.mp3",         "gap": 0.20, "text": "Aturanmu pinter, To. Tapi ini surat denda pungli fasilitas umum, dua ratus ribu."},
+    {"id": "E7",  "beat": 7, "speaker": "ebot",     "file": "user_vo/E7.mp3",          "gap": 0.35, "text": "Utang bakmie seratus dua puluh, tambah denda dua ratus... total tiga ratus dua puluh!"},
+    {"id": "U6",  "beat": 7, "speaker": "bangUtoh", "file": "user_vo/U6.mp3",          "gap": 0.12, "text": "Hah?! Tiga ratus dua puluh ribu?!"},
+    {"id": "B1",  "beat": 8, "speaker": "belang",   "audio": "assets/voices/oyen.wav", "trim": [0.02, 0.52], "gainDb": -1.0, "gap": 0.22, "text": "Meong."},
+    {"id": "U7",  "beat": 8, "speaker": "bangUtoh", "file": "user_vo/U7.mp3",          "gap": 0.18, "text": "Bot... ambil kardus baru."}
+  ]
+}

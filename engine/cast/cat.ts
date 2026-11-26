@@ -1,6 +1,6 @@
 import { drawComicFx, type ComicFx, type Expression } from './expressions';
 import type { TalkSample } from './lipsync';
-import type { ActorView } from './nusantara';
+import { plantedFoot, type ActorGait, type ActorView } from './nusantara';
 
 export type CatPresetId = 'oyen' | 'abu' | 'belang';
 export type CatStance = 'sit' | 'stand' | 'walk' | 'sleep' | 'jump';
@@ -51,6 +51,8 @@ export type CatPose = {
   view?: ActorView;
   /** 0..1 fase siklus langkah 4 kaki saat `stance === 'walk'`. */
   walkPhase?: number;
+  /** Jenis siklus langkah kucing saat `walk` (default `'planted'` di v3.5 agar bebas selip). */
+  gait?: ActorGait;
   /** Fase goyangan ekor kontinyu (radian atau `frame * 0.14`). */
   tailPhase?: number;
   /** -1..1 gerak kuping / ear twitch halus. */
@@ -79,6 +81,11 @@ export type CatPose = {
 export const CAT_W = 720;
 export const CAT_H = 660;
 export const CAT_SOLE_Y = 595;
+
+/** Jarak tempuh dunia (meter) untuk 1 siklus langkah kucing `walkPhase` 0→1 pada gait `planted`. */
+export function catWalkCycleMeters(height = 0.62): number {
+  return (4 * 48 * height) / CAT_H;
+}
 
 /**
  * 3 Preset Karakter Kucing 2D Orisinal MotionForge Atelier.
@@ -550,9 +557,10 @@ function drawCatHead(
   view: ActorView,
   isSleep: boolean,
 ) {
-  const isBack = view === 'back';
+  const isBack34 = view === 'backThreeQuarter';
+  const isBack = view === 'back' || isBack34;
   const isSide = view === 'side';
-  const facing = pose.facing ?? (isSide ? 1 : view === 'threeQuarter' ? 0.32 : 0);
+  const facing = pose.facing ?? (isSide ? 1 : isBack34 ? 0.72 : view === 'threeQuarter' ? 0.32 : 0);
   const face = pose.face;
   const blink =
     typeof pose.blink === 'number' ? pose.blink : pose.blink ? 1 : 0;
@@ -573,7 +581,7 @@ function drawCatHead(
 
   const earTwitch = pose.earTwitch ?? 0;
   const flatEars =
-    face === 'angry' || face === 'shock' || face === 'nervous'
+    face === 'angry' || face === 'shock' || face === 'nervous' || face === 'strain'
       ? 22
       : face === 'sad' || face === 'tired' || isSleep
         ? 14
@@ -709,7 +717,7 @@ function drawCatHead(
     }
     ctx.fill();
   } else {
-    // Tampak belakang kepala: loreng tabby punggung tengkuk
+    // Tampak belakang kepala (termasuk backThreeQuarter): loreng tabby punggung tengkuk
     ctx.strokeStyle = spec.stripeColor;
     ctx.lineWidth = 11;
     ctx.lineCap = 'round';
@@ -718,6 +726,23 @@ function drawCatHead(
       ctx.moveTo(-headW * 0.34, dy - 6);
       ctx.quadraticCurveTo(0, dy + 14, headW * 0.34, dy - 6);
       ctx.stroke();
+    }
+    if (isBack34) {
+      // Intipan pipi krem & kumis di sisi arah pandang untuk transisi 360° mulus
+      const d = facing >= 0 ? 1 : -1;
+      ctx.fillStyle = spec.cream;
+      ctx.beginPath();
+      ctx.ellipse(d * headW * 0.44, headH * 0.24, headW * 0.18, headH * 0.16, 0, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = spec.ink;
+      ctx.lineWidth = 3.2;
+      ctx.lineCap = 'round';
+      for (const [wy, ang] of [[headH * 0.18, -0.14], [headH * 0.26, 0.04], [headH * 0.34, 0.2]] as const) {
+        ctx.beginPath();
+        ctx.moveTo(d * headW * 0.44, wy);
+        ctx.lineTo(d * (headW * 0.64), wy + Math.sin(ang) * 20);
+        ctx.stroke();
+      }
     }
   }
   ctx.restore();
@@ -760,6 +785,17 @@ function drawCatHead(
           ctx.moveTo(ex - 18, eyeY + 2);
           ctx.quadraticCurveTo(ex, eyeY + 7, ex + 18, eyeY + 2);
         }
+        ctx.stroke();
+      } else if (face === 'strain') {
+        // Mata memicing tajam `> <` saat tegang / menahan tenaga (konsisten dengan expressions.ts)
+        ctx.strokeStyle = spec.ink;
+        ctx.lineWidth = 5.8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(ex + s * 16, eyeY - 12);
+        ctx.lineTo(ex - s * 10, eyeY);
+        ctx.lineTo(ex + s * 16, eyeY + 12);
         ctx.stroke();
       } else {
         // Mata kucing khas Cat_diffuse.jpg: ring luar merah-coklat, iris emas-kuning, pupil celah vertikal!
@@ -839,11 +875,20 @@ function drawCatHead(
         ctx.restore();
       }
 
-      // Alis ekspresif (untuk emosi kuat: angry, sad, nervous, skeptical, shock, focus)
-      if (!isSleep && (face === 'angry' || face === 'sad' || face === 'nervous' || face === 'skeptical' || face === 'focus' || face === 'smug')) {
+      // Alis ekspresif (untuk emosi kuat: angry, strain, sad, nervous, skeptical, shock, focus)
+      if (
+        !isSleep &&
+        (face === 'angry' ||
+          face === 'strain' ||
+          face === 'sad' ||
+          face === 'nervous' ||
+          face === 'skeptical' ||
+          face === 'focus' ||
+          face === 'smug')
+      ) {
         const browY = eyeY - ry - 11;
         const angle =
-          face === 'angry'
+          face === 'angry' || face === 'strain'
             ? -s * 0.38
             : face === 'sad' || face === 'nervous'
               ? s * 0.32
@@ -937,6 +982,28 @@ function drawCatHead(
       ctx.strokeStyle = spec.ink;
       ctx.lineWidth = 4;
       ctx.stroke();
+    } else if (face === 'strain') {
+      // Gigi rapat / meringis tegang (clenched teeth konsisten dengan expressions.ts)
+      ctx.beginPath();
+      ctx.moveTo(noseX, noseY + 8);
+      ctx.lineTo(noseX, mouthY + 2);
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(noseX - 20, mouthY + 2, 40, 17, 6);
+      ctx.fill();
+      ctx.strokeStyle = spec.ink;
+      ctx.lineWidth = 3.8;
+      ctx.stroke();
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(noseX - 18, mouthY + 10.5);
+      ctx.lineTo(noseX + 18, mouthY + 10.5);
+      for (const gx of [-9, 0, 9]) {
+        ctx.moveTo(noseX + gx, mouthY + 2);
+        ctx.lineTo(noseX + gx, mouthY + 19);
+      }
+      ctx.stroke();
     } else if (face === 'angry' || face === 'sad') {
       // Mulut cemberut / mengeram kecil
       ctx.beginPath();
@@ -1020,9 +1087,10 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
 
   const stance: CatStance = pose.stance ?? 'sit';
   const view: ActorView = pose.view ?? 'threeQuarter';
-  const isBack = view === 'back';
+  const isBack34 = view === 'backThreeQuarter';
+  const isBack = view === 'back' || isBack34;
   const isSide = view === 'side';
-  const facing = pose.facing ?? (isSide ? 1 : view === 'threeQuarter' ? 0.32 : 0);
+  const facing = pose.facing ?? (isSide ? 1 : isBack34 ? 0.72 : view === 'threeQuarter' ? 0.32 : 0);
   const dir = facing >= 0 ? 1 : -1;
   const walkPhase = pose.walkPhase ?? 0;
   const tailPhase = pose.tailPhase ?? walkPhase * TAU;
@@ -1125,9 +1193,11 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
     const bodyBotY = CAT_SOLE_Y - 18;
     const bodyW = isSide ? 116 : view === 'front' || isBack ? 108 : 114;
 
-    // Ekor bergoyang di belakang/samping
-    const tailAnchorX = isBack ? CX : isSide ? bodyX - dir * 82 : bodyX - dir * 68;
-    drawTabbyTail(ctx, spec, tailAnchorX, bodyBotY - 22, isBack ? 1 : -dir, tailPhase, isPuffed, false);
+    // Ekor bergoyang di belakang/samping (saat back view digambar sekali di lapisan depan punggung)
+    if (!isBack) {
+      const tailAnchorX = isSide ? bodyX - dir * 82 : bodyX - dir * 68;
+      drawTabbyTail(ctx, spec, tailAnchorX, bodyBotY - 22, -dir, tailPhase, isPuffed, false);
+    }
 
     // Paha belakang (haunch) menonjol khas kucing duduk
     if (!isBack && view !== 'front') {
@@ -1197,7 +1267,7 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
         ctx.stroke();
       }
     } else {
-      const sideS = isSide ? -dir : -1;
+      const sideS = -dir;
       const sidesToStripe = view === 'front' ? [-1, 1] : [sideS];
       for (const s of sidesToStripe) {
         for (const yy of [bodyTopY + 62, bodyTopY + 110, bodyTopY + 158]) {
@@ -1258,9 +1328,9 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
     headTopY = headY - 98;
     drawCatHead(ctx, spec, headX, headY, pose, view, false);
 
-    // Saat back view, ekor menonjol rapi di atas pinggul belakang
+    // Saat back view, ekor menonjol rapi di atas pinggul belakang (backThreeQuarter melengkung ke sisi menjauhi wajah)
     if (isBack) {
-      drawTabbyTail(ctx, spec, CX, bodyBotY - 16, 1, tailPhase, isPuffed, false);
+      drawTabbyTail(ctx, spec, CX, bodyBotY - 16, isBack34 ? -dir : 1, tailPhase, isPuffed, false);
     }
   } else {
     // =========================================================================
@@ -1274,14 +1344,19 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
     const torsoY = isJump ? 404 : 422 + breath * 0.4;
     const torsoX = CX;
 
-    const p1 = Math.sin(walkPhase * TAU);
-    const p2 = Math.sin((walkPhase + 0.5) * TAU);
-    const lift1 = Math.max(0, Math.cos(walkPhase * TAU)) * 28;
-    const lift2 = Math.max(0, Math.cos((walkPhase + 0.5) * TAU)) * 28;
+    const catPlanted = isWalk && (pose.gait ?? 'planted') === 'planted';
+    const pf1 = catPlanted ? plantedFoot(walkPhase, 1, 48, 28) : null;
+    const pf2 = catPlanted ? plantedFoot(walkPhase, -1, 48, 28) : null;
+    const dx1 = pf1 ? pf1.dx : Math.sin(walkPhase * TAU) * 48;
+    const dx2 = pf2 ? pf2.dx : Math.sin((walkPhase + 0.5) * TAU) * 48;
+    const lift1 = pf1 ? pf1.lift : Math.max(0, Math.cos(walkPhase * TAU)) * 28;
+    const lift2 = pf2 ? pf2.lift : Math.max(0, Math.cos((walkPhase + 0.5) * TAU)) * 28;
 
-    // Ekor dari pinggul belakang
-    const hipX = isProfile ? torsoX - dir * (torsoW * 0.86) : torsoX;
-    drawTabbyTail(ctx, spec, hipX, torsoY - 18, isProfile ? -dir : 1, tailPhase, isPuffed, false);
+    // Ekor dari pinggul belakang (saat back view digambar sekali di lapisan depan punggung)
+    if (!isBack) {
+      const hipX = isProfile ? torsoX - dir * (torsoW * 0.86) : torsoX;
+      drawTabbyTail(ctx, spec, hipX, torsoY - 18, isProfile ? -dir : 1, tailPhase, isPuffed, false);
+    }
 
     // Kaki sisi jauh (belakang layar — sedikit digelapkan untuk kedalaman 3D)
     const backHipX = isProfile ? torsoX - dir * 78 : torsoX - 42;
@@ -1303,16 +1378,31 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
     };
     const reach = dir * stretch * 36;
 
+    const raiseFarFront = !isBack && isProfile && ((dir > 0 && pawRaise === 'left') || (dir < 0 && pawRaise === 'right'));
+    const raiseNearFront =
+      !isBack && (isProfile ? (dir > 0 && pawRaise === 'right') || (dir < 0 && pawRaise === 'left') : pawRaise === 'right');
+    const raiseNearLeft = !isBack && !isProfile && pawRaise === 'left';
+
     if (isJump) {
       drawLeg(ctx, spec, backHipX - dir * 10, torsoY + 26, backHipX - dir * 68, soleY - 22, 24, 17, true, true);
       drawLeg(ctx, spec, frontShoulderX - dir * 8, torsoY + 22, frontShoulderX + dir * 62, soleY - 52, 22, 17, true, true);
     } else if (isWalk) {
-      drawLeg(ctx, spec, backHipX, torsoY + 26, backHipX + dir * p2 * 44, soleY - lift2, 24, 17, true, false);
-      drawLeg(ctx, spec, frontShoulderX, torsoY + 26, frontShoulderX + dir * p1 * 48, soleY - lift1, 22, 17, true, false);
+      drawLeg(ctx, spec, backHipX, torsoY + 26, backHipX + dir * dx2 * 0.92, soleY - lift2, 24, 17, true, false);
+      drawLeg(ctx, spec, frontShoulderX, torsoY + 26, frontShoulderX + dir * dx1, soleY - lift1, 22, 17, true, false);
     } else {
       drawLeg(ctx, spec, backHipX - dir * 12, torsoY + 26, backHipX - dir * 18, soleY, 24, 17, true, false);
       const [fsx, fsy] = rp(frontShoulderX - dir * 12, torsoY + 26);
-      drawLeg(ctx, spec, fsx, fsy, frontShoulderX - dir * 12 + reach, soleY, 22, 17, true, false);
+      if (raiseFarFront) {
+        const hasPawTarget = pose.pawAngle !== undefined || pose.pawReach !== undefined;
+        const pawReach = Math.max(0.5, Math.min(1.8, pose.pawReach ?? 1));
+        const pawRad = ((pose.pawAngle ?? -30) * Math.PI) / 180;
+        const [fpx, fpy] = hasPawTarget
+          ? rp(frontShoulderX - dir * 12 + dir * Math.cos(pawRad) * 60 * pawReach, torsoY + 26 + Math.sin(pawRad) * 60 * pawReach)
+          : rp(frontShoulderX - dir * 12 + dir * 52, torsoY - 4);
+        drawLeg(ctx, spec, fsx, fsy, fpx, fpy, 22, 17, true, true);
+      } else {
+        drawLeg(ctx, spec, fsx, fsy, frontShoulderX - dir * 12 + reach, soleY, 22, 17, true, false);
+      }
     }
 
     // Badan horizontal kucing (melengkung ke atas saat jump / shock!)
@@ -1358,11 +1448,13 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
       ctx.fill();
     }
 
-    // Perut & dada krem
-    ctx.fillStyle = spec.cream;
-    ctx.beginPath();
-    ctx.ellipse(torsoX + (isProfile ? dir * 18 : 0), torsoY + torsoH * 0.62, torsoW * 0.82, torsoH * 0.45, 0, 0, TAU);
-    ctx.fill();
+    // Perut & dada krem (hanya tampak depan/samping, bukan pada tampak punggung/belakang)
+    if (!isBack) {
+      ctx.fillStyle = spec.cream;
+      ctx.beginPath();
+      ctx.ellipse(torsoX + (isProfile ? dir * 18 : 0), torsoY + torsoH * 0.62, torsoW * 0.82, torsoH * 0.45, 0, 0, TAU);
+      ctx.fill();
+    }
 
     // 4 loreng melengkung khas tabby mackerel di punggung
     ctx.strokeStyle = spec.stripeColor;
@@ -1389,18 +1481,30 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
       drawLeg(ctx, spec, nearHipX, torsoY + 30, nearHipX - dir * 56, soleY - 12, 25, 18, false, true, true);
       drawLeg(ctx, spec, nearShoulderX, torsoY + 26, nearShoulderX + dir * 72, soleY - 62, 23, 18, false, true, true);
     } else if (isWalk) {
-      drawLeg(ctx, spec, nearHipX, torsoY + 30, nearHipX + dir * p1 * 48, soleY - lift1, 25, 18, false, false, true);
-      drawLeg(ctx, spec, nearShoulderX, torsoY + 28, nearShoulderX + dir * p2 * 50, soleY - lift2, 23, 18, false, false, true);
+      drawLeg(ctx, spec, nearHipX, torsoY + 30, nearHipX + dir * dx1, soleY - lift1, 25, 18, false, false, true);
+      drawLeg(ctx, spec, nearShoulderX, torsoY + 28, nearShoulderX + dir * dx2 * 1.04, soleY - lift2, 23, 18, false, false, true);
     } else {
-      drawLeg(ctx, spec, nearHipX, torsoY + 30, nearHipX - dir * 6, soleY, 25, 18, false, false, true);
-      if (pawRaise !== 'none' && !isBack) {
+      if (raiseNearLeft) {
+        const [lsx, lsy] = rp(nearHipX, torsoY + 26);
+        const hasPawTarget = pose.pawAngle !== undefined || pose.pawReach !== undefined;
+        const pawReach = Math.max(0.5, Math.min(1.8, pose.pawReach ?? 1));
+        const pawRad = ((pose.pawAngle ?? -30) * Math.PI) / 180;
+        const [lpx, lpy] = hasPawTarget
+          ? rp(nearHipX - Math.cos(pawRad) * 60 * pawReach, torsoY + 26 + Math.sin(pawRad) * 60 * pawReach)
+          : rp(nearHipX - 52, torsoY - 4);
+        drawLeg(ctx, spec, lsx, lsy, lpx, lpy, 22, 18, false, true, true);
+      } else {
+        drawLeg(ctx, spec, nearHipX, torsoY + 30, nearHipX - dir * 6, soleY, 25, 18, false, false, true);
+      }
+      if (raiseNearFront) {
+        const sideDir = isProfile ? dir : 1;
         const [nsx, nsy] = rp(nearShoulderX, torsoY + 26);
         const hasPawTarget = pose.pawAngle !== undefined || pose.pawReach !== undefined;
         const pawReach = Math.max(0.5, Math.min(1.8, pose.pawReach ?? 1));
         const pawRad = ((pose.pawAngle ?? -30) * Math.PI) / 180;
         const [npx, npy] = hasPawTarget
-          ? rp(nearShoulderX + dir * Math.cos(pawRad) * 60 * pawReach, torsoY + 26 + Math.sin(pawRad) * 60 * pawReach)
-          : rp(nearShoulderX + dir * 52, torsoY - 4);
+          ? rp(nearShoulderX + sideDir * Math.cos(pawRad) * 60 * pawReach, torsoY + 26 + Math.sin(pawRad) * 60 * pawReach)
+          : rp(nearShoulderX + sideDir * 52, torsoY - 4);
         drawLeg(ctx, spec, nsx, nsy, npx, npy, 22, 18, false, true, true);
       } else {
         const [nsx, nsy] = rp(nearShoulderX, torsoY + 28);
@@ -1423,7 +1527,7 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
     drawCatHead(ctx, spec, headX, headY, pose, view, false);
 
     if (isBack) {
-      drawTabbyTail(ctx, spec, CX, torsoY - 10, 1, tailPhase, isPuffed, false);
+      drawTabbyTail(ctx, spec, CX, torsoY - 10, isBack34 ? -dir : 1, tailPhase, isPuffed, false);
     }
   }
 

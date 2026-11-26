@@ -2,6 +2,8 @@ import { Vec3, lerp, lerp3, smootherstep } from './easing';
 
 export type CamPose = { pos: Vec3; look: Vec3; fov: number; roll: number };
 
+export type CamPath = 'linear' | 'dolly' | 'whip' | 'orbit';
+
 export type CamKey = {
   /** Frame saat pose ini sudah tercapai penuh. */
   frame: number;
@@ -13,19 +15,37 @@ export type CamKey = {
   /** Override kecepatan push-in per frame selama hold key ini; `0` membekukan push-in (mis. saat frame impact). */
   creepRate?: number;
   /**
-   * Cara interpolasi glide menuju key ini. `linear` (default) = lerp pos/look/fov apa adanya.
-   * `dolly` = pull-out/push-in dengan laju zoom seragam: arah pandang di-lerp lalu dinormalisasi,
-   * jarak pos→look dan tan(fov/2) diinterpolasi geometris (log). Dipakai untuk rasio skala besar
-   * (mis. macro → medium 6x) supaya kecepatan gambar tidak memuncak di awal glide.
+   * Cara interpolasi glide menuju key ini:
+   * - `linear` (default): lerp pos/look/fov apa adanya.
+   * - `dolly`: skala bingkai (jarak × tan(fov/2)) berubah geometris (log) untuk macro ↔ medium.
+   * - `whip`: akselerasi cepat + damped spring settle 8–14f untuk reaksi komedi tajam.
+   * - `orbit`: orbit melengkung C²-smooth analitis mengelilingi `orbitCenter` (default `next.pose.look`) hanya dengan 2 keyframe!
    */
-  path?: 'linear' | 'dolly';
+  path?: CamPath;
+  /** Pusat orbit opsional untuk `path: 'orbit'` (default `next.pose.look`). */
+  orbitCenter?: Vec3;
+  /** Sudut putar orbit eksplisit dalam derajat (opsional, untuk orbit deterministik >= 180° / 360° tanpa membalik arah). */
+  orbitDeltaDeg?: number;
+  /**
+   * Napas kamera organik lokal (`0` = mati/default, `1` = ±2,5 mm & ±0,07°).
+   * Otomatis 0 pada shot makro (`dist < 0,85 m`) dan terkunci siklus `totalFrames` agar loop mulus.
+   */
+  handheld?: number;
 };
 
 export type Kick = { frame: number; strength: number; length?: number };
 
+export type CameraShake = {
+  dx: number;
+  dy: number;
+  /** Offset Z dunia (diisi saat `kickOffset` menerima `pose` untuk getaran basis lokal kamera). */
+  dz?: number;
+  droll: number;
+};
+
 /**
  * Kecepatan push-in default per frame saat kamera menahan pose.
- * v2.0 (Sinematika Referensi `contohvideo/`): `0` — hold dialog/panggung duduk mantap & percaya diri.
+ * v2.0/v3.0 (Sinematika Referensi `contohvideo/`): `0` — hold dialog/panggung duduk mantap & percaya diri.
  * Opsi `creepRate` per key atau argumen `rate` tetap didukung penuh bila sebuah beat secara sadar
  * membutuhkan slow tension push-in.
  */
@@ -42,6 +62,17 @@ const mix = (a: CamPose, b: CamPose, t: number): CamPose => ({
   fov: lerp(a.fov, b.fov, t),
   roll: lerp(a.roll, b.roll, t),
 });
+
+/** Kurva whip-pan C∞-smooth: start & settle mulus (f'(0)=0, f'(1)=0), akselerasi cepat + overshoot teredam (~4%). */
+function whipCurve(u: number): number {
+  const x = Math.max(0, Math.min(1, u));
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const om = 1 - x;
+  const base = 1 - om * om * om * om * (1 + 4 * x);
+  const overshoot = 2.1 * x * x * x * om * om;
+  return base + overshoot;
+}
 
 /** Interpolasi `dolly`: skala bingkai (jarak × tan(fov/2)) berubah dengan laju log seragam. */
 const mixDolly = (a: CamPose, b: CamPose, t: number): CamPose => {
@@ -69,23 +100,111 @@ const mixDolly = (a: CamPose, b: CamPose, t: number): CamPose => {
   };
 };
 
+/** Interpolasi `orbit` analitis C²-smooth: radius, elevasi, dan sudut azimuth (atau `orbitDeltaDeg` eksplisit) di sekitar `center`. */
+const mixOrbit = (a: CamPose, b: CamPose, t: number, center?: Vec3, orbitDeltaDeg?: number): CamPose => {
+  const c = center ?? b.look;
+  const ax = Math.abs(a.pos[0] - c[0]) < 1e-12 ? 0 : a.pos[0] - c[0];
+  const az = Math.abs(a.pos[2] - c[2]) < 1e-12 ? 0 : a.pos[2] - c[2];
+  const bx = Math.abs(b.pos[0] - c[0]) < 1e-12 ? 0 : b.pos[0] - c[0];
+  const bz = Math.abs(b.pos[2] - c[2]) < 1e-12 ? 0 : b.pos[2] - c[2];
+  const ra = Math.hypot(ax, az);
+  const rb = Math.hypot(bx, bz);
+  const angA = Math.atan2(ax, az);
+  let dAng: number;
+  if (orbitDeltaDeg !== undefined) {
+    dAng = (orbitDeltaDeg * Math.PI) / 180;
+  } else {
+    const angB = Math.atan2(bx, bz);
+    dAng = angB - angA;
+    while (dAng > Math.PI) dAng -= Math.PI * 2;
+    while (dAng < -Math.PI) dAng += Math.PI * 2;
+  }
+  const ang = angA + dAng * t;
+  const r = lerp(ra, rb, t);
+  return {
+    pos: [c[0] + Math.sin(ang) * r, lerp(a.pos[1], b.pos[1], t), c[2] + Math.cos(ang) * r],
+    look: lerp3(a.look, b.look, t),
+    fov: lerp(a.fov, b.fov, t),
+    roll: lerp(a.roll, b.roll, t),
+  };
+};
+
+/**
+ * Napas kamera organik deterministik (Atelier v3.0): ±2,5 mm lokal right/up & ±0,07° roll.
+ * - Mempertahankan siklus alami ~3 detik (`~90f`) sekaligus selalu mengunci jumlah siklus bulat penuh
+ *   terhadap `totalFrames` sehingga loop 100% seamless pada durasi arbitrary.
+ * - Otomatis nol pada shot makro (`dist < 0,85 m`) agar papan/nota 3D tetap tajam tanpa getar.
+ */
+export function applyHandheldBreathe(pose: CamPose, frame: number, amount = 0, totalFrames?: number): CamPose {
+  if (amount <= 0) return pose;
+  const d = Math.hypot(pose.pos[0] - pose.look[0], pose.pos[1] - pose.look[1], pose.pos[2] - pose.look[2]);
+  if (d < 0.85) return pose;
+  const macroFade = Math.min(1, (d - 0.85) / 0.5);
+  const k = amount * macroFade;
+  const period =
+    totalFrames !== undefined && totalFrames >= 30
+      ? totalFrames / Math.max(1, Math.round(totalFrames / 90))
+      : 90;
+  const w1 = (frame / period) * Math.PI * 2;
+  const w2 = w1 * 2;
+  const rOff = (Math.sin(w1) * 0.0022 + Math.sin(w2 + 0.7) * 0.0007) * k;
+  const uOff = (Math.cos(w1 + 0.4) * 0.0018 + Math.sin(w2 - 0.5) * 0.0006) * k;
+  const dRoll = Math.sin(w1 + 1.1) * 0.07 * k;
+  const { right, up } = cameraBasis(pose);
+  return {
+    pos: [
+      pose.pos[0] + right[0] * rOff + up[0] * uOff,
+      pose.pos[1] + right[1] * rOff + up[1] * uOff,
+      pose.pos[2] + right[2] * rOff + up[2] * uOff,
+    ],
+    look: pose.look,
+    fov: pose.fov,
+    roll: pose.roll + dRoll,
+  };
+}
+
 /** Ambil pose kamera pada frame tertentu dari daftar key yang sudah terurut. */
-export function sampleCamera(keys: CamKey[], frame: number, rate = DEFAULT_CREEP): CamPose {
+export function sampleCamera(
+  keys: CamKey[],
+  frame: number,
+  rate = DEFAULT_CREEP,
+  opts?: { totalFrames?: number },
+): CamPose {
   if (keys.length === 0) throw new Error('sampleCamera: keys kosong');
   let i = 0;
   for (let n = 0; n < keys.length; n++) if (keys[n].frame <= frame) i = n;
   const cur = keys[i];
   const next = keys[i + 1];
   const curRate = cur.creepRate ?? rate;
-  if (!next || next.cut) return creep(cur.pose, frame - cur.frame, curRate);
 
-  // Glide tidak boleh mulai sebelum key saat ini tercapai, kalau tidak pose pertama terlewati.
-  const glideStart = Math.max(next.frame - (next.glide ?? 24), cur.frame);
-  const span = Math.max(1, next.frame - glideStart);
-  const held = creep(cur.pose, Math.min(frame, glideStart) - cur.frame, curRate);
-  if (frame < glideStart) return held;
-  const t = smootherstep((frame - glideStart) / span);
-  return next.path === 'dolly' ? mixDolly(held, next.pose, t) : mix(held, next.pose, t);
+  let pose: CamPose;
+  let hh = cur.handheld ?? 0;
+  if (!next || next.cut) {
+    pose = creep(cur.pose, frame - cur.frame, curRate);
+  } else {
+    // Glide tidak boleh mulai sebelum key saat ini tercapai, kalau tidak pose pertama terlewati.
+    const glideStart = Math.max(next.frame - (next.glide ?? 24), cur.frame);
+    const span = Math.max(1, next.frame - glideStart);
+    const held = creep(cur.pose, Math.min(frame, glideStart) - cur.frame, curRate);
+    if (frame < glideStart) {
+      pose = held;
+    } else {
+      const u = (frame - glideStart) / span;
+      const su = smootherstep(u);
+      hh = lerp(cur.handheld ?? 0, next.handheld ?? 0, su);
+      if (next.path === 'whip') {
+        pose = mix(held, next.pose, whipCurve(u));
+      } else if (next.path === 'orbit') {
+        pose = mixOrbit(held, next.pose, su, next.orbitCenter, next.orbitDeltaDeg);
+      } else if (next.path === 'dolly') {
+        pose = mixDolly(held, next.pose, su);
+      } else {
+        pose = mix(held, next.pose, su);
+      }
+    }
+  }
+
+  return hh > 0 ? applyHandheldBreathe(pose, frame, hh, opts?.totalFrames) : pose;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -108,10 +227,24 @@ const cross3 = (a: Vec3, b: Vec3): Vec3 => [
   a[0] * b[1] - a[1] * b[0],
 ];
 
+/**
+ * Jarak fokus sepanjang sumbu pandang kamera (`camPos -> camLook`) menuju `target` (meter).
+ * Kanonik untuk parameter `post.focus` pada thin-lens DOF `<PostStack />`.
+ */
+export function viewAxisFocus(camPos: Vec3, camLook: Vec3, target: Vec3): number {
+  const lookVec = sub3(camLook, camPos);
+  const lookDist = Math.hypot(lookVec[0], lookVec[1], lookVec[2]);
+  if (lookDist < 1e-6) return 0.3;
+  const fwd: Vec3 = [lookVec[0] / lookDist, lookVec[1] / lookDist, lookVec[2] / lookDist];
+  const d = dot3(sub3(target, camPos), fwd);
+  return Math.max(0.3, d > 0 ? d : lookDist);
+}
+
 /** Basis kamera dunia (forward, right, up) setelah roll. */
 export function cameraBasis(p: CamPose): { forward: Vec3; right: Vec3; up: Vec3 } {
   const forward = norm3(sub3(p.look, p.pos));
-  const r0 = norm3(cross3(forward, [0, 1, 0]));
+  const refUp: Vec3 = Math.abs(forward[1]) > 0.999999 ? [0, 0, -1] : [0, 1, 0];
+  const r0 = norm3(cross3(forward, refUp));
   const u0 = cross3(r0, forward);
   const a = (p.roll * Math.PI) / 180;
   const c = Math.cos(a);
@@ -152,6 +285,7 @@ export function screenSpeedPx(a: CamPose, b: CamPose, width = 720, height = 1280
     for (const y of [-0.6, 0, 0.6]) {
       const w = unprojectPoint(a, x, y, depth, aspect);
       const q = projectPoint(b, w, aspect);
+      if (q.depth <= 1e-3 || !Number.isFinite(q.x) || !Number.isFinite(q.y)) return Infinity;
       const dx = ((q.x - x) * width) / 2;
       const dy = ((q.y - y) * height) / 2;
       max = Math.max(max, Math.hypot(dx, dy));
@@ -160,20 +294,39 @@ export function screenSpeedPx(a: CamPose, b: CamPose, width = 720, height = 1280
   return max;
 }
 
-/** Entakan benturan: tanda berganti tiap frame dan meluruh. */
-export function kickOffset(kicks: Kick[], frame: number) {
-  let dx = 0, dy = 0, droll = 0;
+/**
+ * Entakan benturan (Atelier v3.0): **Damped Harmonic Shake** pada basis lokal kamera (`right`, `up`, `roll`).
+ * - Jika `pose` disertakan, `dx/dy/dz` adalah vektor dunia yang sudah terproyeksi ke basis lokal kamera sehingga
+ *   gebrakan meja/dinding tetap akurat di semua sudut `yaw` kamera.
+ * - Jika `pose` diabaikan (backward-compatible), `dx`/`dy` adalah amplitudo lokal `right`/`up` dan `dz` = `undefined`.
+ */
+export function kickOffset(kicks: Kick[], frame: number, pose?: CamPose): CameraShake {
+  let rightAmp = 0;
+  let upAmp = 0;
+  let droll = 0;
   for (const k of kicks) {
-    const len = k.length ?? 7;
+    const len = Math.max(1, k.length ?? 8);
     const d = frame - k.frame;
     if (d < 0 || d >= len) continue;
-    const decay = 1 - d / len;
-    const sign = d % 2 === 0 ? 1 : -1;
-    dx += sign * k.strength * decay * 0.6;
-    dy += -sign * k.strength * decay;
-    droll += sign * k.strength * decay * 1.2;
+    const p = d / len;
+    // Peluruhan harmonik teredam: puncak kuat di d=0, berayun alami, tepat 0 saat d >= len.
+    const env = Math.exp(-3.2 * p) * (1 - p);
+    const oscR = Math.cos(d * 2.15);
+    const oscU = Math.cos(d * 1.85 + 0.3);
+    rightAmp += k.strength * env * oscR * 0.62;
+    upAmp += -k.strength * env * oscU;
+    droll += k.strength * env * oscR * 1.3;
   }
-  return { dx, dy, droll };
+  if (pose) {
+    const { right, up } = cameraBasis(pose);
+    return {
+      dx: right[0] * rightAmp + up[0] * upAmp,
+      dy: right[1] * rightAmp + up[1] * upAmp,
+      dz: right[2] * rightAmp + up[2] * upAmp,
+      droll,
+    };
+  }
+  return { dx: rightAmp, dy: upAmp, droll };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -189,12 +342,48 @@ export function moveSettle(
   startPose: CamPose,
   endPose: CamPose,
   glideFrames = 24,
-  path: 'linear' | 'dolly' = 'linear',
+  path: CamPath = 'linear',
 ): CamKey[] {
   const span = Math.max(1, Math.round(glideFrames));
   return [
     { frame: fromFrame, pose: startPose, cut: true, creepRate: 0 },
     { frame: fromFrame + span, pose: endPose, glide: span, path, creepRate: 0 },
+  ];
+}
+
+/**
+ * Whip-Pan Reaksi Komedi (Atelier v3.0): akselerasi cepat + spring-damped settle (8–14 frame).
+ */
+export function whipPan(
+  fromFrame: number,
+  startPose: CamPose,
+  endPose: CamPose,
+  glideFrames = 11,
+): CamKey[] {
+  const span = Math.max(4, Math.round(glideFrames));
+  return [
+    { frame: fromFrame, pose: startPose, cut: true, creepRate: 0 },
+    { frame: fromFrame + span, pose: endPose, glide: span, path: 'whip', creepRate: 0 },
+  ];
+}
+
+/**
+ * Story Dolly (Atelier v3.0): dolly/pan terarah mengikuti aksi cerita (mis. pan ke kertas diegetik
+ * `(1).mp4` 00:02 atau dorongan lembut ke jendela `download.mp4` 00:47), selalu ditutup confident settle (`creepRate: 0`).
+ */
+export function storyDolly(
+  fromFrame: number,
+  startPose: CamPose,
+  endPose: CamPose,
+  glideFrames = 26,
+  holdBeforeFrames = 0,
+  path: 'dolly' | 'linear' = 'dolly',
+): CamKey[] {
+  const hold = Math.max(0, Math.round(holdBeforeFrames));
+  const span = Math.max(1, Math.round(glideFrames));
+  return [
+    { frame: fromFrame, pose: startPose, cut: true, creepRate: 0 },
+    { frame: fromFrame + hold + span, pose: endPose, glide: span, path, creepRate: 0 },
   ];
 }
 
@@ -218,8 +407,26 @@ export function pullOutReveal(
 }
 
 /**
+ * Orbit Analitis C²-Smooth (Atelier v3.0): hanya 2 keyframe bersih tanpa membengkakkan array `CAMS`.
+ */
+export function orbitTo(
+  fromFrame: number,
+  startPose: CamPose,
+  endPose: CamPose,
+  glideFrames = 28,
+  orbitCenter?: Vec3,
+): CamKey[] {
+  const span = Math.max(1, Math.round(glideFrames));
+  return [
+    { frame: fromFrame, pose: startPose, cut: true, creepRate: 0 },
+    { frame: fromFrame + span, pose: endPose, glide: span, path: 'orbit', orbitCenter, creepRate: 0 },
+  ];
+}
+
+/**
  * Orbit Arc: geser orbit melengkung 3D mengelilingi `center` pada radius `radius` dan elevasi `y`
  * dari `azFromDeg` ke `azToDeg` (0° = +Z, +90° = +X), menonjolkan paralaks ruang lalu settle mantap.
+ * (Tetap dipertahankan 100% kompatibel; secara internal kini memakai 2 keyframe `path: 'orbit'` analitis!)
  */
 export function orbitArc(
   fromFrame: number,
@@ -232,27 +439,37 @@ export function orbitArc(
   frames: number,
 ): CamKey[] {
   const span = Math.max(1, Math.round(frames));
-  const keys: CamKey[] = [];
-  for (let k = 0; k <= span; k++) {
-    const s = smootherstep(k / span);
-    const rad = (lerp(azFromDeg, azToDeg, s) * Math.PI) / 180;
-    const pose: CamPose = {
-      pos: [center[0] + Math.sin(rad) * radius, y, center[2] + Math.cos(rad) * radius],
-      look: [center[0], center[1], center[2]],
-      fov,
-      roll: 0,
-    };
-    keys.push(
-      k === 0
-        ? { frame: fromFrame, pose, cut: true, creepRate: 0 }
-        : { frame: fromFrame + k, pose, glide: 1, creepRate: 0 },
-    );
-  }
-  return keys;
+  const r0 = (azFromDeg * Math.PI) / 180;
+  const r1 = (azToDeg * Math.PI) / 180;
+  const startPose: CamPose = {
+    pos: [center[0] + Math.sin(r0) * radius, y, center[2] + Math.cos(r0) * radius],
+    look: [center[0], center[1], center[2]],
+    fov,
+    roll: 0,
+  };
+  const endPose: CamPose = {
+    pos: [center[0] + Math.sin(r1) * radius, y, center[2] + Math.cos(r1) * radius],
+    look: [center[0], center[1], center[2]],
+    fov,
+    roll: 0,
+  };
+  // Selalu 2 keyframe tunggal dengan orbitDeltaDeg eksplisit -> 1 kurva C² mulus tanpa henti di midpoint maupun balik arah pada 180°/360°!
+  return [
+    { frame: fromFrame, pose: startPose, cut: true, creepRate: 0 },
+    {
+      frame: fromFrame + span,
+      pose: endPose,
+      glide: span,
+      path: 'orbit',
+      orbitCenter: center,
+      orbitDeltaDeg: azToDeg - azFromDeg,
+      creepRate: 0,
+    },
+  ];
 }
 
 /**
- * Top-Down Flat-Lay Insert (90° overhead) tepat di atas meja/prop.
+ * Top-Down Flat-Lay Insert (90° overhead) tepat di atas meja/prop 3D (khusus prop 3D murni, bukan karakter 2D!).
  * Menggunakan offset Z mikro (+0,002 m) agar terbebas dari singularitas gimbal `lookAt`
  * sementara sumbu atas layar tetap lurus ke -Z secara deterministik.
  */
@@ -274,7 +491,7 @@ export function craneTransition(
   highPose: CamPose,
   lowPose: CamPose,
   frames = 36,
-  path: 'linear' | 'dolly' = 'linear',
+  path: CamPath = 'linear',
 ): CamKey[] {
   const span = Math.max(1, Math.round(frames));
   return [

@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { blinkLidAt } from '../engine/cast/bean';
+import { blinkLidAt } from '../engine/cast/expressions';
 import { talkAt, talkWave } from '../engine/cast/lipsync';
 import {
   CAST_PRESETS,
   actorFaceAnchors,
   actorHandPoint,
+  drawActor,
   resolveActorSpec,
   springPop,
   strikeEnvelope,
@@ -13,11 +14,13 @@ import {
   type ActorStance,
 } from '../engine/cast/nusantara';
 import { actorPoseKey } from '../engine/cast/ActorBillboard';
-import { CAT_PRESETS, resolveCatSpec, type CatPose } from '../engine/cast/cat';
+import { CAT_PRESETS, drawCat, resolveCatSpec, type CatPose } from '../engine/cast/cat';
 import { catPoseKey } from '../engine/cast/CatBillboard';
-import { KAMPUNG_SPOTS, SET_PRESETS, WARKOP_SPOT_META, indoorLight } from '../engine/sets';
+import { KAMPUNG_SPOTS, SET_PRESETS, WARKOP_SPOT_META, indoorLight, shouldHideGlbNode } from '../engine/sets';
 import { LIGHTS, cameraRelativeSun } from '../engine/stage/lights';
+import { GRADE_PRESETS } from '../engine/post/PostStack';
 import { pxScale } from '../engine/post/scale';
+import { checkBillboardSweep } from '../engine/core/spatial';
 
 test('blinkLidAt tidak mulai tertutup di frame 0 dan membentuk 4-frame half/shut/shut/half pada swap', () => {
   assert.equal(blinkLidAt(0, 1, 30), 0);
@@ -51,13 +54,14 @@ test('talkAt menyinkronkan vokal bahasa Indonesia dengan leadFrames', () => {
   assert.deepEqual(talkWave(15, false), { open: 0, shape: 'closed' });
 });
 
-test('CAST_PRESETS memuat 12 karakter Indonesia (termasuk bangUtoh, pakUjang, tio, mbakYuni) dan resolveActorSpec tidak memutasi preset', () => {
+test('CAST_PRESETS memuat 13 karakter Indonesia (termasuk bangUtoh, ebot, pakUjang, tio, mbakYuni) dan resolveActorSpec tidak memutasi preset', () => {
   assert.deepEqual(Object.keys(CAST_PRESETS).sort(), [
     'arya',
     'bangUdin',
     'bangUtoh',
     'buSiti',
     'dimas',
+    'ebot',
     'mbakYuni',
     'pakBudi',
     'pakUjang',
@@ -70,6 +74,14 @@ test('CAST_PRESETS memuat 12 karakter Indonesia (termasuk bangUtoh, pakUjang, ti
   assert.equal(CAST_PRESETS.bangUtoh.headgear, 'headphones');
   assert.equal(CAST_PRESETS.bangUtoh.outfit, 'hoodieTech');
   assert.equal(CAST_PRESETS.bangUtoh.defaultProp, 'laptop');
+
+  assert.equal(CAST_PRESETS.ebot.name, 'Ebot');
+  assert.equal(CAST_PRESETS.ebot.eyeStyle, 'almond');
+  assert.equal(CAST_PRESETS.ebot.hairStyle, 'fadeCrop');
+  assert.equal(CAST_PRESETS.ebot.outfit, 'lokalKnit');
+  assert.equal(CAST_PRESETS.ebot.beautyMark ?? 'none', 'none');
+  assert.equal(CAST_PRESETS.ebot.noseStyle ?? 'hook', 'hook');
+  assert.equal(CAST_PRESETS.ebot.fullLips, true);
 
   assert.equal(CAST_PRESETS.pakUjang.outfit, 'satpam');
   assert.equal(CAST_PRESETS.pakUjang.headgear, 'satpamCap');
@@ -193,8 +205,9 @@ test('ActorBillboard & CatBillboard useMemo reactivity: setiap perubahan field p
     { hatPop: 0.8 },
     { fx: 'sweat' },
     { walkPhase: 0.25 },
-    { gait: 'planted' },
+    { gait: 'swing' },
     { stride: 1.5 },
+    { strideBlend: 0.45 },
     { lean: 6 },
     { headTilt: -10 },
     { sitHeight: 0.475 },
@@ -235,5 +248,146 @@ test('ActorBillboard & CatBillboard useMemo reactivity: setiap perubahan field p
       baseCatKey,
       `catPoseKey harus berubah saat ${Object.keys(patch).join(',')} diubah`,
     );
+  }
+});
+
+/** Mock ringan CanvasRenderingContext2D untuk uji regresi drawCat & drawActor di Node. */
+function makeRecordingCtx() {
+  const fills: { style: unknown; ops: string[] }[] = [];
+  const ops: string[] = [];
+  let curOps: string[] = [];
+  const grad = { addColorStop() {} };
+  const ctx: Record<string, unknown> = {
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 1,
+    lineCap: 'butt',
+    lineJoin: 'miter',
+    globalAlpha: 1,
+    font: '',
+    textAlign: 'left',
+    textBaseline: 'alphabetic',
+    save() { ops.push('save'); },
+    restore() { ops.push('restore'); },
+    clearRect() {},
+    translate(x: number, y: number) { ops.push(`tr:${x.toFixed(1)},${y.toFixed(1)}`); },
+    rotate() {},
+    scale() {},
+    clip() {},
+    beginPath() { curOps = []; },
+    closePath() {},
+    moveTo(x: number, y: number) { curOps.push(`M:${x.toFixed(1)},${y.toFixed(1)}`); },
+    lineTo(x: number, y: number) { curOps.push(`L:${x.toFixed(1)},${y.toFixed(1)}`); },
+    bezierCurveTo() { curOps.push('C'); },
+    quadraticCurveTo() { curOps.push('Q'); },
+    arc(x: number, y: number, r: number) { curOps.push(`A:${x.toFixed(1)},${y.toFixed(1)},${r.toFixed(1)}`); },
+    ellipse(x: number, y: number, rx: number, ry: number) { curOps.push(`E:${x.toFixed(1)},${y.toFixed(1)},${rx.toFixed(1)},${ry.toFixed(1)}`); },
+    roundRect(x: number, y: number, w: number, h: number) { curOps.push(`RR:${x.toFixed(1)},${y.toFixed(1)},${w.toFixed(1)},${h.toFixed(1)}`); },
+    fill() { fills.push({ style: ctx.fillStyle, ops: [...curOps] }); },
+    stroke() { ops.push(`S:${curOps.join('|')}`); },
+    fillRect() { fills.push({ style: ctx.fillStyle, ops: ['FR'] }); },
+    strokeText() {},
+    fillText() {},
+    createLinearGradient() { return grad; },
+    createRadialGradient() { return grad; },
+    getTransform() { return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }; },
+  };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, fills, ops };
+}
+
+test('v2.1 regresi cat.ts: view back hanya menggambar ekor SEKALI (sit & stand/walk), ekspresi strain & pawRaise stand akurat', () => {
+  const oyen = CAT_PRESETS.oyen;
+  // 1. view: 'back' pada sit, stand, walk -> drawTabbyTail dipanggil tepat 1x (3 fill stripeDark per ekor)
+  for (const stance of ['sit', 'stand', 'walk'] as const) {
+    const rec = makeRecordingCtx();
+    drawCat(rec.ctx, oyen, { face: 'neutral', stance, view: 'back', tailPhase: 0.5 });
+    const darkTailFills = rec.fills.filter((f) => f.style === oyen.stripeDark).length;
+    assert.equal(darkTailFills, 3, `view: 'back' pada stance '${stance}' tidak boleh menggambar ekor ganda (ditemukan ${darkTailFills} fill stripeDark)`);
+  }
+
+  // 2. Ekspresi 'strain' menggambar gigi rapat (roundRect putih) dan berbeda dari 'neutral'
+  const recStrain = makeRecordingCtx();
+  drawCat(recStrain.ctx, oyen, { face: 'strain', stance: 'sit', view: 'front' });
+  const teethRects = recStrain.fills.filter((f) => f.style === '#ffffff' && f.ops.some((o) => o.startsWith('RR:')));
+  assert.equal(teethRects.length, 1, "ekspresi 'strain' pada cat.ts harus menggambar gigi rapat (roundRect putih)");
+
+  // 3. pawRaise pada stance: 'stand' membedakan 'left' vs 'right' secara akurat
+  const recLeft = makeRecordingCtx();
+  const recRight = makeRecordingCtx();
+  drawCat(recLeft.ctx, oyen, { face: 'neutral', stance: 'stand', view: 'side', facing: 1, pawRaise: 'left' });
+  drawCat(recRight.ctx, oyen, { face: 'neutral', stance: 'stand', view: 'side', facing: 1, pawRaise: 'right' });
+  assert.notDeepEqual(recLeft.fills, recRight.fills, "stance: 'stand' harus membedakan pawRaise 'left' vs 'right'");
+});
+
+test('v2.1 regresi CatBillboard catPoseKey: membedakan undefined vs 0 untuk tailPhase, lean, breathPhase', () => {
+  const base: CatPose = { face: 'neutral', stance: 'walk', walkPhase: 0.3 };
+  assert.notEqual(catPoseKey(base), catPoseKey({ ...base, tailPhase: 0 }), 'tailPhase undefined != 0');
+  assert.notEqual(catPoseKey(base), catPoseKey({ ...base, lean: 0 }), 'lean undefined != 0');
+  assert.notEqual(catPoseKey(base), catPoseKey({ ...base, breathPhase: 0 }), 'breathPhase undefined != 0');
+});
+
+test('v2.1 regresi GlbSet shouldHideGlbNode: sanitize titik (.) & menolak string kosong ""', () => {
+  // String kosong / spasi / titik tunggal TIDAK BOLEH menyembunyikan seluruh dunia!
+  assert.equal(shouldHideGlbNode('WK_Floor', ['']), false);
+  assert.equal(shouldHideGlbNode('WK_Floor', ['   ']), false);
+  assert.equal(shouldHideGlbNode('WK_Floor', ['.']), false);
+  assert.equal(shouldHideGlbNode('WK_Floor', []), false);
+
+  // Cocokkan nama mentah Blender maupun nama tersanitasi GLTFLoader (`.` dibuang)
+  assert.equal(shouldHideGlbNode('WK_LampBulb_-135', ['WK_LampBulb_-1.35']), true);
+  assert.equal(shouldHideGlbNode('WK_LampBulb_-1.35', ['WK_LampBulb_-1.35']), true);
+  assert.equal(shouldHideGlbNode('KG_StreetPole_05_Top', ['KG_StreetPole_05']), true);
+  assert.equal(shouldHideGlbNode('WK_Floor', ['WK_LampBulb_-1.35']), false);
+});
+
+test('v2.1 regresi nusantara.ts: view back menggambar 2 anting, headTilt memutar eyeY/noseY/headTop, sitHeight hormati actorHeight', () => {
+  // 1. view: 'back' dengan earrings: true -> 2 anting (#fff8e8)
+  const rec = makeRecordingCtx();
+  const spec = resolveActorSpec('rara', { hairStyle: 'bun', earrings: true, headgear: 'none' });
+  drawActor(rec.ctx, spec, { face: 'neutral', view: 'back' });
+  const earrings = rec.fills.filter((f) => f.style === '#fff8e8');
+  assert.equal(earrings.length, 2, "view: 'back' dengan earrings harus menggambar 2 anting (kiri dan kanan)");
+
+  // 2. actorFaceAnchors memutar eyeY, noseY, dan headTop secara konsisten saat headTilt != 0
+  const flat = actorFaceAnchors('bangUtoh', { face: 'neutral', headTilt: 0 });
+  const tilted = actorFaceAnchors('bangUtoh', { face: 'neutral', headTilt: 18 });
+  assert.notEqual(tilted.eyeY, flat.eyeY, 'headTilt harus memutar eyeY');
+  assert.notEqual(tilted.noseY, flat.noseY, 'headTilt harus memutar noseY');
+  assert.notEqual(tilted.headTop, flat.headTop, 'headTilt harus memutar headTop');
+
+  // 3. sitHeight menerima actorHeight opsional (default 1.8 tidak berubah)
+  const defaultSit = actorFaceAnchors('bangUtoh', { face: 'neutral', stance: 'sit', sitHeight: 0.475 });
+  const tallSit = actorFaceAnchors('bangUtoh', { face: 'neutral', stance: 'sit', sitHeight: 0.475, actorHeight: 2.0 });
+  assert.notEqual(tallSit.torsoTop, defaultSit.torsoTop, 'actorHeight kustom harus mengkalibrasi posisi duduk sitHeight');
+});
+
+test('v2.1 regresi GRADE_PRESETS.night & checkBillboardSweep tidak pernah melaporkan penetration 0', () => {
+  // GRADE_PRESETS lengkap 5-lawan-5 dengan LIGHTS
+  assert.deepEqual(Object.keys(GRADE_PRESETS).sort(), Object.keys(LIGHTS).sort());
+  assert.ok(GRADE_PRESETS.night.contrast > 1 && GRADE_PRESETS.night.saturation > 1);
+
+  // Sudut kotak dekat margin (L-infinity hit tapi L2 > margin): tidak boleh lapor collision ber-penetration 0
+  const cornerBox = { name: 'CornerTable', min: [0.5, 0, 0.5] as [number, number, number], max: [1.5, 1.0, 1.5] as [number, number, number] };
+  const res = checkBillboardSweep([0.465, 0, 0.465], 0.01, 1.8, [0.465, 1.5, 3], [cornerBox], 0.04);
+  for (const c of res.collisions) {
+    assert.ok(c.penetration > 0, `collision tidak boleh punya penetration === 0 (${c.message})`);
+  }
+});
+
+test('Karakter lokal Ebot: merender mulus di 4 sudut pandang, tanpa tahi lalat, hidung standar studio', () => {
+  for (const view of ['front', 'threeQuarter', 'side', 'back'] as const) {
+    const recEbot = makeRecordingCtx();
+    drawActor(recEbot.ctx, 'ebot', {
+      face: view === 'side' ? 'happy' : 'neutral',
+      view,
+      stance: view === 'side' ? 'walk' : 'stand',
+      gait: 'planted',
+      walkPhase: 0.25,
+    });
+    assert.ok(recEbot.fills.length > 8, `Ebot view '${view}' harus menggambar path penuh`);
+    if (view !== 'back') {
+      const moleFills = recEbot.fills.filter((f) => f.style === '#38211d').length;
+      assert.equal(moleFills, 0, `Ebot view '${view}' tidak boleh menggambar tahi lalat (#38211d)`);
+    }
   }
 });

@@ -1,30 +1,30 @@
 ---
 name: atelier-light-grade
-description: Set up motivated lighting, sky, fog, palette, and color grade aligned with `contohvideo/` and `references/reports/lighting.md` + `grade.md`. Use whenever a shot looks flat, muddy, too dark, over-saturated, or when configuring siang/sore/malam/neon moods.
+description: Set up soft-lit matte 2.5D lighting, hemisphere sky-ground wrap, soft PCF shadows (`shadow.radius = 3.0`), motivated sky/fog, soft-clamped local lights (`uLocalLight`), real `receiveShadow`/`castShadow` (active even on `LIGHTS.noon`), palette, and color grade aligned with `contohvideo/download.mp4`, `(1).mp4`, and `references/reports/{lighting,grade}.md`.
 ---
 
-# Light and Grade (Atelier v2.0)
+# Light and Grade (Atelier v3.5 — Soft-Lit Matte 3D Polish)
 
-Light tells the viewer where they are and how to feel. Pretty light with no source feels fake. Calibrate against `contohvideo/` and `references/reports/lighting.md` + `grade.md`.
+Light integrates 2D characters physically into a soft-lit matte 3D world (`download.mp4` & `(1).mp4`). Every light must have a motivated diegetic source and zero plastic specular sheen.
 
-## Motivated Sources
-Name each diegetic source: window sun, warm tungsten hanging lamp, lab fluorescent tube, street lamp pool, or monitor/phone glow. Place lights where the source lives and ensure 2D characters separate cleanly from the 3D background.
+## True 2.5D Soft-Lit Lighting & Shadow Integration (`engine/stage/shade.ts` & `lights.ts` v3.5)
+- **Anti-Plastic Matte Suppression & Hemisphere Wrap (`twoTone()` v3.5)**:
+  - `twoTone()` suppresses `directSpecular` completely whenever `shininess <= 1.0` (paired with `classifyGlbSurface` matte `shininess: 0`) and blends subtle sky-ground hemisphere wrap (`hemiWrap`) for painterly matte depth like `download.mp4`.
+- **Soft-Lit Terminator & Soft PCF Shadows (`lights.ts` & `Stage.tsx` v3.5)**:
+  - `LIGHTS.noon` uses soft terminator `term: 0.30`, `lambert: 0.46`, `shadow.radius = 3.0`, and **`card.castShadow = true`** so characters cast real soft shadows on floors & walls even in broad daylight!
+  - All presets configure `shadow.radius` (`2.8–3.0`) passed to `<directionalLight shadow-radius={...} />` in `Stage.tsx` to eliminate jagged shadow edges.
+- **`uLocalLight` + Reinhard Soft-Clamp (Anti-Overbloom)**:
+  - Active by default (`TONE.uLocalLight = 1.0`, configurable via `LightPreset.tone.localLight`), clamping `<pointLight>`/`<spotLight>` below bloom threshold `1.0` with scalar headroom anti-hue-shift (**0% white washout**).
+- **Spherical/Cylindrical Volume + `receiveShadow` + `castShadow`**:
+  - `cardShade()` applies smooth spherical head / cylindrical torso wrap and receives real directional shadows (`receiveShadow`) while keeping facial expressions crisp.
+  - Pair with `POST_HYBRID_25D` in `look.ts` for `download.mp4`-style atmospheric depth where 2D characters pop naturally.
 
 ## Presets (`engine/stage/lights.ts` & `engine/sets/`)
-- Core presets: `noon`, `amber`, `dusk`, `night`, `neon` (`LIGHTS`).
-- Interior sets (`<WarkopSet />`, `<KostSet />`, `<KampusSet />`): wrap with **`indoorLight(LIGHTS.xxx)`** (`cameraRelative: false`) so front-top directional light is never blocked by back walls.
-- Unified world (`<KampungSet mode="siang" | "sore" | "malam" />`): uses `KAMPUNG_MODES` to switch sky, fog, practical lamps, and window glow automatically.
-- Override per production in `look.ts` when needed.
+- 5 core presets: `noon`, `amber`, `dusk`, `night`, `neon` (matched 5-to-5 with `GRADE_PRESETS`).
+- Interior sets (`<WarkopSet />`, `<KostSet />`, `<KampusSet />`): wrap with **`indoorLight(LIGHTS.xxx)`** (`cameraRelative: false`).
+- Unified world (`<KampungSet mode="siang" | "sore" | "malam" />`): uses `KAMPUNG_MODES` automatically.
 
 ## Rules of Thumb
-- **Freeze per shot**: Light preset, sun direction, DOF enable state, and focus target only change on **hard cuts** — never pop or crawl mid-shot!
-- **Fog = Horizon**: Fog color matches the horizon so distant silhouettes fade cleanly.
-- **Cool shadows only**: Shadows lean violet/blue, never muddy brown. Do not crush blacks; lit faces stay bright and readable without blowing out neon.
-- **Muted natural albedos**: Wood, brick, and stone stay grounded; avoid harsh lemon yellow or lavender casts on lit skin.
-- **Unlit 3D signage**: Signs with text (`SignMain`, `MenuLine`, `BoardHead`) use unlit `NOINK` materials so lettering stays sharp under any sun angle.
-
-## Rim Light
-Inner rim only, on head and torso. Never use an offset outer sprite copy that turns hats or heads into floating picture frames.
-
-## Check
-Verify stills against `atelier-quality-gate` (Pillar 4: Motivated Light & Look Bible) and obtain G2 approval before motion work.
+- **Hard-cut discipline**: Light preset, sun direction, DOF, and focus change ONLY on hard cuts.
+- **Fog = Horizon**, cool violet/blue shadows only (never muddy brown), never crush blacks, unlit `NOINK` for 3D signs.
+- Verify stills against `atelier-quality-gate` (0% plastic sheen, 0% over-bloom, clean soft shadow integration) before G2 approval.

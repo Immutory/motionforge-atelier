@@ -36,6 +36,10 @@ def build_grid_sheet(
     cell_w: int = 420,
     cell_h: int = 746,
 ) -> None:
+    if cols < 1:
+        raise ValueError(f"cols harus >= 1, bukan {cols}")
+    if not items:
+        return
     rows = (len(items) + cols - 1) // cols
     pad = 22
     header_h = 110
@@ -72,7 +76,8 @@ def build_grid_sheet(
             width=2,
         )
         if img_path.exists():
-            im = Image.open(img_path).convert("RGB").resize((cell_w, cell_h), Image.Resampling.LANCZOS)
+            with Image.open(img_path) as raw_im:
+                im = raw_im.convert("RGB").resize((cell_w, cell_h), Image.Resampling.LANCZOS)
             sheet.paste(im, (x, y))
         else:
             draw.rectangle([x, y, x + cell_w, y + cell_h], fill=(50, 42, 70))
@@ -105,6 +110,7 @@ def main() -> None:
     w_src = OUT / "warga" / "stills"
     r_src = OUT / "riglab" / "stills"
     u_src = OUT / "bangutoh" / "stills"
+    e_src = OUT / "ebot" / "stills"
     k_src = OUT / "kucingoyen" / "stills"
     s_src = OUT / "setlab" / "stills"
 
@@ -159,33 +165,36 @@ def main() -> None:
         if src.exists():
             copy_if_exists(src, FRAMES_DIR / f"warga_anim_{src.name}")
 
-    build_grid_sheet(
-        global_items,
-        cols=4,
-        title="MOTIONFORGE ATELIER — SHEET PROTOTIPE KARAKTER GLOBAL",
-        subtitle="3 Gaya Orisinal (Atelier Indie · Squircle Plush · Ink-Pop Comic) dirender di dunia 3D",
-        dest=SHEETS_DIR / "sheet_global_prototypes.jpg",
-    )
+    if any(p.exists() for p, _ in global_items):
+        build_grid_sheet(
+            global_items,
+            cols=4,
+            title="MOTIONFORGE ATELIER — SHEET PROTOTIPE KARAKTER GLOBAL",
+            subtitle="3 Gaya Orisinal (Atelier Indie · Squircle Plush · Ink-Pop Comic) dirender di dunia 3D",
+            dest=SHEETS_DIR / "sheet_global_prototypes.jpg",
+        )
 
-    build_grid_sheet(
-        nusa_items,
-        cols=5,
-        title="MOTIONFORGE ATELIER — SHEET KARAKTER ALA INDONESIA (HOST NUSANTARA)",
-        subtitle="4 Tokoh Host Nusantara: Mas Arya · Mbak Rara · Bang Dimas · Saka Nusantara",
-        dest=SHEETS_DIR / "sheet_nusantara.jpg",
-        cell_w=380,
-        cell_h=675,
-    )
+    if any(p.exists() for p, _ in nusa_items):
+        build_grid_sheet(
+            nusa_items,
+            cols=5,
+            title="MOTIONFORGE ATELIER — SHEET KARAKTER ALA INDONESIA (HOST NUSANTARA)",
+            subtitle="4 Tokoh Host Nusantara: Mas Arya · Mbak Rara · Bang Dimas · Saka Nusantara",
+            dest=SHEETS_DIR / "sheet_nusantara.jpg",
+            cell_w=380,
+            cell_h=675,
+        )
 
-    build_grid_sheet(
-        nusa_anim,
-        cols=4,
-        title="NUSANTARA ANIMATION STRIP — 30 FPS LIVE ACTION TEST",
-        subtitle="Siklus Jalan Bouncy -> Lip-Sync Bicara & Prop -> Plot-Twist Peci Loncat + Golden Hour + Camera Kick",
-        dest=SHEETS_DIR / "sheet_nusantara_anim_strip.jpg",
-        cell_w=380,
-        cell_h=675,
-    )
+    if any(p.exists() for p, _ in nusa_anim):
+        build_grid_sheet(
+            nusa_anim,
+            cols=4,
+            title="NUSANTARA ANIMATION STRIP — 30 FPS LIVE ACTION TEST",
+            subtitle="Siklus Jalan Bouncy -> Lip-Sync Bicara & Prop -> Plot-Twist Peci Loncat + Golden Hour + Camera Kick",
+            dest=SHEETS_DIR / "sheet_nusantara_anim_strip.jpg",
+            cell_w=380,
+            cell_h=675,
+        )
 
     if any(p.exists() for p, _ in warga_items):
         build_grid_sheet(
@@ -194,16 +203,6 @@ def main() -> None:
             title="MOTIONFORGE ATELIER — SHEET NPC WARGA SEHARI-HARI INDONESIA",
             subtitle="4 NPC Khas Indonesia: Pak Budi (Pak RT) · Bu Siti (Ibu Warung) · Raka (SMA) · Bang Udin (Ojol)",
             dest=SHEETS_DIR / "sheet_warga_indonesia.jpg",
-            cell_w=380,
-            cell_h=675,
-        )
-
-        build_grid_sheet(
-            warga_anim,
-            cols=4,
-            title="WARGA INDONESIA ANIMATION STRIP — 30 FPS LIVE ACTION TEST",
-            subtitle="Pak RT & Bang Ojol: Jalan Bouncy -> Ngobrol Kopi & Peta -> Plot-Twist Helm Loncat + Golden Hour",
-            dest=SHEETS_DIR / "sheet_warga_anim_strip.jpg",
             cell_w=380,
             cell_h=675,
         )
@@ -229,6 +228,17 @@ def main() -> None:
             cell_h=693,
         )
 
+    if any(p.exists() for p, _ in warga_anim):
+        build_grid_sheet(
+            warga_anim,
+            cols=4,
+            title="WARGA INDONESIA ANIMATION STRIP — 30 FPS LIVE ACTION TEST",
+            subtitle="Pak RT & Bang Ojol: Jalan Bouncy -> Ngobrol Kopi & Peta -> Plot-Twist Helm Loncat + Golden Hour",
+            dest=SHEETS_DIR / "sheet_warga_anim_strip.jpg",
+            cell_w=380,
+            cell_h=675,
+        )
+
     master_items = [
         global_items[1],
         global_items[2],
@@ -239,15 +249,16 @@ def main() -> None:
         nusa_items[3],
         nusa_items[4],
     ]
-    build_grid_sheet(
-        master_items,
-        cols=4,
-        title="MOTIONFORGE ATELIER — MASTER CATALOG (GLOBAL + HOST NUSANTARA)",
-        subtitle="Baris Atas: Prototipe Global (A, B, C)   |   Baris Bawah: Seri Host Nusantara (ID-1 s/d ID-4)",
-        dest=SHEETS_DIR / "sheet_master_catalog.jpg",
-        cell_w=390,
-        cell_h=693,
-    )
+    if any(p.exists() for p, _ in master_items):
+        build_grid_sheet(
+            master_items,
+            cols=4,
+            title="MOTIONFORGE ATELIER — MASTER CATALOG (GLOBAL + HOST NUSANTARA)",
+            subtitle="Baris Atas: Prototipe Global (A, B, C)   |   Baris Bawah: Seri Host Nusantara (ID-1 s/d ID-4)",
+            dest=SHEETS_DIR / "sheet_master_catalog.jpg",
+            cell_w=390,
+            cell_h=693,
+        )
 
     rig_items = [
         (copy_if_exists(r_src / "f0000.jpg", FRAMES_DIR / "rig_01_expressions_fx.jpg"), "12 Ekspresi & Comic FX"),
@@ -305,6 +316,48 @@ def main() -> None:
             title="BANG UTOH ANIMATION STRIP — 30 FPS LIVE ACTION TEST",
             subtitle="Pemeran Utama #1 (S1 TI): Jalan Bouncy -> Presentasi Laptop & Lip-Sync -> Plot-Twist Error + Headphone Loncat!",
             dest=SHEETS_DIR / "sheet_bang_utoh_anim_strip.jpg",
+            cell_w=380,
+            cell_h=675,
+        )
+
+    ebot_items = [
+        (copy_if_exists(e_src / "f0000.jpg", FRAMES_DIR / "ebot_hero.jpg"), "Hero · Ebot (Kasual Lokal)"),
+        (copy_if_exists(e_src / "f0030.jpg", FRAMES_DIR / "ebot_turnaround.jpg"), "Turnaround 4 Sudut Pandang"),
+        (copy_if_exists(e_src / "f0060.jpg", FRAMES_DIR / "ebot_moods.jpg"), "4 Mood & Gaya Lokal Ebot"),
+        (copy_if_exists(e_src / "f0090.jpg", FRAMES_DIR / "ebot_cast.jpg"), "Ebot + Cast Lokal & Batik"),
+    ]
+    ebot_anim = [
+        (e_src / "f0150.jpg", "f150 · Walk Masuk (Planted)"),
+        (e_src / "f0160.jpg", "f160 · Walk Step 1"),
+        (e_src / "f0170.jpg", "f170 · Walk Step 2"),
+        (e_src / "f0180.jpg", "f180 · Sapa & Es Kopi"),
+        (e_src / "f0192.jpg", "f192 · Auto Lip-Sync 1"),
+        (e_src / "f0204.jpg", "f204 · Smug Nongkrong"),
+        (e_src / "f0217.jpg", "f217 · Plot-Twist Shock!"),
+        (e_src / "f0232.jpg", "f232 · Golden Shock Hold"),
+    ]
+    for src, _ in ebot_anim:
+        if src.exists():
+            copy_if_exists(src, FRAMES_DIR / f"ebot_anim_{src.name}")
+
+    if any(p.exists() for p, _ in ebot_items):
+        build_grid_sheet(
+            ebot_items,
+            cols=4,
+            title="MOTIONFORGE ATELIER — KARAKTER LOKAL ORISINAL: EBOT",
+            subtitle="Wajah Mirip Referensi · Kulit Sawo Matang Hangat · Fade Crop · Outer Rajut Earth-Tone · Resmi di engine/cast/",
+            dest=SHEETS_DIR / "sheet_ebot_main.jpg",
+            cell_w=420,
+            cell_h=746,
+        )
+
+    if any(p.exists() for p, _ in ebot_anim):
+        build_grid_sheet(
+            ebot_anim,
+            cols=4,
+            title="EBOT ANIMATION STRIP — 30 FPS LIVE ACTION TEST",
+            subtitle="Ebot (Gaya Kasual Lokal): Planted Gait Walk -> Auto Lip-Sync & Head-Tilt -> Plot-Twist Shock + Golden Hour!",
+            dest=SHEETS_DIR / "sheet_ebot_anim_strip.jpg",
             cell_w=380,
             cell_h=675,
         )
@@ -371,6 +424,7 @@ def main() -> None:
 
     for src, dst_name in [
         (OUT / "bangutoh" / "previews" / "beat_150-240.mp4", "bang_utoh_anim_preview.mp4"),
+        (OUT / "ebot" / "previews" / "beat_150-240.mp4", "ebot_anim_preview.mp4"),
         (OUT / "kucingoyen" / "previews" / "beat_150-240.mp4", "kucing_oyen_anim_preview.mp4"),
         (OUT / "nusantara" / "previews" / "beat_150-240.mp4", "nusantara_anim_preview.mp4"),
         (OUT / "warga" / "previews" / "beat_150-240.mp4", "warga_anim_preview.mp4"),

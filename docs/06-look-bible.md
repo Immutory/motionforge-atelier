@@ -1,39 +1,37 @@
-# 06. Look Bible "Atelier" (v2.0)
+# 06. Look Bible "Atelier" (v3.5 — 2D-Grade Walk + Soft-Lit 3D Polish)
 
-Standar visual, akting, dan kamera MotionForge Atelier — diselaraskan dengan video referensi studio di `contohvideo/` (`(1).mp4` & `(4).mp4`) dan hasil pengukuran numerik di `references/reports/`. Ukur dan sesuaikan memakai skill `atelier-look-match` bila memulai gaya baru.
+Standar visual, berjalan kaki 2D-grade, akting 2,5D, cahaya matte lembut, dan kamera MotionForge Atelier v3.5 — diselaraskan dengan kedua video referensi utama di disk:
+1. **`contohvideo/download.mp4`** (dunia 3D *soft-lit atmospheric matte* bebas kilap plastik, integrasi cahaya/bayangan 2D-in-3D lembut, outline 3D tipis, & *frame-within-a-frame*).
+2. **`contohvideo/Panduan Analisis dan Produksi Video Animasi - Google Gemini (1).mp4`** (karakter 2,5D bervolume utuh, artikulasi berjalan kaki 2D jelas, *motion grammar*, prop 3D di tangan, *shadow-on-wall*, & kamera sinematik).
+3. Laporan terukur di `references/reports/*.md`.
 
-## Warna dan cahaya
-- Siang (`noon`): langit atas biru sedang, horizon pucat, kabut berwarna sama dengan horizon.
-- Golden (`amber` / `sore`): matahari rendah hangat, bayangan ungu kebiruan, kabut peach.
-- Malam (`night` / `dusk` / `neon`): lampu jalan, jendela, dan bohlam praktis menyala hangat (`GlbSet` otomatis); interior memakai `indoorLight(LIGHTS.xxx)` agar cahaya utama tidak terhalang dinding belakang.
-- Bayangan tidak pernah cokelat kusam. Tint dingin hanya di area bayangan.
-- Hitam tidak boleh hancur. Wajah terang dan terbaca, tidak neon.
-- Preset cahaya, status DOF, dan titik fokus hanya berubah pada **hard cut** (nol pop di tengah shot).
+## Definisi Resmi Karakter 2,5D (1 Siluet Utuh Bervolume)
+- **BUKAN** memecah karakter menjadi beberapa papan kertas yang melayang terpisah di sumbu Z.
+- **MELAINKAN** 1 siluet vektor utuh (`<ActorBillboard />` / `<CatBillboard />`) dengan 5 mekanisme:
+  1. **Spherical Face & Feature Parallax** (*cosine foreshortening* mata/alis/kacamata + 8-arah mulus termasuk `backThreeQuarter` via `resolve25DView`).
+  2. **Weighted Asymmetric 2.5D Ink Outline** (tipis di sisi terang, 2–3× lebih tegas di sisi bayangan, warna `#1f192d`).
+  3. **True 3D Light & Shadow Integration** (`receiveShadow` nyata ke wajah/badan, `uLocalLight` dengan *Reinhard soft-clamp* anti-overbloom, serta `castShadow` siluet penuh ke lantai & dinding belakang termasuk `LIGHTS.noon.card.castShadow = true`).
+  4. **Hybrid 2D-Hand → 3D-Prop Interaction** (tangan 2D memegang prop **3D murni** matte dari `engine/props/` via `actorHandWorldPos`, duduk anti-tembus via `seatRadius`, pijakan konter berbilah kayu via `PALLET_TOP_Y` / `ergonomicBaseY`).
+  5. **High-Angle X-Tilt Compensation** (`tiltComp`: kemiringan halus `tiltX` berporos telapak `y = 0` saat pitch kamera `> 12°`).
 
-## Ink (`NOINK` aktif)
-- Garis dunia 3D (`InkPass`) nyaris hitam, tebal dekat kamera dan tipis di kejauhan.
-- Hanya siluet, lompatan kedalaman, dan lipatan tajam — bukan pertemuan lantai-dinding atau horizon.
-- Tokoh 2D (`<ActorBillboard />`, `<CatBillboard />`) dan papan nama 3D (`SignMain`, `MenuLine`, `BoardHead`) berada di **layer `NOINK`** (`engine/post/layers.ts`) sehingga memakai garis tinta ungu tua Canvas2D sendiri tanpa outline ganda.
+## Warna, Material Matte, dan Cahaya (`download.mp4` Standard)
+- **Anti-Plastic Matte 3D**: `classifyGlbSurface()` di `GlbSet.tsx` mematikan kilap plastik (`shininess: 0, specular: 0, normalScale: 0.35`) pada permukaan matte (`Roughness >= 0.82` di Blender, `Normal Strength <= 0.45`, normal map 512px, `kampung.glb <= 29 MB`), diperkuat penekanan specular & *hemisphere sky-ground wrap* di `twoTone()` (`shade.ts`).
+- **Bayangan Lembut**: `Stage.tsx` mengaktifkan `shadow-radius` (`3.0` di `noon`/`amber`/`dusk`), `LIGHTS.noon` memakai terminator lebar `term: 0.30` / `lambert: 0.46` dan `card.castShadow = true`.
+- Siang (`noon`), Golden (`amber`/`sore`), Senja (`dusk`), Malam (`night`), & `neon`: setiap lampu punya sumber nyata (`indoorLight` untuk interior).
+- **`uLocalLight` + Reinhard Soft-Clamp (`shade.ts`)**: lampu bohlam warkop/gerobak, layar laptop, dan lampu jalan malam menyinari dunia 3D dan wajah karakter secara hangat tanpa pernah *washout* putih atau over-bloom (`< 1.0`).
+- Bayangan tidak pernah cokelat kusam (cenderung violet/biru), hitam tidak hancur, wajah tetap terbaca tajam. Preset cahaya, DOF, dan fokus hanya berubah pada **hard cut**.
 
-## Tokoh & Animasi Referensi
-- **Cast Resmi**: 12 karakter Indonesia (`CAST_PRESETS`) + 3 kucing 2D (`CAT_PRESETS`: `oyen`, `abu`, `belang` — selalu 2D, tidak pernah mesh 3D).
-- **Proporsi & Garis**: kepala sedikit lebih lebar dari tinggi, garis luar tebal-tipis (`#1f192d`), bayangan wajah lembut, `build: 'slim' | 'regular' | 'big'`, dan 13 ekspresi (lidded deadpan `neutral`/`tired` kontras tajam dengan `shock`, `angry`, `laugh`, `strain`).
-- **Artikulasi Organik**: *organic noodle-limbs* Bezier 3-titik pada lengan & kaki, *walk body bob* 3–6% tinggi tubuh, siklus *torso lean* 1°–7°, `headTilt` independen dari badan, `sitHeight` menapak alami di atas bangku/kursi (`SpotMeta.seatY`), dan `view: 'back'` penuh untuk putaran 180°.
-- **Timing & Impact**: kedip 4-frame (`0.5 / 1 / 1 / 0.5`) di setiap pergantian ekspresi, reaksi mendarat 2 frame sebelum kata (`reactionFrame`), *planted gait* (`gait: 'planted'`, nol selip), *RMS-gated lip-sync* (`talkGated`), `strikeEnvelope` (4f wind-up → 6f hold → 1f strike → 8f follow-through), dan `springPop`.
-- **Anti-Clipping**: seluruh billboard wajib lolos `checkBillboardSweep` pada sudut `yaw` kamera aktif dan `checkCounterVisibility` saat di balik konter.
+## Ink & Post-Processing (`NOINK` aktif)
+- Urutan wajib: `InkPass` (`NOINK` aktif untuk karakter 2D & papan nama 3D) → `LensPass` → `UnrealBloomPass` → tone map netral → color grade → transisi editorial.
+- **`POST_HYBRID_25D` (Rekomendasi Default v3.5 untuk episode baru)**: outline dunia 3D tipis (`strength: 0.42`, `thickness: 1.6`) + *atmospheric depth* + shallow DOF foreground/background agar karakter 2D ber-ink *pop* maksimal seperti `download.mp4`. `DEFAULT_POST` tetap dipertahankan 100% untuk EP01–EP04.
 
-## Kamera — Sinematika Referensi `contohvideo/`
-- **Paradigma Utama**: *Purposeful 3D Move → Confident Settle* (`DEFAULT_CREEP = 0`). Hold dialog dan panggung duduk **mantap stabil (`creepRate: 0`, `roll: 0`)** — **TIDAK menggunakan slow zoom-in monoton pada setiap shot!**
-- **Variasi Gerak 3D (`engine/core/camera.ts`)**:
-  - `moveSettle` (glide mulus `smootherstep` 18–32f, peak ≤ 25 px/f @720p → settle mantap),
-  - `pullOutReveal` (macro prop → mundur logaritmis `path: 'dolly'` membuka panggung utuh),
-  - `orbitArc` (geser orbit melengkung 3D menonjolkan paralaks ruang),
-  - `topDownInsert` (flat-lay 90° overhead di atas meja/prop),
-  - `craneTransition` (aerial bird's-eye menukik ke eye-level / horizontal tracking).
-- **Transisi & Ritme**: hard cut pada lompatan skala/ruang besar, **Cross-Dissolve (8–14f)**, **Foreground Object Wipe (8–12f)**, dan **White Flash (4–6f)** pada pergantian realitas via `Shot.transition`.
-- **Safe Framing**: seluruh shot kunci wajib lolos `checkSafeFraming` (0 wajah/telinga/papan nama terpotong; bersih dari zona subtitle 9:16 `y ≈ 76–88%`).
-- **Pure Cinema**: ZERO kotak HUD/banner 2D di atas dunia 3D.
+## Tokoh & Berjalan Kaki 2D-Grade (`nusantara.ts` v3.5)
+- **Cast Resmi**: **13 Indonesian Cast (`CAST_PRESETS`, termasuk `ebot`)** + **3 Kucing 2D (`CAT_PRESETS`: `oyen`, `abu`, `belang` — selalu 2D, never 3D!)**.
+- **Walk Cycle 2D-Grade (ZERO Ice-Skating)**: 2-Bone Analytic Leg IK (`solveLegIK`, tekukan lutut `60–70°` saat Passing), far-leg digelapkan `16%`, 4-pose foot roll (`+18°` heel-strike, `0°` flat, `-24°` toe-off), counter-swing lengan `Math.cos(ph)` pada `side`/`threeQuarter`/`front`/`back`, default `gait: 'planted'` (manusia & kucing), contact shadow dinamis (`blobY = 0,005`), serta wajib **`computeWalkState()`** (`strideBlend` ease-out) untuk semua perpindahan XZ.
+- **Artikulasi & Ergonomi**: `headTilt` independen, auto-inject `actorHeight` pada `sitHeight`, kursi tunggal + `seatRadius`, **larangan `armPose: 'rest'` di balik konter (`handY >= counterTopY + 0,08 m`)**, `strikeEnvelope` (4-6-1-8), `springPop`, kedip 4-frame (`blinkLidAt`), reaksi 2f lebih awal, dan *RMS-gated lip-sync* (`talkGated`).
 
-## Kedalaman
-- Blur latar (`LensPass`) pada sekitar sepertiga durasi: close-up dan macro insert. Wide & establishing tetap tajam.
-- Fokus pada mata atau prop hero 3D.
+## Kamera — Cinema Camera v3.0
+- **`<CameraRig />` kanonik & `viewAxisFocus`** dari `engine` (tanpa duplikasi di tiap produksi).
+- **Paradigma Utama**: *Purposeful 3D Move → Confident Settle* (`DEFAULT_CREEP = 0` — **nol slow-zoom monoton!**).
+- **Helper Resmi (`engine/core/camera.ts`)**: `moveSettle`, `pullOutReveal`, `whipPan` (`path: 'whip'`), analitis `orbit` (`orbitTo` / `orbitArc`, C²-smooth 2 keyframe), `storyDolly`, `topDownInsert` (**khusus prop 3D murni**, bukan karakter 2D!), `craneTransition`, `handheld` loop-safe (otomatis `0` pada makro), camera-local harmonic `kickOffset`, *frame-within-a-frame*, dan transisi (`cut`/`dissolve`/`wipe`/`flash`).
+- **Pure Cinema, Subtitle, Loop & Thumbnail**: ZERO 2D HUD boxes; subtitle `SUB_STACK = 'label-above'` (`1485–1690 px`) bebas mulut; loop `TOTAL_FRAMES % 90 === 0`; thumbnail 4-platform safe-zone (`y = 295..1630 px`, `x < 920 px`).

@@ -302,10 +302,10 @@ export const KampungUpgradeProduction: React.FC = () => {
             }}
           />
 
-          {/* Tio aktif memasak & menyajikan Bakmie Ayam di belakang gerobaknya */}
+          {/* Tio aktif memasak & menyajikan Bakmie Ayam di atas pallet permanen (ergonomicBaseY = 0.30 m) */}
           <ActorBillboard
             actor="tio"
-            position={KAMPUNG_SPOTS.bakmieTioVendor}
+            position={[KAMPUNG_SPOTS.bakmieTioVendor[0], 0.3, KAMPUNG_SPOTS.bakmieTioVendor[2]]}
             faceTo={s3d.pose.pos}
             height={1.88}
             castShadow={false}
@@ -324,10 +324,10 @@ export const KampungUpgradeProduction: React.FC = () => {
             }}
           />
 
-          {/* Mbak Yuni aktif melayani Es Buah & Campur Segar di belakang gerobak timur */}
+          {/* Mbak Yuni aktif melayani Es Buah & Campur Segar di atas pallet permanen (ergonomicBaseY = 0.30 m) */}
           <ActorBillboard
             actor="mbakYuni"
-            position={KAMPUNG_SPOTS.esBuahYuniVendor}
+            position={[KAMPUNG_SPOTS.esBuahYuniVendor[0], 0.3, KAMPUNG_SPOTS.esBuahYuniVendor[2]]}
             faceTo={s3d.pose.pos}
             height={1.82}
             castShadow={false}

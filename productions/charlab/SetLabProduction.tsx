@@ -124,10 +124,10 @@ export const SetLabProduction: React.FC = () => {
           {slide.set === 'warkop' && (
             <>
               <WarkopSet lightId={slide.lightId} />
-              {/* Bu Siti di belakang konter melayani warkop */}
+              {/* Bu Siti di belakang konter melayani warkop (spot counterKeeper + ergonomicBaseY agar dada/bahu utuh) */}
               <ActorBillboard
                 actor="buSiti"
-                position={WARKOP_SPOTS.behindCounter}
+                position={[WARKOP_SPOTS.counterKeeper[0], 0.44, WARKOP_SPOTS.counterKeeper[2]]}
                 faceTo={slide.pose.pos}
                 height={1.88}
                 pose={{ face: 'happy', leftArm: 'hip', rightArm: 'hold', rightProp: 'kopi', facing: 0.15 }}
@@ -151,13 +151,14 @@ export const SetLabProduction: React.FC = () => {
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              {/* Bang Dimas duduk di area meja kanan */}
+              {/* Bang Dimas duduk di area meja kanan (spot rightTableSeat + seatRadius & sitHeight terkalibrasi v3.0) */}
               <ActorBillboard
                 actor="dimas"
-                position={WARKOP_SPOTS.rightTable}
+                position={WARKOP_SPOTS.rightTableSeat}
                 faceTo={slide.pose.pos}
                 height={1.84}
-                pose={{ face: 'laugh', stance: 'sit', leftArm: 'rest', rightArm: 'hold', rightProp: 'esteh', facing: -0.35 }}
+                seatRadius={0.16}
+                pose={{ face: 'laugh', stance: 'sit', sitHeight: 0.483, leftArm: 'rest', rightArm: 'hold', rightProp: 'esteh', facing: -0.35 }}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />

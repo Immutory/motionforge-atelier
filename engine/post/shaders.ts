@@ -31,8 +31,12 @@ varying vec2 vCut;
 void main() {
   if (cut > 0.0 && texture2D(tCut, vCut).a < cut) discard;
   vec3 n;
-  if (dot(vN, vN) < 1e-8) n = normalize(cross(dFdx(vV), dFdy(vV)));
-  else n = normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0);
+  if (dot(vN, vN) < 1e-8) {
+    vec3 fn = cross(dFdx(vV), dFdy(vV));
+    n = dot(fn, fn) > 1e-12 ? normalize(fn) : vec3(0.0, 0.0, 1.0);
+  } else {
+    n = normalize(vN) * (gl_FrontFacing ? 1.0 : -1.0);
+  }
   gl_FragColor = vec4(n, 1.0);
 }`;
 
@@ -74,7 +78,7 @@ varying vec2 vUv;
 
 const vec2 STEP[4] = vec2[4](vec2(1.0, 0.0), vec2(0.0, 1.0), vec2(1.0, 1.0), vec2(1.0, -1.0));
 const float SLEN[4] = float[4](1.0, 1.0, 1.41421, 1.41421);
-#define RMAX 6
+#define RMAX 8
 
 float distAt(sampler2D t, vec2 uv) {
   return -perspectiveDepthToViewZ(textureLod(t, clamp(uv, vec2(0.0), vec2(1.0)), 0.0).x, uNear, uFar);
@@ -150,23 +154,35 @@ uniform vec3 uFogColor;
 uniform int uDebug;
 varying vec2 vUv;
 
-float mAt(float x, float y) {
-  return textureLod(tMask, clamp(vUv + vec2(x, y) * uTexel, vec2(0.0), vec2(1.0)), 0.0).r;
+vec2 mfAt(float x, float y) {
+  return textureLod(tMask, clamp(vUv + vec2(x, y) * uTexel, vec2(0.0), vec2(1.0)), 0.0).rg;
 }
 
 void main() {
+  vec2 m00 = mfAt(0.0, 0.0);
+  vec2 m10 = mfAt(1.0, 0.0);
+  vec2 m_10 = mfAt(-1.0, 0.0);
+  vec2 m01 = mfAt(0.0, 1.0);
+  vec2 m0_1 = mfAt(0.0, -1.0);
+  vec2 m11 = mfAt(1.0, 1.0);
+  vec2 m_11 = mfAt(-1.0, 1.0);
+  vec2 m1_1 = mfAt(1.0, -1.0);
+  vec2 m_1_1 = mfAt(-1.0, -1.0);
   float a = (
-    4.0 * mAt(0.0, 0.0)
-    + 2.0 * (mAt(1.0, 0.0) + mAt(-1.0, 0.0) + mAt(0.0, 1.0) + mAt(0.0, -1.0))
-    + mAt(1.0, 1.0) + mAt(-1.0, 1.0) + mAt(1.0, -1.0) + mAt(-1.0, -1.0)
+    4.0 * m00.r
+    + 2.0 * (m10.r + m_10.r + m01.r + m0_1.r)
+    + m11.r + m_11.r + m1_1.r + m_1_1.r
   ) / 16.0;
   vec4 c = textureLod(tDiffuse, vUv, 0.0);
   if (uDebug == 1) { gl_FragColor = vec4(vec3(1.0 - a), 1.0); return; }
   if (uDebug == 2) { gl_FragColor = vec4(textureLod(tNormal, vUv, 0.0).xyz * 0.5 + 0.5, 1.0); return; }
-  float fogK = textureLod(tMask, vUv, 0.0).g;
+  float fogK = max(
+    max(max(m00.g, m10.g), max(m_10.g, m01.g)),
+    max(max(m0_1.g, m11.g), max(max(m_11.g, m1_1.g), m_1_1.g))
+  );
   vec3 inkLin = mix(uInkColor, uFogColor, fogK * 0.6);
-  vec3 g = pow(max(c.rgb, 0.0), vec3(1.0 / 2.2));
-  vec3 gi = pow(max(inkLin, 0.0), vec3(1.0 / 2.2));
+  vec3 g = pow(max(c.rgb, 1e-6), vec3(1.0 / 2.2));
+  vec3 gi = pow(max(inkLin, 1e-6), vec3(1.0 / 2.2));
   gl_FragColor = vec4(pow(mix(g, gi, a), vec3(2.2)), c.a);
 }`;
 
@@ -327,7 +343,7 @@ void main() {
   rgb += wS * uTintS + wM * uTintM + wH * uTintH;
 
   float r = length(vUv * 2.0 - 1.0) * 0.70710678;
-  rgb *= 1.0 - uVig.x * smoothstep(uVig.y, 1.0, r);
+  rgb *= 1.0 - uVig.x * smoothstep(min(uVig.y, 0.999), 1.0, r);
 
   rgb = mix(src, clamp(rgb, 0.0, 1.0), uAmount);
   gl_FragColor = vec4(rgb, c.a);

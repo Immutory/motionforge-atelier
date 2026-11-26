@@ -175,7 +175,7 @@ def load_img(fname, non_color=False):
 TILE = {}
 
 
-def tex_mat(name, diff, norm=None, rough=0.86, tile=2.0, strength=0.8):
+def tex_mat(name, diff, norm=None, rough=0.88, tile=2.0, strength=0.42):
     TILE[name] = tile
     m = bpy.data.materials.get(name)
     if m:
@@ -198,7 +198,7 @@ def tex_mat(name, diff, norm=None, rough=0.86, tile=2.0, strength=0.8):
     return m
 
 
-def col_mat(name, rgb, emit=0.0, rough=0.7, metal=0.0, emit_rgb=None):
+def col_mat(name, rgb, emit=0.0, rough=0.86, metal=0.0, emit_rgb=None):
     m = bpy.data.materials.get(name)
     if m:
         return m

@@ -1,29 +1,24 @@
-# MotionForge Atelier
+# MotionForge Atelier v3.0 (2.5D Reference Edition)
 
-Studio template untuk membuat video animasi **2D-in-3D**: tokoh kartun 2D (digambar dengan kode Canvas2D)
-berdiri di dunia 3D yang dimodelkan di Blender dan diekspor ke `.glb`, lalu dirender dengan Remotion dan
-three.js. Setiap tahap punya agent dan skill sendiri, jadi Claude Code bisa bekerja seperti satu studio kecil.
+Studio produksi animasi **2,5D-in-3D**: 1 siluet vektor karakter utuh bervolume 2,5D (Canvas2D + *spherical face parallax*, *weighted ink*, `receiveShadow`/`castShadow` nyata, interaksi prop 3D via `actorHandWorldPos`) berdiri di dunia 3D Blender (`.glb` + `*.boxes.json`), dirender dengan Remotion dan Three.js. Setiap tahap punya agent dan skill sendiri di `.claude/`.
 
 Format yang didukung:
 
 | Format | Ukuran | Contoh komposisi di repo |
 |--------|--------|--------------------------|
-| Short / Reels / TikTok | 1080x1920 (9:16), 55-70 detik | `ep02-bang-utoh`, `ep01-bang-utoh-short`, `starter` |
-| Episode YouTube | 1920x1080 (16:9) | `ep01-bang-utoh-vlog`, `kampungupgrade` |
-| Branding kanal | 2560x1440 banner, 2048x2048 profil | `youtubebanner`, `youtubeprofile`, `tiktokprofile` |
+| Short / Reels / TikTok | 1080×1920 (9:16), 58–75 dtk (hingga 90 dtk khusus VO asli pengguna, kelipatan `90f`) | `ep04-karyawan-bakmie`, `ep03-tio-bakmie`, `ep02-bang-utoh`, `ep01-bang-utoh-short`, `starter` |
+| Episode YouTube | 1920×1080 (16:9) | `ep01-bang-utoh-vlog`, `kampungupgrade`, `kampungv2` |
+| Branding & Thumbnail | 2560×1440 banner, 2048×2048 profil, 1080×1920 thumbnail 4-platform | `youtubebanner`, `youtubeprofile`, `tiktokprofile`, `shortsthumbs` |
 
-Nama di kolom kanan adalah **ID komposisi** (yang muncul di Remotion Studio dan dipakai perintah render),
-bukan nama folder. Contoh: `ep01-bang-utoh-short` ada di `productions/ep01_bang_utoh_short/`, sedangkan
-`kampungupgrade`, `youtubebanner`, `youtubeprofile`, dan `tiktokprofile` adalah komposisi di dalam
-`productions/charlab/`. Daftar lengkapnya ada di `productions/registry.ts`.
+Daftar lengkap ID komposisi ada di `productions/registry.ts`.
 
 ## Mulai cepat
 
 ```bash
 npm install
-npm run doctor                    # cek Node, Python, FFmpeg, numpy
-npm run check                     # typecheck + tes
-npm run studio                    # lihat komposisi "starter"
+npm run doctor                    # cek Node, Python, FFmpeg, ffprobe, numpy, scipy, Pillow
+npm run check                     # typecheck + seluruh tes TS & Python
+npm run studio                    # lihat komposisi "starter" v3.0
 npm run forge:new -- jembatan-roboh "Jembatan Roboh"
 ```
 
@@ -35,62 +30,56 @@ npm run vo:gen -- --script productions/<slug>/voice/script.json --out-dir produc
 npm run vo:align -- rekaman.wav productions/<slug>/voice/words.json   # rekaman asli -> words.json
 ```
 
-Lalu jalankan showrunner sebagai sesi utama Claude Code di folder ini:
+Jalankan showrunner sebagai sesi utama Claude Code:
 
 ```bash
 claude --agent showrunner
 ```
 
-Dan katakan: *"Aku mau bikin short tentang ..."*. Showrunner yang memanggil agent lain, karena
-subagent tidak bisa diandalkan untuk memanggil subagent lain.
-
 ## Struktur folder
 
 ```text
 motionforge-atelier/
-├── CLAUDE.md                  Otak proyek untuk Claude Code
+├── CLAUDE.md                  Otak proyek v3.0 untuk Claude Code
 ├── .claude/
 │   ├── agents/                11 agent spesialis
-│   ├── skills/                11 skill (atelier-*)
-│   └── youtube/               Panduan suara kanal
-├── .agents/
-│   ├── skills.json            Daftar folder skill yang dimuat
-│   └── youtube-skills/        10 skill kanal YouTube (yt-*), sebagian dengan skrip Python
-├── docs/                      Panduan: alur, roster, gate, look bible, kebijakan orisinalitas
-├── engine/                    Mesin yang dipakai ulang semua produksi
-│   ├── core/                  easing, kamera, timeline kata
-│   ├── stage/                 Stage, langit, kabut, lampu, preset cahaya, shading
-│   ├── cast/                  Rig tokoh 2D (ActorBillboard, nusantara), kucing (CatBillboard),
-│   │                          ekspresi, lip-sync, props 2D, bentuk dasar bean
-│   ├── sets/                  GlbSet + KampungSet, WarkopSet, KostSet, KampusSet (memuat public/sets/*.glb)
-│   ├── textures/              Tekstur cat prosedural
-│   └── post/                  ink, lens, bloom, tone map, grade (PostStack)
+│   └── skills/                11 skill (atelier-*)
+├── docs/                      Panduan v3.0: alur, roster, kepemilikan, gate, look bible, orisinalitas
+├── engine/                    Mesin 2,5D yang dipakai ulang semua produksi
+│   ├── core/                  easing, camera.ts, CameraRig.tsx, spatial.ts (audit 2,5D), timeline.ts
+│   ├── stage/                 Stage, langit, kabut, lampu, preset cahaya, shade.ts (uLocalLight soft-clamp)
+│   ├── cast/                  13 cast (ActorBillboard, nusantara), 3 kucing (CatBillboard, cat),
+│   │                          13 ekspresi + blinkLidAt, lip-sync, 23 props 2D, sticker.ts
+│   ├── sets/                  GlbSet, boxes.ts/boxesNode.ts + KampungSet, WarkopSet, KostSet, KampusSet
+│   ├── textures/              Tekstur cat prosedural + disposeTextureCache
+│   └── post/                  ink, lens, bloom, tone map, grade (PostStack + POST_HYBRID_25D)
 ├── productions/               Satu folder per video
-│   ├── _starter/              Cetak biru bersih
-│   ├── charlab/               Lab karakter, rig, set, Kampung v2, dan branding kanal
-│   │                          (12 komposisi: charlab, nusantara, warga, riglab, bangutoh,
+│   ├── _starter/              Cetak biru bersih v3.0 (2.5D Reference Edition)
+│   ├── charlab/               Lab karakter, rig, set, Kampung v2, branding & thumbnail
+│   │                          (14 komposisi: charlab, nusantara, warga, riglab, bangutoh, ebot,
 │   │                          setlab, kucingoyen, kampungv2, kampungupgrade, youtubebanner,
-│   │                          youtubeprofile, tiktokprofile)
-│   ├── ep01_bang_utoh_vlog/   Episode 1 versi YouTube 16:9 (tata letak lama, lihat docs/04)
-│   ├── ep01_bang_utoh_short/  Episode 1 versi Short 9:16 (tata letak lama)
-│   ├── ep02-bang-utoh/        Episode 2 Short 9:16 (pola _starter penuh)
+│   │                          youtubeprofile, tiktokprofile, shortsthumbs)
+│   ├── ep01_bang_utoh_vlog/   Episode 1 versi YouTube 16:9
+│   ├── ep01_bang_utoh_short/  Episode 1 versi Short 9:16
+│   ├── ep02-bang-utoh/        Episode 2 Short 9:16 (FINAL MASTER v6.1, Gate G4 LULUS)
+│   ├── ep03-tio-bakmie/       Episode 3 Short 9:16 (FINAL MASTER v6, Gate G4 LULUS)
+│   ├── ep04-karyawan-bakmie/  Episode 4 Short 9:16 (FINAL MASTER 87 dtk VO pengguna)
 │   ├── registry.ts            Daftar komposisi (diisi otomatis oleh forge:new)
-│   └── <slug>/                brief, naskah, voice, audio, shots, set, cast, look, reports
+│   └── <slug>/                brief, naskah, voice, audio, shots, set, cast, look, reports, UPLOAD.md
 ├── studio/                    Entry Remotion (satu Composition per entri registry)
-├── tests/                     Tes TS (kamera, timeline, engine, spot set, Kampung, set EP02)
-│                              dan Python (QA, pipeline voice)
-├── .github/workflows/         CI: typecheck, tes, cek sintaks pipeline
-├── pipeline/                  Skrip still, preview, render, mux, contact sheet
-│   ├── qa/                    Pemeriksa kualitas otomatis
+├── tests/                     Tes TS (kamera, timeline, engine, spatial 2,5D, spot set, EP02–EP04) & Python (QA, sound, voice)
+├── .github/workflows/         CI: typecheck, tes, cek sintaks pipeline & sound
+├── pipeline/                  Skrip still, preview, render, mux, contact sheet, export-boxes.mjs
+│   ├── qa/                    Pemeriksa kualitas otomatis (qa_check.py)
 │   └── voice/                 TTS lokal (Chatterbox), aligner (faster-whisper), SRT -> words
-├── sound/                     Lab audio sintetis (dsp, sfx, mix)
+├── sound/                     Lab audio sintetis (dsp, sfx, music, loudness, mix — -16 LUFS / -1,5 dBTP)
 ├── assets/
-│   ├── characters/            Sheet, frame, dan preview karakter
-│   ├── sets/                  Master Blender (.blend), builder Kampung v2, tekstur PBR, sheet dan frame
-│   ├── voices/                Referensi suara terkunci (*.wav) dan presets.json
-│   └── props/, textures/, fonts/   (hanya yang lisensinya jelas)
-├── public/sets/               Set 3D siap render (.glb): kampung, kampus, kost, warkop
-├── references/                Materi belajar gaya (privat, jangan dipublikasikan)
+│   ├── characters/            Sheet, frame, dan preview karakter (13 cast + 3 kucing)
+│   ├── sets/                  Master Blender (.blend), builder Kampung v2, upgrade_sets_v3.py, tekstur PBR
+│   └── voices/                Referensi suara terkunci (*.wav) dan presets.json (termasuk ebot)
+├── public/sets/               Set 3D siap render (.glb) + sidecar AABB manifest (*.boxes.json)
+├── contohvideo/               Video referensi privat: (1).mp4 & download.mp4 (jangan dipublikasikan)
+├── references/                Laporan terukur gaya & motion privat (jangan dipublikasikan)
 └── out/                       Hasil render (tidak masuk git)
 ```
 
@@ -98,20 +87,19 @@ motionforge-atelier/
 
 | Agent | Tugas | Memiliki file |
 |-------|-------|---------------|
-| showrunner | Produser, mengatur fase dan gate | PRODUCTION_LOG.md |
-| story-architect | Riset fakta dan naskah | brief.md, SCRIPT.md |
-| voice-director | Suara dan waktu per kata | voice/, words.ts, assets/voices, pipeline/voice |
-| cinematographer | Shot, kamera, kick, DOF | shots.ts |
-| set-designer | Dunia 3D (Blender ke GLB), props, tekstur | set.tsx, engine/sets, assets/sets, public/sets |
-| character-animator | Tokoh, kucing, ekspresi, akting | cast.ts, engine/cast |
-| light-colorist | Cahaya, palet, grade | look.ts |
-| post-compositor | Ink, lens, bloom | engine/post |
-| sound-designer | SFX, musik, mix | audio/, sound/ |
-| qa-inspector | Verifikasi dan skor | reports/ |
-| render-engineer | Render dan mux | pipeline/ (kecuali voice/), out/ |
+| showrunner | Produser, mengatur fase dan gate | `PRODUCTION_LOG.md`, `productions/registry.ts`, `.claude/*`, `docs/*`, `references/*`, `CLAUDE.md`, `README.md` |
+| story-architect | Riset fakta dan naskah | `brief.md`, `SCRIPT.md` |
+| voice-director | Suara dan waktu per kata | `voice/`, `words.ts`, `assets/voices/`, `pipeline/voice/` |
+| cinematographer | Shot, kamera, kick, DOF, spatial audit | `shots.ts`, `engine/core/` (`camera.ts`, `CameraRig.tsx`, `spatial.ts`) |
+| set-designer | Dunia 3D (Blender ke GLB + boxes.json), props, tekstur | `set.tsx`, `engine/sets/`, `engine/textures/`, `assets/sets/`, `public/sets/`, `charlab/KampungV2Production.tsx` |
+| character-animator | Tokoh 2,5D, kucing, ekspresi, akting | `cast.ts`, `engine/cast/`, `assets/characters/` |
+| light-colorist | Cahaya 2,5D, palet, grade | `look.ts`, `engine/stage/` |
+| post-compositor | Ink, lens, bloom, composer, transisi | `Production.tsx`, `engine/post/` |
+| sound-designer | SFX, musik, mix | `audio/`, `sound/` |
+| qa-inspector | Verifikasi 2-lapis dan skor | `reports/`, `productions/charlab/reports/` |
+| render-engineer | Render, mux, studio entry | `pipeline/` (kecuali `pipeline/voice/`), `studio/`, `out/` |
 
 Detail lengkap: [docs/03-agent-roster.md](docs/03-agent-roster.md).
 
 ## Lisensi dan orisinalitas
-Kode MIT. Template ini terinspirasi dari alur kerja proyek `2d-in-3d-animation-agent` (MIT), tetapi
-nama, struktur, agent, skill, dan kode ditulis ulang. Sebagian aturan teknis diadaptasi. Lihat `NOTICE` dan [docs/07-originality-policy.md](docs/07-originality-policy.md).
+Kode MIT. Template ini terinspirasi dari alur kerja proyek `2d-in-3d-animation-agent` (MIT), tetapi nama, struktur, agent, skill, dan kode ditulis ulang. Lihat `NOTICE` dan [docs/07-originality-policy.md](docs/07-originality-policy.md).

@@ -4,6 +4,7 @@ import { ThreeCanvas } from '@remotion/three';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
+  ActorBillboard,
   DEFAULT_POST,
   GRADE_PRESETS,
   LIGHTS,
@@ -14,14 +15,15 @@ import {
   kickOffset,
   sampleCamera,
   smootherstep,
+  type ActorPose,
   type CamKey,
   type CamPose,
+  type CastPresetId,
+  type HandProp,
   type PostParams,
   type Vec3,
 } from '../../engine';
-import { SetPieces } from '../_starter/set';
-import { NusantaraCard } from './NusantaraCard';
-import type { NusantaraId, NusantaraPose } from './nusantara';
+import { SetPieces } from './LabStageSet';
 
 const CameraRig: React.FC<{ pose: CamPose; shake?: { dx: number; dy: number; droll: number } }> = ({
   pose,
@@ -44,7 +46,8 @@ type ShowcaseSlide = {
   blur: number;
   title: string;
   subtitle: string;
-  focusId?: NusantaraId;
+  focusActor?: CastPresetId;
+  explainProp?: HandProp;
 };
 
 const SLIDES: ShowcaseSlide[] = [
@@ -65,7 +68,8 @@ const SLIDES: ShowcaseSlide[] = [
     blur: 0.78,
     title: 'ID-1 — MAS ARYA (BATIK & PECI MODERN)',
     subtitle: 'Host Fakta & Sejarah Nusantara · Kiri: Menjelaskan · Kanan: Plot-Twist Peci Loncat',
-    focusId: 'ID1',
+    focusActor: 'arya',
+    explainProp: 'book',
   },
   {
     from: 60,
@@ -75,7 +79,8 @@ const SLIDES: ShowcaseSlide[] = [
     blur: 0.78,
     title: 'ID-2 — MBAK RARA (HIJAB MODERN & DENIM)',
     subtitle: 'Host Kreator Muda & Edutainment · Kiri: Podcast Mic · Kanan: Reaksi Kaget',
-    focusId: 'ID2',
+    focusActor: 'rara',
+    explainProp: 'mic',
   },
   {
     from: 90,
@@ -85,7 +90,8 @@ const SLIDES: ShowcaseSlide[] = [
     blur: 0.78,
     title: 'ID-3 — BANG DIMAS (STREETWEAR & ES TEH)',
     subtitle: 'Komedi & Relatable Sehari-hari · Kiri: Nongkrong + Es Teh · Kanan: Topi Loncat',
-    focusId: 'ID3',
+    focusActor: 'dimas',
+    explainProp: 'esteh',
   },
   {
     from: 120,
@@ -95,7 +101,8 @@ const SLIDES: ShowcaseSlide[] = [
     blur: 0.78,
     title: 'ID-4 — SAKA NUSANTARA (IKET & TENUN)',
     subtitle: 'Kisah Rakyat & Petualangan · Kiri: Gulungan Peta · Kanan: Plot-Twist',
-    focusId: 'ID4',
+    focusActor: 'saka',
+    explainProp: 'map',
   },
 ];
 
@@ -142,26 +149,71 @@ export const NusantaraProduction: React.FC = () => {
   const groundMap = useMemo(() => cobbleTexture({ repeat: [150, 150] }), []);
   const s = height / 1920;
 
-  // Hitung posisi & pose animasi untuk segmen gerak 150..239
   const walkT = smootherstep((frame - ANIM_START) / 34);
-  const aryaX = -1.75 + walkT * 1.15; // berjalan dari kiri ke x = -0.60
-  const raraX = 1.75 - walkT * 1.15; // berjalan dari kanan ke x = +0.60
-  const walkPhase = ((frame - ANIM_START) / 22) % 1; // ~2.7 steps/sec (matching motion.md)
-  const talkWave = Math.max(0, Math.sin((frame - 186) * 0.65) * 0.5 + 0.5);
+  const aryaX = -1.75 + walkT * 1.15;
+  const raraX = 1.75 - walkT * 1.15;
+  const walkPhase = ((frame - ANIM_START) / 22) % 1;
+  const talkWaveVal = Math.max(0, Math.sin((frame - 186) * 0.65) * 0.5 + 0.5);
 
-  const aryaAnimPose: NusantaraPose =
+  const aryaAnimPose: ActorPose =
     frame < 185
-      ? { mode: 'walk', walkPhase, blink: blinkLidAt(frame, 1, 30), facing: 0.4 }
+      ? { face: 'happy', stance: 'walk', walkPhase, blink: blinkLidAt(frame, 1, 30), facing: 0.4, view: 'threeQuarter' }
       : frame < SHOCK_F
-        ? { mode: 'explain', talk: talkWave, blink: blinkLidAt(frame, 1, 30, [186, SHOCK_F]), facing: 0.35 }
-        : { mode: 'shock', blink: blinkLidAt(frame, 1, 30, [SHOCK_F]), facing: 0.1 };
+        ? {
+            face: 'happy',
+            stance: 'stand',
+            leftArm: 'point',
+            rightArm: 'hold',
+            rightProp: 'book',
+            talk: talkWaveVal,
+            blink: blinkLidAt(frame, 1, 30, [186, SHOCK_F]),
+            facing: 0.35,
+            view: 'threeQuarter',
+          }
+        : {
+            face: 'shock',
+            stance: 'stand',
+            leftArm: 'raise',
+            rightArm: 'raise',
+            hatPop: 1,
+            fx: 'shock',
+            blink: blinkLidAt(frame, 1, 30, [SHOCK_F]),
+            facing: 0.1,
+            view: 'front',
+          };
 
-  const raraAnimPose: NusantaraPose =
+  const raraAnimPose: ActorPose =
     frame < 185
-      ? { mode: 'walk', walkPhase: (walkPhase + 0.42) % 1, blink: blinkLidAt(frame, 2, 30), facing: -0.4 }
+      ? {
+          face: 'happy',
+          stance: 'walk',
+          walkPhase: (walkPhase + 0.42) % 1,
+          blink: blinkLidAt(frame, 2, 30),
+          facing: -0.4,
+          view: 'threeQuarter',
+        }
       : frame < SHOCK_F
-        ? { mode: 'explain', talk: Math.max(0, Math.sin((frame - 196) * 0.5) * 0.4), blink: blinkLidAt(frame, 2, 30, [SHOCK_F]), facing: -0.32 }
-        : { mode: 'shock', blink: blinkLidAt(frame, 2, 30, [SHOCK_F]), facing: -0.1 };
+        ? {
+            face: 'happy',
+            stance: 'stand',
+            leftArm: 'hold',
+            leftProp: 'mic',
+            rightArm: 'hip',
+            talk: Math.max(0, Math.sin((frame - 196) * 0.5) * 0.4),
+            blink: blinkLidAt(frame, 2, 30, [SHOCK_F]),
+            facing: -0.32,
+            view: 'threeQuarter',
+          }
+        : {
+            face: 'shock',
+            stance: 'stand',
+            leftArm: 'raise',
+            rightArm: 'raise',
+            fx: 'shock',
+            blink: blinkLidAt(frame, 2, 30, [SHOCK_F]),
+            facing: -0.1,
+            view: 'front',
+          };
 
   const title = isAnim
     ? frame < 185
@@ -188,8 +240,8 @@ export const NusantaraProduction: React.FC = () => {
 
           {isAnim ? (
             <>
-              <NusantaraCard
-                id="ID1"
+              <ActorBillboard
+                actor="arya"
                 pose={aryaAnimPose}
                 position={[aryaX, 0, 0.2]}
                 faceTo={camPose.pos}
@@ -197,8 +249,8 @@ export const NusantaraProduction: React.FC = () => {
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <NusantaraCard
-                id="ID2"
+              <ActorBillboard
+                actor="rara"
                 pose={raraAnimPose}
                 position={[raraX, 0, 0.2]}
                 faceTo={camPose.pos}
@@ -207,38 +259,38 @@ export const NusantaraProduction: React.FC = () => {
                 blobColor={light.card.blob}
               />
             </>
-          ) : !slide.focusId ? (
+          ) : !slide.focusActor ? (
             <>
-              <NusantaraCard
-                id="ID1"
-                pose={{ mode: 'idle', facing: 0.34 }}
+              <ActorBillboard
+                actor="arya"
+                pose={{ face: 'happy', stance: 'stand', facing: 0.34, view: 'threeQuarter' }}
                 position={[-1.42, 0, -0.15]}
                 faceTo={camPose.pos}
                 height={1.98}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <NusantaraCard
-                id="ID2"
-                pose={{ mode: 'idle', facing: 0.24 }}
+              <ActorBillboard
+                actor="rara"
+                pose={{ face: 'happy', stance: 'stand', leftArm: 'hold', leftProp: 'mic', facing: 0.24, view: 'threeQuarter' }}
                 position={[-0.48, 0, 0.35]}
                 faceTo={camPose.pos}
                 height={1.9}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <NusantaraCard
-                id="ID3"
-                pose={{ mode: 'idle', facing: -0.24 }}
+              <ActorBillboard
+                actor="dimas"
+                pose={{ face: 'smug', stance: 'stand', rightArm: 'hold', rightProp: 'esteh', facing: -0.24, view: 'threeQuarter' }}
                 position={[0.48, 0, 0.35]}
                 faceTo={camPose.pos}
                 height={1.88}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <NusantaraCard
-                id="ID4"
-                pose={{ mode: 'idle', facing: -0.34 }}
+              <ActorBillboard
+                actor="saka"
+                pose={{ face: 'happy', stance: 'stand', leftArm: 'hold', leftProp: 'map', facing: -0.34, view: 'threeQuarter' }}
                 position={[1.42, 0, -0.15]}
                 faceTo={camPose.pos}
                 height={2.02}
@@ -248,21 +300,39 @@ export const NusantaraProduction: React.FC = () => {
             </>
           ) : (
             <>
-              <NusantaraCard
-                id={slide.focusId}
-                pose={{ mode: 'explain', talk: 0.78, facing: 0.34 }}
+              <ActorBillboard
+                actor={slide.focusActor}
+                pose={{
+                  face: 'happy',
+                  stance: 'stand',
+                  leftArm: 'point',
+                  rightArm: 'hold',
+                  rightProp: slide.explainProp ?? 'none',
+                  talk: 0.78,
+                  facing: 0.34,
+                  view: 'threeQuarter',
+                }}
                 position={[-0.6, 0, 0.2]}
                 faceTo={camPose.pos}
-                height={slide.focusId === 'ID3' ? 1.9 : 1.98}
+                height={slide.focusActor === 'dimas' ? 1.9 : 1.98}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
-              <NusantaraCard
-                id={slide.focusId}
-                pose={{ mode: 'shock', facing: 0.08 }}
+              <ActorBillboard
+                actor={slide.focusActor}
+                pose={{
+                  face: 'shock',
+                  stance: 'stand',
+                  leftArm: 'raise',
+                  rightArm: 'raise',
+                  hatPop: 1,
+                  fx: 'shock',
+                  facing: 0.08,
+                  view: 'front',
+                }}
                 position={[0.62, 0, 0.2]}
                 faceTo={camPose.pos}
-                height={slide.focusId === 'ID3' ? 1.9 : 1.98}
+                height={slide.focusActor === 'dimas' ? 1.9 : 1.98}
                 castShadow={light.card.castShadow}
                 blobColor={light.card.blob}
               />
@@ -301,7 +371,7 @@ export const NusantaraProduction: React.FC = () => {
         </div>
       </div>
 
-      {!isAnim && !slide.focusId && (
+      {!isAnim && !slide.focusActor && (
         <div
           style={{
             position: 'absolute',

@@ -65,9 +65,9 @@ export type SpotMeta = {
 
 export const WARKOP_SPOT_META: Partial<Record<keyof typeof WARKOP_SPOTS, SpotMeta>> = {
   counterKeeper: {
-    counterTopY: 1.04,
+    counterTopY: 0.97,
     ergonomicBaseY: 0.44,
-    note: 'Naikkan y ke ergonomicBaseY (0,44 m) saat di balik konter WK_CounterTop (y=1,04) agar bahu, dada atas & lengan tampak utuh (lolos checkCounterVisibility).',
+    note: 'Terkalibrasi AABB warkop.glb: WK_CounterTop maxY = 0,97 m, pijakan kasir WK_CounterPallet topY = 0,44 m (lolos checkCounterVisibility).',
   },
   leftTable: {
     seatY: 0.475,
@@ -75,9 +75,9 @@ export const WARKOP_SPOT_META: Partial<Record<keyof typeof WARKOP_SPOTS, SpotMet
     note: 'Bangku kayu WK_BenchL_Top (y=0,475 m) menghadap WK_TableL_Top (y=0,77 m). Cek checkBillboardSweep saat kamera OTS.',
   },
   rightTableSeat: {
-    seatY: 0.46,
+    seatY: 0.483,
     tableTopY: 0.77,
-    note: 'Kursi merah WK_StoolRed2_Seat menghadap WK_TableR_Top (y=0,77 m).',
+    note: 'Kursi merah WK_StoolRed2_Seat (maxY=0,483 m) menghadap WK_TableR_Top (y=0,77 m).',
   },
   laptopTable: {
     tableTopY: 0.77,
@@ -111,34 +111,39 @@ export const WarkopSet: React.FC<WorldSetProps> = ({
 }) => {
   const autoGlow = glowScale ?? (lightId === 'noon' ? 0.9 : 1.35);
 
-  const swingKey = bulbSwings ? bulbSwings.map((a) => a.toFixed(4)).join(',') : undefined;
-  const mergedUpdateKey = swingKey && updateKey ? `${swingKey}|${updateKey}` : (swingKey ?? updateKey);
-  const handleUpdate = bulbSwings
-    ? (root: THREE.Group) => {
-        for (let i = 0; i < 3; i++) {
-          const px = LAMP_PIVOT_X[i];
-          const a = bulbSwings[i];
-          const sinA = Math.sin(a);
-          const cosA = Math.cos(a);
-          for (const raw of WARKOP_LAMP_NODES[i]) {
-            // GLTFLoader menyaring nama node (`PropertyBinding.sanitizeNodeName` membuang `.`), jadi
-            // `WK_LampBulb_-1.35` dari Blender termuat sebagai `WK_LampBulb_-135`. Cari keduanya.
-            const obj =
-              root.getObjectByName(raw) ?? root.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(raw));
-            if (!obj) continue;
-            let restPos = obj.userData.__restPos as THREE.Vector3 | undefined;
-            if (!restPos) {
-              restPos = obj.position.clone();
-              obj.userData.__restPos = restPos;
-            }
-            const L = LAMP_PIVOT_Y - restPos.y;
-            obj.position.set(px + sinA * L, LAMP_PIVOT_Y - cosA * L, restPos.z);
-            obj.rotation.z = a;
+  const swingKey = bulbSwings ? bulbSwings.map((a) => a.toFixed(4)).join(',') : 'rest';
+  const mergedUpdateKey = updateKey ? `${swingKey}|${updateKey}` : swingKey;
+  const handleUpdate = (root: THREE.Group) => {
+    for (let i = 0; i < 3; i++) {
+      const px = LAMP_PIVOT_X[i];
+      const a = bulbSwings ? bulbSwings[i] : 0;
+      const sinA = Math.sin(a);
+      const cosA = Math.cos(a);
+      for (const raw of WARKOP_LAMP_NODES[i]) {
+        // GLTFLoader menyaring nama node (`PropertyBinding.sanitizeNodeName` membuang `.`), jadi
+        // `WK_LampBulb_-1.35` dari Blender termuat sebagai `WK_LampBulb_-135`. Cari keduanya.
+        const obj =
+          root.getObjectByName(raw) ?? root.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(raw));
+        if (!obj) continue;
+        let restPos = obj.userData.__restPos as THREE.Vector3 | undefined;
+        if (!bulbSwings) {
+          if (restPos) {
+            obj.position.copy(restPos);
+            obj.rotation.z = 0;
           }
+          continue;
         }
-        onUpdate?.(root);
+        if (!restPos) {
+          restPos = obj.position.clone();
+          obj.userData.__restPos = restPos;
+        }
+        const L = LAMP_PIVOT_Y - restPos.y;
+        obj.position.set(px + sinA * L, LAMP_PIVOT_Y - cosA * L, restPos.z);
+        obj.rotation.z = a;
       }
-    : onUpdate;
+    }
+    onUpdate?.(root);
+  };
 
   return (
     <GlbSet

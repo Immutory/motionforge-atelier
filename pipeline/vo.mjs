@@ -5,10 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const VENV_PY =
-  process.platform === 'win32'
-    ? path.join(ROOT, '.venv-vo', 'Scripts', 'python.exe')
-    : path.join(ROOT, '.venv-vo', 'bin', 'python');
+const VENV_REL = process.platform === 'win32' ? '.venv-vo/Scripts/python.exe' : '.venv-vo/bin/python';
+const VENV_PY = path.join(ROOT, VENV_REL);
 
 const sub = process.argv[2];
 const rest = process.argv.slice(3);
@@ -23,25 +21,37 @@ if (!existsSync(VENV_PY)) {
     `Environment VO lokal (.venv-vo) belum tersedia di ${VENV_PY}.\n` +
       'Buat dengan:\n' +
       '  uv venv --python 3.11 .venv-vo\n' +
-      '  uv pip install --python .venv-vo/Scripts/python.exe torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124\n' +
-      '  uv pip install --python .venv-vo/Scripts/python.exe chatterbox-tts faster-whisper safetensors huggingface_hub soundfile',
+      `  uv pip install --python ${VENV_REL} torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124\n` +
+      `  uv pip install --python ${VENV_REL} chatterbox-tts faster-whisper safetensors huggingface_hub soundfile`,
   );
   process.exit(1);
 }
 
 if (sub === 'doctor') {
   const code = [
-    'import shutil, torch',
-    'print("Python VO   :", __import__("sys").version.split()[0])',
-    'print("PyTorch     :", torch.__version__, "| CUDA:", torch.cuda.is_available(), "| GPU:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")',
-    'print("ffmpeg      :", shutil.which("ffmpeg") or "TIDAK DITEMUKAN")',
-    'for pkg in ("chatterbox", "faster_whisper", "safetensors", "huggingface_hub"):',
+    'import shutil, sys',
+    'bad = 0',
+    'print("Python VO   :", sys.version.split()[0])',
+    'try:',
+    '    import torch',
+    '    print("PyTorch     :", torch.__version__, "| CUDA:", torch.cuda.is_available(), "| GPU:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")',
+    'except Exception as e:',
+    '    bad += 1; print(f"PyTorch     : BELUM TERPASANG ({e})")',
+    'ff = shutil.which("ffmpeg")',
+    'if not ff: bad += 1',
+    'print("ffmpeg      :", ff or "TIDAK DITEMUKAN")',
+    'for pkg in ("torchaudio", "chatterbox", "faster_whisper", "safetensors", "huggingface_hub", "soundfile", "perth"):',
     '    try:',
-    '        __import__(pkg); print(f"{pkg:12s}: OK")',
+    '        __import__(pkg); print(f"{pkg:15s}: OK")',
     '    except Exception as e:',
-    '        print(f"{pkg:12s}: BELUM TERPASANG ({e})")',
+    '        bad += 1; print(f"{pkg:15s}: BELUM TERPASANG ({e})")',
+    'sys.exit(1 if bad else 0)',
   ].join('\n');
-  const r = spawnSync(VENV_PY, ['-c', code], { stdio: 'inherit' });
+  const r = spawnSync(VENV_PY, ['-c', code], { stdio: 'inherit', env: { ...process.env, PYTHONUTF8: '1' } });
+  if (r.error) {
+    console.error(`[vo] Gagal menjalankan Python VO: ${r.error.message}`);
+    process.exit(1);
+  }
   process.exit(r.status ?? 1);
 }
 
@@ -50,5 +60,9 @@ const script =
     ? path.join(ROOT, 'pipeline', 'voice', 'tts_local.py')
     : path.join(ROOT, 'pipeline', 'voice', 'align_words.py');
 
-const r = spawnSync(VENV_PY, [script, ...rest], { stdio: 'inherit' });
+const r = spawnSync(VENV_PY, [script, ...rest], { stdio: 'inherit', env: { ...process.env, PYTHONUTF8: '1' } });
+if (r.error) {
+  console.error(`[vo] Gagal menjalankan Python VO: ${r.error.message}`);
+  process.exit(1);
+}
 process.exit(r.status ?? 1);
