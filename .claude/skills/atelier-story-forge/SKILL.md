@@ -1,16 +1,16 @@
 ---
 name: atelier-story-forge
-description: Develops original stories, Indonesian comedy/hybrid scripts, and sourced factual narratives in the Kampung Rawa Sari RT 04 universe for 9:16 Shorts/Reels/TikTok (58–75 s, up to 90 s user VO, multiple of 90f) and 16:9 YouTube Episodes (60–120 s) — Atelier v3.0.
+description: Develops original stories, Indonesian comedy/hybrid scripts, and sourced factual narratives in the Kampung Rawa Sari RT 04 universe for 9:16 Shorts/Reels/TikTok (58–75 s, up to 90 s user VO, multiple of 90f) and 16:9 YouTube Episodes (60–120 s) paired with `.agents/youtube-skills/` & `.claude/youtube/voice.md` — Atelier v4.0.
 ---
 
-# Story Forge (Atelier v3.0 — 2.5D Reference Edition)
+# Story Forge (Atelier v4.0 — 2.5D Volumetric 360° Edition)
 
-Every sentence must earn its place on screen. Write tight, funny, visually driven Indonesian scripts grounded in the **Kampung Rawa Sari RT 04** universe, leveraging **pure 3D diegetic storytelling** (ZERO 2D HUD boxes) and **2.5D character physical comedy** (`(1).mp4` & `download.mp4`).
+Every sentence must earn its place on screen. Write tight, funny, visually driven Indonesian scripts grounded in the **Kampung Rawa Sari RT 04** universe, leveraging **pure 3D diegetic storytelling** (ZERO 2D HUD boxes), **2.5D 360° character physical comedy** (`(1).mp4` & `download.mp4`), and channel voice consistency (`.claude/youtube/voice.md` + `.agents/youtube-skills/yt-{plan,script,shorts}/SKILL.md`).
 
 ## Canon Studio Universe (Kampung Rawa Sari RT 04)
 - **13 Official Cast (`CAST_PRESETS`)**: Lead **Bolohoutoh (Bang Utoh)**, **`ebot`** (pemuda kasual lokal ber-outer rajut earth-tone), **Bu Siti** (Warkop 24 Jam), **Pak Ujang** (Satpam Pos Ronda RT 04, logat Jawa, *straight man*), **Tio** (Bakmie Ayam Tio), **Mbak Yuni** (Es Buah & Campur), **Pak Budi** (Pak RT), **Bang Dimas**, **Raka** (pelajar SMA), **Mbak Rara**, **Mas Arya**, **Saka Nusantara**, **Bang Udin** (ojol).
 - **3 Official 2D Cats (`CAT_PRESETS`)**: **Si Oyen** (Maskot Warkop & Mandor QC / Kepala Mandor Bakmie Tio), **Mpus Abu**, **Si Belang**.
-- **Canon Episode Continuity**: EP01 ("Error 47 Baris?!"), EP02 ("Konsultan Oyen"), EP03 ("Curhat ke Abang Bakmie", bon 90rb), EP04 ("Karyawan Baru Bakmie Tio, Bosnya Si Oyen?!", utang jadi 120rb, voting EP05 `LEMBUR` vs `RESIGN`).
+- **Canon Episode Continuity**: EP01 ("Error 47 Baris?!"), EP02 ("Konsultan Oyen"), EP03 ("Curhat ke Abang Bakmie", bon 90rb), EP04 ("Karyawan Baru Bakmie Tio, Bosnya Si Oyen?!", utang jadi 120rb), EP05 ("Parkir Gratis Bang Utoh vs Pak Ujang" / eskalasi utang & warga).
 
 ## Format, Duration, Loop & Thumbnail Targets
 - **9:16 Vertical Short / Reels / TikTok**: **`58–75 detik`** (fleksibel hingga **`90 detik`** khusus rekaman VO asli pengguna, selalu dikunci kelipatan **`90 frame`** agar loop matematis & audio seamless).

@@ -140,6 +140,54 @@ function convertMaterial(
     return { mat: src.clone(), noInk: noTextShadow, castShadow: !noTextShadow && !isCeiling(meshName) };
   }
 
+  const matName = src.name ?? '';
+
+  // 0a. Bayangan kontak kolong kendaraan (`M_Veh_ContactShadow`): transparan lembut di layer NOINK, nol garis tinta kotak
+  if (matName === 'M_Veh_ContactShadow') {
+    if (src.map) {
+      src.map.colorSpace = THREE.SRGBColorSpace;
+    }
+    return {
+      mat: new THREE.MeshBasicMaterial({
+        map: src.map ?? null,
+        color: new THREE.Color(0x0b0d12),
+        transparent: true,
+        opacity: timeOfDay === 'night' ? 0.55 : 0.76,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      }),
+      noInk: true,
+      castShadow: false,
+    };
+  }
+
+  // 0b. Fasad kaca Minimarket & ATM 24 Jam ber-UV (`M_RL_MinimarketFront`, `M_RL_AtmFront`):
+  // Siang tampil natural berbayangan, Sore/Malam menyala terang lembut tanpa berubah jadi blok biru/kuning polos!
+  if (matName === 'M_RL_MinimarketFront' || matName === 'M_RL_AtmFront') {
+    if (src.map) {
+      src.map.colorSpace = THREE.SRGBColorSpace;
+      src.map.anisotropy = 8;
+    }
+    if (timeOfDay === 'golden' || timeOfDay === 'night') {
+      const tint =
+        matName === 'M_RL_AtmFront'
+          ? new THREE.Color(0.92, 0.98, 1.06)
+          : new THREE.Color(1.04, 1.0, 0.92);
+      return {
+        mat: new THREE.MeshBasicMaterial({ map: src.map ?? null, color: tint }),
+        noInk: true,
+        castShadow: false,
+      };
+    }
+    return {
+      mat: twoTone(new THREE.MeshLambertMaterial({ map: src.map ?? null, color: 0xffffff })),
+      noInk: false,
+      castShadow: true,
+    };
+  }
+
   // 0. Override Dinamis Waktu (Mode Siang / Sore Golden Hour / Malam Hari)
   const tlLens = isTrafficLightLens(meshName);
   if (tlLens) {
@@ -162,28 +210,45 @@ function convertMaterial(
     };
   }
 
-  if (isWindowGlowMesh(meshName) && (timeOfDay === 'golden' || timeOfDay === 'night')) {
+  if ((isWindowGlowMesh(meshName) || matName === 'KG_WinWarm' || matName === 'KG_WinGlow') && (timeOfDay === 'golden' || timeOfDay === 'night')) {
     const h = hashName(meshName);
     const litChance = timeOfDay === 'night' ? 72 : 38;
     if (meshName.includes('ATM_GlassFront') || h < litChance) {
       const warm = meshName.includes('ATM_GlassFront')
-        ? new THREE.Color(0.75, 1.05, 1.35)
+        ? new THREE.Color(0.85, 0.96, 1.08)
         : timeOfDay === 'night'
           ? h % 3 === 0
-            ? new THREE.Color(1.38, 1.16, 0.72)
-            : new THREE.Color(1.25, 0.96, 0.54)
-          : new THREE.Color(1.05, 0.86, 0.52);
+            ? new THREE.Color(1.22, 1.06, 0.72)
+            : new THREE.Color(1.12, 0.92, 0.58)
+          : new THREE.Color(1.02, 0.88, 0.62);
+      if (src.map) {
+        src.map.colorSpace = THREE.SRGBColorSpace;
+        return { mat: new THREE.MeshBasicMaterial({ map: src.map, color: warm }), noInk: true, castShadow: false };
+      }
       return { mat: new THREE.MeshBasicMaterial({ color: warm }), noInk: true, castShadow: false };
     }
   }
 
   // 1. Material Emissive / Lampu / Layar Monitor (hanya lampu/kode kecil yang melampaui threshold bloom > 1.0)
+  if (matName === 'M_Veh_HeadlightLamp' || matName === 'M_Veh_TaillightLamp') {
+    const isHead = matName === 'M_Veh_HeadlightLamp';
+    if (timeOfDay === 'night' || timeOfDay === 'golden') {
+      const k = timeOfDay === 'night' ? (isHead ? 1.55 : 1.28) : isHead ? 1.15 : 1.05;
+      const col = isHead ? new THREE.Color(1.0 * k, 0.94 * k, 0.78 * k) : new THREE.Color(0.95 * k, 0.12 * k, 0.08 * k);
+      return { mat: new THREE.MeshBasicMaterial({ color: col }), noInk: true, castShadow: false };
+    }
+    return {
+      mat: twoTone(new THREE.MeshPhongMaterial({ color: isHead ? 0xe8e4d4 : 0xa61c18, shininess: 22, specular: new THREE.Color(0x181a1e) })),
+      noInk: false,
+      castShadow: false,
+    };
+  }
   const em = src.emissive;
   const emLum = em.r * 0.299 + em.g * 0.587 + em.b * 0.114;
   if (emLum > 0.015 && src.emissiveIntensity > 0.12) {
     const hdr = em.clone();
-    if (isFlatPanel(meshName)) {
-      // Panel besar (papan neon, kaca jendela, layar dasar) tetap cerah self-lit tanpa bloom yang memudarkan teks!
+    if (isFlatPanel(meshName) || src.map) {
+      // Panel besar / material bertekstur tetap cerah self-lit tanpa bloom yang memudarkan detail tekstur
       const peak = Math.max(hdr.r, hdr.g, hdr.b, 0.001);
       const nightPanelLift = timeOfDay === 'night' ? 1.12 : timeOfDay === 'golden' ? 0.98 : 0.86;
       const targetPeak = Math.min(nightPanelLift, peak * Math.max(0.85, src.emissiveIntensity * 0.72));
@@ -192,8 +257,11 @@ function convertMaterial(
       const boost = Math.min(2.1, Math.max(1.05, src.emissiveIntensity * glowScale * 0.85));
       hdr.multiplyScalar(boost);
     }
+    if (src.map) {
+      src.map.colorSpace = THREE.SRGBColorSpace;
+    }
     return {
-      mat: new THREE.MeshBasicMaterial({ color: hdr }),
+      mat: new THREE.MeshBasicMaterial({ ...(src.map ? { map: src.map } : {}), color: hdr }),
       noInk: noTextShadow || isFlatPanel(meshName),
       castShadow: false,
     };

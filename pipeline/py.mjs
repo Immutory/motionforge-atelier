@@ -49,9 +49,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error('Python 3.10+ tidak ditemukan di PATH maupun folder instalasi standar.');
     process.exit(1);
   }
-  const r = spawnSync(py.cmd, process.argv.slice(2), {
+  const r = spawnSync(py.cmd, ['-B', ...process.argv.slice(2)], {
     stdio: 'inherit',
-    env: { ...process.env, PYTHONUTF8: '1' },
+    env: { ...process.env, PYTHONUTF8: '1', PYTHONDONTWRITEBYTECODE: '1' },
   });
   if (r.error) {
     console.error(`Gagal menjalankan Python (${py.cmd}): ${r.error.message}`);

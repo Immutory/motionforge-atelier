@@ -5,7 +5,7 @@ import { WORDS } from './words';
 export const FPS = 30;
 
 /**
- * Milik agent cinematographer (standar Atelier v3.0 — Reference Cinema Camera).
+ * Milik agent cinematographer (standar Atelier v4.0 — Reference Cinema Camera).
  * Semua waktu dalam frame pada 30 fps; hold dialog memakai `creepRate: 0` & `roll: 0` (nol slow zoom monoton).
  * Shot `medium-react` memakai sedikit high-angle (pitch > 12°) untuk mendemonstrasikan kompensasi `tiltX` 2,5D.
  */

@@ -1,11 +1,11 @@
 ---
 name: atelier-render-ship
-description: Run stills (JPG or lossless PNG), previews, 4-platform thumbnails, 2K/4K master renders, branding exports, box manifest exports, sound mix, and mux commands safely (Atelier v3.0).
+description: Run stills (JPG or lossless PNG), previews, 4-platform thumbnails, 2K/4K master renders, branding exports, box manifest exports, sound mix, YouTube packaging (`.agents/youtube-skills/`), and mux commands safely (Atelier v4.0).
 ---
 
-# Render and Ship (Atelier v3.0)
+# Render and Ship (Atelier v4.0)
 
-Lock visual code and pass `npm run check` (100% green) before master renders.
+Lock visual code and pass `npm run check` (100% green) before master renders. Always run Python scripts via `node pipeline/py.mjs ...` (or `python -B`) so zero `__pycache__` is emitted.
 
 ## Preflight
 - `npm run doctor` must pass (Node, Python, FFmpeg, ffprobe, `numpy`, `scipy`, `Pillow`).
@@ -23,10 +23,12 @@ Lock visual code and pass `npm run check` (100% green) before master renders.
 - **Contact Sheets**: `node pipeline/py.mjs pipeline/make_sheet.py`
 - **QA Check**: `npm run qa -- out/<slug>/<slug>_final.mp4`
 
-## Channel Branding & 4-Platform Thumbnails (`charlab`, 14 compositions)
+## Channel Branding, Rig QC & YouTube Packaging (`charlab` + `.agents/youtube-skills/`)
 - **Shorts Thumbnails (`shortsthumbs`, `1080 × 1920`)**: Verify **4-platform safe-zone** (`y = 295..1630 px`, `x < 920 px`) covering YT Shorts 2:3, IG/TikTok 3:4, FB/IG 4:5, & right-side UI buttons.
 - **YouTube Banner (`youtubebanner`, `2560 × 1440`)**: `npm run still -- youtubebanner --frames 0,1 --scale 1.5 --png` (`3840 × 2160`, `< 6 MB`).
-- **YouTube & TikTok Profiles (`youtubeprofile`, `tiktokprofile`, `2048 × 2048`)**: `--scale 1 --png` (`< 4 MB`), canonical `2048×2048` scaling, circular-safe crop.
+- **YouTube & TikTok Profiles (`youtubeprofile`, `tiktokprofile`, `2048 × 2048`)**: `--scale 1 --png` (`< 4 MB`), canonical `2048×2048` scaling, circular-safe crop (via shared `profileCanvasShared.ts`).
+- **360° Turnaround Lab (`turntable360`)**: QC all 13 humans + 3 cats across `-180°..+180°` yaw + orbital lighting.
+- **YouTube Growth & Metadata Packaging**: Load `.claude/youtube/voice.md` + `.agents/youtube-skills/yt-{package,seo,chapters,shorts,comment,audit}/SKILL.md` to generate `UPLOAD.md` after G4 passes.
 
 ## Gate G4 Cleanup Protocol
-Before closing **Gate G4**, remove obsolete intermediates (`out/<slug>/video_silent.mp4`, orphan TTS drafts in `voice/`, temporary logs, old draft contact sheets, `__pycache__/`, `.blend1`) while keeping 100% of final VO assets (`voice.wav`, `words.json`, `timeline.json`, `rms.json`, `lines.json`, `user_vo/`), active code, `mix.wav`, thumbnail, `UPLOAD.md`, and `<slug>_final.mp4`. Ask the user before deleting old `remotion-webpack-bundle-*` folders in `REMOTION_TMP`.
+Before closing **Gate G4**, remove obsolete intermediates (`out/<slug>/video_silent.mp4`, orphan TTS drafts in `voice/`, temporary logs, old draft contact sheets, `__pycache__/`, `.blend1`) while preserving 100% of final VO assets (`voice.wav`, `words.json`, `timeline.json`, `rms.json`, `lines.json`, `user_vo/`), active code, `mix.wav`, thumbnail, `UPLOAD.md`, and `<slug>_final.mp4`. Ask the user before deleting old `remotion-webpack-bundle-*` folders in `REMOTION_TMP`.

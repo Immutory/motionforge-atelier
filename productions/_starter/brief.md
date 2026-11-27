@@ -1,4 +1,4 @@
-# Brief Produksi — Starter (Template v3.0)
+# Brief Produksi — Starter (Template v4.0)
 
 - **Judul kerja:** Starter
 - **Slug:** `starter`

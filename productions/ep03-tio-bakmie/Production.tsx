@@ -1,19 +1,17 @@
 import React from 'react';
 import { AbsoluteFill, Audio, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
-import { useThree } from '@react-three/fiber';
-import type { PerspectiveCamera } from 'three';
 import * as THREE from 'three';
 import {
   ActorBillboard,
+  CameraRig,
   CatBillboard,
   PostStack,
   Stage,
   kickOffset,
   sampleCamera,
   shotAt,
-  type CamPose,
-  type Vec3,
+  viewAxisFocus,
   type Word,
 } from '../../engine';
 import { ACTORS, OYEN_HEIGHT, actorPositionAt, oyenPoseAt, oyenPositionAt, poseFor, setStateAt } from './cast';
@@ -24,23 +22,7 @@ import { EP03_LOOP_CUT_FRAME, PREVIEW_VOICE, VOICE_LINES, WORDS } from './words'
 
 /** Milik agent post-compositor: wiring komposisi, subtitle, dan loop. */
 
-const CameraRig: React.FC<{ pose: CamPose; shake: { dx: number; dy: number; droll: number } }> = ({ pose, shake }) => {
-  const cam = useThree().camera as PerspectiveCamera;
-  cam.position.set(pose.pos[0] + shake.dx, pose.pos[1] + shake.dy, pose.pos[2]);
-  cam.fov = pose.fov;
-  cam.lookAt(pose.look[0], pose.look[1], pose.look[2]);
-  cam.rotateZ(((pose.roll + shake.droll) * Math.PI) / 180);
-  cam.updateProjectionMatrix();
-  return null;
-};
-
-/** Jarak fokus sepanjang sumbu pandang (`references/reports/depth.md`). */
-export function viewAxisFocus(camPos: Vec3, camLook: Vec3, target: Vec3): number {
-  const f = [camLook[0] - camPos[0], camLook[1] - camPos[1], camLook[2] - camPos[2]];
-  const fl = Math.hypot(f[0], f[1], f[2]) || 1;
-  const d = [target[0] - camPos[0], target[1] - camPos[1], target[2] - camPos[2]];
-  return Math.max(0.25, (d[0] * f[0] + d[1] * f[1] + d[2] * f[2]) / fl);
-}
+export { viewAxisFocus } from '../../engine';
 
 /**
  * Loop kontinu (R-6): TIDAK ada lagi pemetaan ulang frame. Ekor f1785–1799 merender frame aslinya

@@ -1,9 +1,9 @@
 ---
 name: atelier-look-match
-description: Measure reference style (`contohvideo/download.mp4`, `(1).mp4`, & `references/reports/`) with numbers and tune your look toward Atelier v3.5 (2D-grade walk + soft-lit matte 3D polish) in parallel sandboxes with one owner per file.
+description: Measure reference style (`contohvideo/download.mp4`, `(1).mp4`, & `references/reports/`) with numbers and tune your look toward Atelier v4.0 (2.5D volumetric 360° + soft-lit matte 3D polish) in parallel sandboxes with one owner per file.
 ---
 
-# Look Match (Atelier v3.5 — 2D-Grade Walk + Soft-Lit 3D Polish)
+# Look Match (Atelier v4.0 — 2.5D Volumetric 360° + Soft-Lit 3D Polish)
 
 Adjectives like "warmer" or "punchier" do not converge. Numbers and side-by-side images do.
 

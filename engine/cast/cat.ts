@@ -1,6 +1,12 @@
 import { drawComicFx, type ComicFx, type Expression } from './expressions';
 import type { TalkSample } from './lipsync';
 import { plantedFoot, type ActorGait, type ActorView } from './nusantara';
+import {
+  degToRad,
+  rotateYaw3D,
+  sortByDepthZ,
+  type ReliefPrimitive,
+} from './rig360';
 
 export type CatPresetId = 'oyen' | 'abu' | 'belang';
 export type CatStance = 'sit' | 'stand' | 'walk' | 'sleep' | 'jump';
@@ -71,6 +77,12 @@ export type CatPose = {
   facing?: number;
   /** Fase napas halus (terutama terlihat saat `sleep` & `sit`). */
   breathPhase?: number;
+  /** Sudut yaw badan kontinu 360° (derajat: `0` = hadap depan, `+90` = kanan, `±180` = belakang). Jika diisi, mengaktifkan rig 2.5D volumetrik 360°. */
+  yawDeg?: number;
+  /** Sudut yaw kepala independen relatif kamera (derajat). */
+  headYawDeg?: number;
+  /** Sudut pitch kepala (derajat). */
+  pitchDeg?: number;
   /**
    * 0..1 regang / membungkuk mengintip (hanya `stance: 'stand'`, tampak samping / 3-4). Dada dan kepala turun ke
    * depan, pinggul tetap; keempat cakar tetap menapak di `CAT_SOLE_Y`. Default 0 (gambar lama tidak berubah).
@@ -1079,7 +1091,16 @@ function drawCollar(ctx: Ctx, spec: CatSpec, cx: number, cy: number, width: numb
 }
 
 /** Gambar 1 frame karakter kucing 2D ekspresif ke Canvas2D (`CAT_W x CAT_H`, sole di `CAT_SOLE_Y`). */
-export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
+export function drawCat(
+  ctx: Ctx,
+  spec: CatSpec,
+  pose: CatPose,
+  reliefOut?: ReliefPrimitive[],
+) {
+  if (pose.yawDeg !== undefined) {
+    drawCat360(ctx, spec, pose, reliefOut);
+    return;
+  }
   ctx.save();
   ctx.clearRect(0, 0, CAT_W, CAT_H);
   ctx.lineJoin = 'round';
@@ -1338,7 +1359,7 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
     // =========================================================================
     const isWalk = stance === 'walk';
     const isJump = stance === 'jump';
-    const isProfile = isSide || view === 'threeQuarter';
+    const isProfile = isSide || view === 'threeQuarter' || isBack34;
     const torsoW = isProfile ? 132 : 96;
     const torsoH = isJump ? 66 : 74;
     const torsoY = isJump ? 404 : 422 + breath * 0.4;
@@ -1535,5 +1556,671 @@ export function drawCat(ctx: Ctx, spec: CatSpec, pose: CatPose) {
   const fx = pose.fx !== undefined ? pose.fx : isBack ? 'none' : defaultFxFor(pose.face);
   drawComicFx(ctx, fx, headX, headTopY - 6, 220, spec.ink);
 
+  ctx.restore();
+}
+
+// =============================================================================
+// 2.5D VOLUMETRIC 360° CAT RIG (`pose.yawDeg !== undefined`)
+// =============================================================================
+
+function drawCatHead360(
+  ctx: Ctx,
+  spec: CatSpec,
+  hx: number,
+  hy: number,
+  pose: CatPose,
+  headYawRad: number,
+  isSleep: boolean,
+  reliefOut?: ReliefPrimitive[],
+) {
+  const sinY = Math.sin(headYawRad);
+  const cosY = Math.cos(headYawRad);
+  const pitchOffset = ((pose.pitchDeg ?? 0) * Math.PI) / 180;
+  const faceVis = Math.max(-1, Math.min(1, cosY));
+  const face = pose.face;
+  const blink = typeof pose.blink === 'number' ? pose.blink : pose.blink ? 1 : 0;
+  const talkSample: TalkSample =
+    typeof pose.talk === 'number'
+      ? {
+          open: pose.talk,
+          shape:
+            pose.talk > 0.65
+              ? 'wide'
+              : pose.talk > 0.3
+                ? 'mid'
+                : pose.talk > 0.16
+                  ? 'small'
+                  : 'closed',
+        }
+      : (pose.talk ?? { open: 0, shape: 'closed' });
+
+  const earTwitch = pose.earTwitch ?? 0;
+  const flatEars =
+    face === 'angry' || face === 'shock' || face === 'nervous' || face === 'strain'
+      ? 20
+      : face === 'sad' || face === 'tired' || isSleep
+        ? 12
+        : 0;
+  const perkEars = face === 'idea' || face === 'happy' || face === 'focus' ? -5 : 0;
+
+  const absS = Math.abs(sinY);
+  const headRx = 114 - 16 * absS;
+  const headRy = 92;
+  const headRz = 94;
+
+  // Proyeksi kedua telinga dalam 3D agar selalu sort tepat di belakang vs depan kepala
+  const earPts = ([-1, 1] as const).map((side) => {
+    const p = rotateYaw3D([side * 70, -headRy * 0.72, 12], headYawRad);
+    return { side, ...p };
+  });
+
+  const drawEar3D = (ep: (typeof earPts)[number]) => {
+    const isBackFacing = cosY < -0.15;
+    const earScale = 0.88 + 0.14 * Math.max(-1, Math.min(1, ep.z / 75));
+    const tilt = ep.side * (12 + flatEars + perkEars) * (0.4 + 0.6 * Math.abs(cosY)) + earTwitch * 7;
+    drawCatEar(ctx, spec, hx + ep.x, hy + ep.y, ep.side, tilt, isBackFacing, earScale);
+    if (reliefOut) {
+      reliefOut.push({
+        kind: 'sphere',
+        cx: hx + ep.x,
+        cy: hy + ep.y - 18,
+        rx: 28 * earScale,
+        ry: 42 * earScale,
+        z: 100 + ep.z * 0.35,
+        heightScale: 0.72,
+        ao: 0.9,
+      });
+    }
+  };
+
+  for (const ep of earPts) {
+    if (ep.z < 0) drawEar3D(ep);
+  }
+
+  // Siluet tengkorak membulat 360° dengan proyeksi moncong 3D lembut
+  const muzProjX = sinY * 22;
+  const muzBulge = Math.max(0, absS - 0.35) * 18 * Math.sign(sinY || 1);
+  const headPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(hx, hy - headRy);
+    ctx.bezierCurveTo(
+      hx + headRx * 0.84 + Math.max(0, muzBulge),
+      hy - headRy,
+      hx + headRx * 1.06 + Math.max(0, muzBulge),
+      hy - headRy * 0.24,
+      hx + headRx * 1.04 + Math.max(0, muzBulge * 1.15),
+      hy + headRy * 0.22,
+    );
+    ctx.bezierCurveTo(
+      hx + headRx * 0.92,
+      hy + headRy * 0.88,
+      hx + headRx * 0.44,
+      hy + headRy * 1.02,
+      hx,
+      hy + headRy * 1.02,
+    );
+    ctx.bezierCurveTo(
+      hx - headRx * 0.44,
+      hy + headRy * 1.02,
+      hx - headRx * 0.92,
+      hy + headRy * 0.88,
+      hx - headRx * 1.04 + Math.min(0, muzBulge * 1.15),
+      hy + headRy * 0.22,
+    );
+    ctx.bezierCurveTo(
+      hx - headRx * 1.06 + Math.min(0, muzBulge),
+      hy - headRy * 0.24,
+      hx - headRx * 0.84 + Math.min(0, muzBulge),
+      hy - headRy,
+      hx,
+      hy - headRy,
+    );
+    ctx.closePath();
+  };
+
+  inked(ctx, headPath, spec.furBase, spec.ink, 5.5, 3.2, 4.8);
+  if (reliefOut) {
+    reliefOut.push({
+      kind: 'sphere',
+      cx: hx + muzBulge * 0.2,
+      cy: hy,
+      rx: headRx * 1.05,
+      ry: headRy * 1.02,
+      z: 100,
+      heightScale: 1.0,
+    });
+  }
+
+  // Clip detail di dalam kepala
+  ctx.save();
+  headPath();
+  ctx.clip();
+
+  // Highlight mahkota & bayangan dagu
+  ctx.fillStyle = spec.furHighlight;
+  ctx.globalAlpha = 0.42;
+  ctx.beginPath();
+  ctx.ellipse(hx - headRx * 0.08, hy - headRy * 0.48, headRx * 0.56, headRy * 0.34, 0, 0, TAU);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = spec.furShadow;
+  ctx.globalAlpha = 0.34;
+  ctx.beginPath();
+  ctx.ellipse(hx, hy + headRy * 0.72, headRx * 0.64, headRy * 0.28, 0, 0, TAU);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Bercak Calico berputar mulus mengelilingi kepala
+  if (spec.calicoPatch) {
+    const cp1 = rotateYaw3D([56, -42, 42], headYawRad);
+    if (cp1.z > -headRz * 0.7) {
+      ctx.fillStyle = spec.calicoPatch;
+      ctx.beginPath();
+      ctx.ellipse(hx + cp1.x, hy + cp1.y, 44 * Math.max(0.45, Math.abs(Math.cos(headYawRad - 0.6))), 38, 0.2, 0, TAU);
+      ctx.fill();
+    }
+    const cp2 = rotateYaw3D([-62, -32, 34], headYawRad);
+    if (cp2.z > -headRz * 0.7) {
+      ctx.fillStyle = spec.stripeColor;
+      ctx.beginPath();
+      ctx.ellipse(hx + cp2.x, hy + cp2.y, 38 * Math.max(0.45, Math.abs(Math.cos(headYawRad + 0.6))), 34, -0.25, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  // Loreng dahi M + tengkuk belakang melingkar 360°
+  if (cosY > -0.25) {
+    const alphaF = Math.min(1, (cosY + 0.25) / 0.45);
+    ctx.save();
+    ctx.globalAlpha = alphaF;
+    const fc = rotateYaw3D([0, -headRy * 0.52, headRz * 0.85], headYawRad);
+    const fxS = hx + fc.x;
+    const fyShift = Math.sin(pitchOffset) * 14;
+    ctx.strokeStyle = spec.stripeColor;
+    ctx.lineWidth = 9;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(fxS, hy - headRy * 0.88 + fyShift);
+    ctx.lineTo(fxS, hy - headRy * 0.4 + fyShift);
+    ctx.moveTo(fxS - 22 * Math.max(0.4, Math.abs(cosY)), hy - headRy * 0.84 + fyShift);
+    ctx.quadraticCurveTo(fxS - 15 * Math.max(0.4, Math.abs(cosY)), hy - headRy * 0.5, fxS - 9 * Math.max(0.4, Math.abs(cosY)), hy - headRy * 0.36);
+    ctx.moveTo(fxS + 22 * Math.max(0.4, Math.abs(cosY)), hy - headRy * 0.84 + fyShift);
+    ctx.quadraticCurveTo(fxS + 15 * Math.max(0.4, Math.abs(cosY)), hy - headRy * 0.5, fxS + 9 * Math.max(0.4, Math.abs(cosY)), hy - headRy * 0.36);
+    ctx.stroke();
+    ctx.restore();
+  }
+  if (cosY < 0.25) {
+    const alphaB = Math.min(1, (0.25 - cosY) / 0.45);
+    ctx.save();
+    ctx.globalAlpha = alphaB;
+    ctx.strokeStyle = spec.stripeColor;
+    ctx.lineWidth = 10.5;
+    ctx.lineCap = 'round';
+    const bShift = -sinY * 32;
+    for (const dy of [-headRy * 0.56, -headRy * 0.28, -headRy * 0.02]) {
+      ctx.beginPath();
+      ctx.moveTo(hx + bShift - headRx * 0.38, hy + dy - 5);
+      ctx.quadraticCurveTo(hx + bShift, hy + dy + 11, hx + bShift + headRx * 0.38, hy + dy - 5);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Moncong krem bulat (selalu mengikuti arah hidung 3D)
+  const muzPt = rotateYaw3D([0, headRy * 0.4 + Math.sin(pitchOffset) * 16, headRz * 0.84], headYawRad);
+  if (muzPt.z > -headRz * 0.45) {
+    const mScale = Math.max(0.55, 0.72 + 0.28 * Math.max(0, cosY));
+    ctx.fillStyle = spec.cream;
+    ctx.beginPath();
+    ctx.ellipse(hx + muzPt.x, hy + muzPt.y, 44 * mScale, 32, 0, 0, TAU);
+    ctx.fill();
+  }
+
+  ctx.restore(); // end head clip
+
+  headPath();
+  ctx.strokeStyle = spec.ink;
+  ctx.lineWidth = 5.5;
+  ctx.stroke();
+
+  // Fitur wajah (mata, alis, hidung, mulut, kumis) pada belahan depan bola kepala
+  if (faceVis > -0.22) {
+    const pyOff = Math.sin(pitchOffset) * 16;
+    const eyes = ([-1, 1] as const)
+      .map((s) => {
+        const p = rotateYaw3D([s * 46, -headRy * 0.04 + pyOff, headRz * 0.84], headYawRad);
+        const foreshorten = Math.max(0.28, (s * sinY * -0.35 + cosY) * 0.85 + 0.15);
+        return { s, ...p, foreshorten };
+      })
+      .filter((e) => e.z > -headRz * 0.18);
+
+    for (const eye of sortByDepthZ(eyes)) {
+      const ex = hx + eye.x;
+      const ey = hy + eye.y;
+      const rx = (face === 'shock' ? 24 : 22) * eye.foreshorten;
+      const ry = face === 'shock' ? 25 : face === 'smug' || face === 'tired' ? 15 : 21;
+
+      if (blink >= 0.85 || face === 'laugh' || isSleep) {
+        ctx.strokeStyle = spec.ink;
+        ctx.lineWidth = 5.6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        if (face === 'laugh' || (face === 'happy' && !isSleep)) {
+          ctx.arc(ex, ey + 6, Math.max(8, 15 * eye.foreshorten), Math.PI * 1.12, Math.PI * 1.88);
+        } else if (isSleep) {
+          ctx.arc(ex, ey - 2, Math.max(8, 14 * eye.foreshorten), Math.PI * 0.14, Math.PI * 0.86);
+        } else {
+          ctx.moveTo(ex - rx * 0.8, ey + 2);
+          ctx.quadraticCurveTo(ex, ey + 7, ex + rx * 0.8, ey + 2);
+        }
+        ctx.stroke();
+      } else if (face === 'strain') {
+        ctx.strokeStyle = spec.ink;
+        ctx.lineWidth = 5.6;
+        ctx.beginPath();
+        ctx.moveTo(ex + eye.s * rx * 0.7, ey - 11);
+        ctx.lineTo(ex - eye.s * rx * 0.45, ey);
+        ctx.lineTo(ex + eye.s * rx * 0.7, ey + 11);
+        ctx.stroke();
+      } else {
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, rx, ry, 0, 0, TAU);
+        ctx.fillStyle = spec.eyeRim;
+        ctx.fill();
+
+        const irisGrad = ctx.createRadialGradient(ex - 2, ey - 3, 1.5, ex, ey, Math.max(4, rx * 0.88));
+        irisGrad.addColorStop(0, '#f4e878');
+        irisGrad.addColorStop(0.7, spec.eyeIris);
+        irisGrad.addColorStop(1, '#b58d22');
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, rx * 0.84, ry * 0.84, 0, 0, TAU);
+        ctx.fillStyle = irisGrad;
+        ctx.fill();
+
+        const pupilW =
+          (face === 'shock' ? 0.56 : face === 'happy' || face === 'idea' || face === 'sad' ? 0.42 : face === 'angry' || face === 'smug' || face === 'focus' ? 0.22 : 0.3) *
+          rx;
+        const pupilH = (face === 'shock' ? 0.68 : 0.72) * ry;
+        const lookX = sinY * 4.5;
+        ctx.fillStyle = '#181114';
+        ctx.beginPath();
+        ctx.ellipse(ex + lookX, ey, pupilW, pupilH, 0, 0, TAU);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(ex + lookX - pupilW * 0.4 - 2, ey - ry * 0.28, face === 'shock' ? 5.8 : 4.6, 0, TAU);
+        ctx.fill();
+
+        const lidClose =
+          blink >= 0.35 ? 0.52 : face === 'tired' ? 0.45 : face === 'smug' ? 0.38 : face === 'skeptical' && eye.s > 0 ? 0.36 : 0;
+        if (lidClose > 0) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.ellipse(ex, ey, rx + 2, ry + 2, 0, 0, TAU);
+          ctx.clip();
+          ctx.fillStyle = spec.furBase;
+          ctx.fillRect(ex - rx - 4, ey - ry - 4, (rx + 4) * 2, ry * 2 * lidClose + 4);
+          ctx.strokeStyle = spec.ink;
+          ctx.lineWidth = 4.2;
+          ctx.beginPath();
+          ctx.moveTo(ex - rx - 2, ey - ry + ry * 2 * lidClose);
+          ctx.lineTo(ex + rx + 2, ey - ry + ry * 2 * lidClose);
+          ctx.stroke();
+          ctx.restore();
+        }
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, rx, ry, 0, 0, TAU);
+        ctx.strokeStyle = spec.ink;
+        ctx.lineWidth = 4.3;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Hidung & mulut :3 / meow terproyeksi 3D
+    const nosePt = rotateYaw3D([0, headRy * 0.24 + pyOff, headRz * 0.96], headYawRad);
+    if (nosePt.z > -headRz * 0.15) {
+      const nx = hx + nosePt.x;
+      const ny = hy + nosePt.y;
+      const nw = Math.max(5, 11 * Math.max(0.5, cosY));
+      ctx.beginPath();
+      ctx.moveTo(nx - nw, ny - 5);
+      ctx.lineTo(nx + nw, ny - 5);
+      ctx.lineTo(nx, ny + 8);
+      ctx.closePath();
+      ctx.fillStyle = spec.noseColor;
+      ctx.fill();
+      ctx.strokeStyle = spec.ink;
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      const mouthY = ny + 10;
+      const isMeowing = talkSample.open > 0.15 || face === 'shock' || face === 'laugh';
+      ctx.strokeStyle = spec.ink;
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      if (isMeowing) {
+        const openH = face === 'shock' ? 26 : face === 'laugh' ? 22 : 11 + talkSample.open * 19;
+        const openW = Math.max(7, (talkSample.shape === 'o' ? 14 : 19) * Math.max(0.55, cosY));
+        ctx.beginPath();
+        ctx.moveTo(nx, ny + 8);
+        ctx.lineTo(nx, mouthY + 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(nx, mouthY + openH * 0.46, openW, openH * 0.54, 0, 0, TAU);
+        ctx.fillStyle = '#5e1a27';
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        const mw = Math.max(9, 18 * Math.max(0.5, cosY));
+        ctx.beginPath();
+        ctx.moveTo(nx, ny + 8);
+        ctx.lineTo(nx, mouthY + 5);
+        ctx.moveTo(nx - mw, mouthY + 4);
+        ctx.quadraticCurveTo(nx - mw * 0.5, mouthY + 15, nx, mouthY + 5);
+        ctx.quadraticCurveTo(nx + mw * 0.5, mouthY + 15, nx + mw, mouthY + 4);
+        ctx.stroke();
+      }
+    }
+
+    // Kumis terproyeksi 3D pada pipi kiri & kanan
+    for (const s of [-1, 1] as const) {
+      const wp = rotateYaw3D([s * 54, headRy * 0.34 + pyOff, headRz * 0.72], headYawRad);
+      if (wp.z < -headRz * 0.25) continue;
+      const wx = hx + wp.x;
+      const wy = hy + wp.y;
+      const wDir = s * cosY + sinY * 0.55;
+      const wScale = Math.sign(wDir || s) * (0.45 + 0.55 * Math.abs(cosY));
+      ctx.strokeStyle = spec.ink;
+      ctx.lineWidth = 3.4;
+      for (const [dy0, dy1, len] of [
+        [-7, -16, 50],
+        [1, 0, 56],
+        [9, 15, 48],
+      ]) {
+        ctx.beginPath();
+        ctx.moveTo(wx, wy + dy0);
+        ctx.quadraticCurveTo(wx + wScale * len * 0.52, wy + dy0 + (dy1 - dy0) * 0.35, wx + wScale * len, wy + dy1);
+        ctx.stroke();
+      }
+    }
+  }
+
+  for (const ep of earPts) {
+    if (ep.z >= 0) drawEar3D(ep);
+  }
+}
+
+function drawCat360(
+  ctx: Ctx,
+  spec: CatSpec,
+  pose: CatPose,
+  reliefOut?: ReliefPrimitive[],
+) {
+  ctx.save();
+  ctx.clearRect(0, 0, CAT_W, CAT_H);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  const stance: CatStance = pose.stance ?? 'sit';
+  const yawRad = degToRad(pose.yawDeg ?? 0);
+  const headYawRad = degToRad(pose.headYawDeg ?? pose.yawDeg ?? 0);
+  const sinY = Math.sin(yawRad);
+  const cosY = Math.cos(yawRad);
+  const dir = sinY >= 0 ? 1 : -1;
+  const walkPhase = pose.walkPhase ?? 0;
+  const tailPhase = pose.tailPhase ?? walkPhase * TAU;
+  const breath = Math.sin(pose.breathPhase ?? tailPhase * 0.7) * 3.5;
+  const isPuffed = pose.face === 'shock' || pose.face === 'angry';
+  const walkBob = stance === 'walk' ? Math.abs(Math.sin(walkPhase * TAU)) * -12 : 0;
+  const jumpLift = stance === 'jump' ? -72 : 0;
+  const shockHop = pose.face === 'shock' && stance !== 'jump' ? -16 : 0;
+  const leanRad = ((pose.lean ?? 0) * Math.PI) / 180;
+
+  ctx.translate(CX, CAT_SOLE_Y);
+  ctx.rotate(leanRad);
+  ctx.translate(-CX, -CAT_SOLE_Y + walkBob + jumpLift + shockHop);
+
+  const legItems: { z: number; draw: () => void }[] = [];
+  const soleY = CAT_SOLE_Y - 18;
+  let headAnchor = { x: CX, y: 245 };
+
+  if (stance === 'sleep') {
+    const bodyShiftX = sinY * 14;
+    const pRump = rotateYaw3D([0, 0, -68], yawRad);
+    const pChest = rotateYaw3D([0, 0, 58], yawRad);
+    const by = CAT_SOLE_Y - 76 + breath * 0.4;
+    const loafRx = 98 + Math.abs(sinY) * 44;
+    const tailAnchor = rotateYaw3D([0, 12, -96], yawRad);
+    const loafPath = () => {
+      ctx.beginPath();
+      ctx.ellipse(CX + bodyShiftX, by + 6, loafRx, 66 - breath * 0.4, 0, 0, TAU);
+    };
+
+    const tailDraw = () => {
+      drawTabbyTail(ctx, spec, CX + tailAnchor.x, by + tailAnchor.y + 8, sinY >= 0 ? -1 : 1, tailPhase * 0.45, false, true);
+    };
+    if (tailAnchor.z < 0) tailDraw();
+
+    inked(ctx, loafPath, spec.furBase, spec.ink, 5.5, 3.2, 4.8);
+    if (reliefOut) {
+      reliefOut.push({ kind: 'sphere', cx: CX + bodyShiftX, cy: by + 6, rx: loafRx, ry: 66, z: 40, heightScale: 0.9 });
+    }
+    ctx.save();
+    loafPath();
+    ctx.clip();
+    ctx.strokeStyle = spec.stripeColor;
+    ctx.lineWidth = 13;
+    for (const ox of [-56, -18, 18, 56]) {
+      ctx.beginPath();
+      ctx.moveTo(CX + bodyShiftX + ox * 0.85, by - 64);
+      ctx.quadraticCurveTo(CX + bodyShiftX + ox * 0.95 + sinY * 12, by - 12, CX + bodyShiftX + ox * 0.78, by + 56);
+      ctx.stroke();
+    }
+    ctx.restore();
+    loafPath();
+    ctx.strokeStyle = spec.ink;
+    ctx.lineWidth = 5.5;
+    ctx.stroke();
+
+    if (tailAnchor.z >= 0) tailDraw();
+    const hp = rotateYaw3D([0, -24, 52], yawRad);
+    headAnchor = { x: CX + pChest.x * 0.65 + hp.x * 0.35, y: by - 18 + breath * 0.5 };
+    drawCatHead360(ctx, spec, headAnchor.x, headAnchor.y, { ...pose, blink: 1 }, headYawRad, true, reliefOut);
+  } else if (stance === 'sit') {
+    const bodyTopY = 344 + breath * 0.4;
+    const bodyBotY = CAT_SOLE_Y - 18;
+    const bodyW = 104 + Math.abs(sinY) * 18;
+    const tailBase = rotateYaw3D([0, bodyBotY - 24, -74], yawRad);
+
+    if (tailBase.z < 0) {
+      drawTabbyTail(ctx, spec, CX + tailBase.x, tailBase.y, sinY >= 0 ? -1 : 1, tailPhase, isPuffed, false);
+    }
+
+    // Haunches kiri/kanan di-sort berdasarkan Z
+    for (const s of [-1, 1] as const) {
+      const hp = rotateYaw3D([s * 54, bodyBotY - 46, -24], yawRad);
+      legItems.push({
+        z: hp.z,
+        draw: () => {
+          const haunchPath = () => {
+            ctx.beginPath();
+            ctx.ellipse(CX + hp.x, hp.y, 48 + Math.abs(sinY) * 14, 68, (s * 0.12) + sinY * 0.1, 0, TAU);
+          };
+          inked(ctx, haunchPath, hp.z < 0 ? spec.furShadow : spec.furBase, spec.ink, 5, 2.5, 3.8);
+          drawPaw(ctx, spec, CX + hp.x + sinY * 14, CAT_SOLE_Y - 16, 26, 16, false);
+        },
+      });
+    }
+    for (const item of legItems) if (item.z < 0) item.draw();
+
+    const torsoPath = () => {
+      const offX = -sinY * 16;
+      ctx.beginPath();
+      ctx.moveTo(CX + offX, bodyTopY);
+      ctx.bezierCurveTo(CX + offX + bodyW * 0.76, bodyTopY + 10, CX + offX + bodyW * 0.96, bodyBotY - 72, CX + offX + bodyW * 0.82, bodyBotY);
+      ctx.quadraticCurveTo(CX + offX, bodyBotY + 24, CX + offX - bodyW * 0.82, bodyBotY);
+      ctx.bezierCurveTo(CX + offX - bodyW * 0.96, bodyBotY - 72, CX + offX - bodyW * 0.76, bodyTopY + 10, CX + offX, bodyTopY);
+      ctx.closePath();
+    };
+    inked(ctx, torsoPath, spec.furBase, spec.ink, 5.5, 3.2, 4.8);
+    if (reliefOut) {
+      reliefOut.push({ kind: 'capsule', x1: CX - sinY * 14, y1: bodyTopY + 34, x2: CX - sinY * 14, y2: bodyBotY - 32, radius: bodyW * 0.78, z: 50, heightScale: 0.96 });
+    }
+
+    ctx.save();
+    torsoPath();
+    ctx.clip();
+    if (cosY > -0.25) {
+      ctx.fillStyle = spec.cream;
+      ctx.globalAlpha = Math.min(1, (cosY + 0.25) / 0.45);
+      ctx.beginPath();
+      ctx.ellipse(CX + sinY * 34, bodyTopY + 115, 50 * Math.max(0.55, cosY * 0.7 + 0.3), 106, 0, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = spec.stripeColor;
+    ctx.lineWidth = 12;
+    const stripeShift = -sinY * 36;
+    for (const yy of [bodyTopY + 58, bodyTopY + 108, bodyTopY + 156]) {
+      ctx.beginPath();
+      ctx.moveTo(CX + stripeShift - 86, yy + 10);
+      ctx.quadraticCurveTo(CX + stripeShift, yy - 12, CX + stripeShift + 86, yy + 10);
+      ctx.stroke();
+    }
+    ctx.restore();
+    torsoPath();
+    ctx.strokeStyle = spec.ink;
+    ctx.lineWidth = 5.5;
+    ctx.stroke();
+
+    for (const item of legItems) if (item.z >= 0) item.draw();
+
+    // Kaki depan duduk
+    for (const s of [-1, 1] as const) {
+      const fp = rotateYaw3D([s * 30, bodyTopY + 68, 48], yawRad);
+      if (fp.z > -38) {
+        drawLeg(ctx, spec, CX + fp.x, fp.y, CX + fp.x + s * 2, CAT_SOLE_Y - 18, 21, 17, fp.z < 12, false, true);
+      }
+    }
+
+    const colP = rotateYaw3D([0, bodyTopY + 14, 30], yawRad);
+    drawCollar(ctx, spec, CX + colP.x, colP.y, 98, cosY < -0.15);
+
+    const hP = rotateYaw3D([0, 250 + breath * 0.8, 18], yawRad);
+    headAnchor = { x: CX + hP.x, y: hP.y };
+    drawCatHead360(ctx, spec, headAnchor.x, headAnchor.y, pose, headYawRad, false, reliefOut);
+
+    if (tailBase.z >= 0) {
+      drawTabbyTail(ctx, spec, CX + tailBase.x, tailBase.y, sinY >= 0 ? -1 : 1, tailPhase, isPuffed, false);
+    }
+  } else {
+    // STAND / WALK / JUMP 360° (4-kaki penuh berputar mulus sepanjang sumbu Y!)
+    const isWalk = stance === 'walk';
+    const isJump = stance === 'jump';
+    const torsoY = isJump ? 404 : 422 + breath * 0.4;
+    const catPlanted = isWalk && (pose.gait ?? 'planted') === 'planted';
+    const pf1 = catPlanted ? plantedFoot(walkPhase, 1, 48, 28) : null;
+    const pf2 = catPlanted ? plantedFoot(walkPhase, -1, 48, 28) : null;
+    const dz1 = pf1 ? pf1.dx : Math.sin(walkPhase * TAU) * 48;
+    const dz2 = pf2 ? pf2.dx : Math.sin((walkPhase + 0.5) * TAU) * 48;
+    const lift1 = pf1 ? pf1.lift : Math.max(0, Math.cos(walkPhase * TAU)) * 28;
+    const lift2 = pf2 ? pf2.lift : Math.max(0, Math.cos((walkPhase + 0.5) * TAU)) * 28;
+
+    const pRump = rotateYaw3D([0, torsoY, -78], yawRad);
+    const pChest = rotateYaw3D([0, torsoY - 4, 78], yawRad);
+    const bodySpanX = Math.abs(pChest.x - pRump.x);
+    const torsoRx = Math.max(82, bodySpanX * 0.55 + 68);
+    const torsoRy = isJump ? 66 : 72;
+
+    const tailBase = rotateYaw3D([0, torsoY - 14, -92], yawRad);
+    const tailDir = Math.abs(sinY) > 0.22 ? -dir : 1;
+    if (tailBase.z < 0) {
+      drawTabbyTail(ctx, spec, CX + tailBase.x, tailBase.y, tailDir, tailPhase, isPuffed, false);
+    }
+
+    // 4 kaki: [sideX, hipZ, strideDz, lift, isFront]
+    const quadLegs: [number, number, number, number, boolean][] = [
+      [-32, -68, isWalk ? dz2 : 0, isWalk ? lift2 : isJump ? 22 : 0, false],
+      [32, -68, isWalk ? dz1 : 0, isWalk ? lift1 : isJump ? 14 : 0, false],
+      [-32, 72, isWalk ? dz1 : 0, isWalk ? lift1 : isJump ? 54 : 0, true],
+      [32, 72, isWalk ? dz2 * 1.02 : 0, isWalk ? lift2 : isJump ? 60 : 0, true],
+    ];
+    for (const [lx, lz, stride, lift, isFront] of quadLegs) {
+      const top = rotateYaw3D([lx, torsoY + 26, lz], yawRad);
+      const bot = rotateYaw3D([lx * 0.94, soleY - lift, lz + (isJump ? (isFront ? 58 : -54) : stride)], yawRad);
+      const isDark = top.z < -8;
+      legItems.push({
+        z: top.z,
+        draw: () => {
+          drawLeg(ctx, spec, CX + top.x, top.y, CX + bot.x, bot.y, isFront ? 22 : 24, 17, isDark, isJump, top.z >= 0);
+          if (reliefOut) {
+            reliefOut.push({ kind: 'capsule', x1: CX + top.x, y1: top.y, x2: CX + bot.x, y2: bot.y, radius: 20, z: 30 + top.z * 0.4, ao: isDark ? 0.84 : 0.94 });
+          }
+        },
+      });
+    }
+    const sortedLegs = sortByDepthZ(legItems);
+    for (const item of sortedLegs) if (item.z < 0) item.draw();
+
+    const arch = isJump || isPuffed ? -24 : 0;
+    const midX = CX + (pRump.x + pChest.x) * 0.5;
+    const bodyPath = () => {
+      ctx.beginPath();
+      ctx.moveTo(midX - torsoRx, torsoY + 4);
+      ctx.bezierCurveTo(midX - torsoRx * 0.7, torsoY - torsoRy + arch, midX + torsoRx * 0.7, torsoY - torsoRy + arch, midX + torsoRx, torsoY + 2);
+      ctx.bezierCurveTo(midX + torsoRx * 0.94, torsoY + torsoRy * 0.88, midX - torsoRx * 0.94, torsoY + torsoRy * 0.88, midX - torsoRx, torsoY + 4);
+      ctx.closePath();
+    };
+    inked(ctx, bodyPath, spec.furBase, spec.ink, 5.5, 3.2, 4.8);
+    if (reliefOut) {
+      reliefOut.push({ kind: 'capsule', x1: CX + pRump.x * 0.85, y1: torsoY, x2: CX + pChest.x * 0.85, y2: torsoY - 4, radius: torsoRy * 0.92, z: 50, heightScale: 0.96 });
+    }
+
+    ctx.save();
+    bodyPath();
+    ctx.clip();
+    if (cosY > -0.25) {
+      ctx.fillStyle = spec.cream;
+      ctx.globalAlpha = Math.min(1, (cosY + 0.25) / 0.45);
+      ctx.beginPath();
+      ctx.ellipse(midX + pChest.x * 0.35, torsoY + torsoRy * 0.58, torsoRx * 0.75, torsoRy * 0.44, 0, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = spec.stripeColor;
+    ctx.lineWidth = 13;
+    for (const t of [-0.55, -0.18, 0.18, 0.55]) {
+      const sx = midX + t * torsoRx;
+      ctx.beginPath();
+      ctx.moveTo(sx, torsoY - torsoRy - 14);
+      ctx.quadraticCurveTo(sx + dir * 12, torsoY - 10, sx - dir * 5, torsoY + 34);
+      ctx.stroke();
+    }
+    ctx.restore();
+    bodyPath();
+    ctx.strokeStyle = spec.ink;
+    ctx.lineWidth = 5.5;
+    ctx.stroke();
+
+    for (const item of sortedLegs) if (item.z >= 0) item.draw();
+
+    const colP = rotateYaw3D([0, torsoY - 22, 86], yawRad);
+    drawCollar(ctx, spec, CX + colP.x, colP.y, 82, cosY < -0.15);
+
+    const hP = rotateYaw3D([0, torsoY - 84 + (isWalk ? Math.sin(walkPhase * TAU * 2) * 4 : 0), 106], yawRad);
+    headAnchor = { x: CX + hP.x, y: hP.y };
+    drawCatHead360(ctx, spec, headAnchor.x, headAnchor.y, pose, headYawRad, false, reliefOut);
+
+    if (tailBase.z >= 0) {
+      drawTabbyTail(ctx, spec, CX + tailBase.x, tailBase.y, tailDir, tailPhase, isPuffed, false);
+    }
+  }
+
+  const fx = pose.fx !== undefined ? pose.fx : cosY < -0.2 ? 'none' : defaultFxFor(pose.face);
+  drawComicFx(ctx, fx, headAnchor.x, headAnchor.y - 104, 220, spec.ink);
   ctx.restore();
 }

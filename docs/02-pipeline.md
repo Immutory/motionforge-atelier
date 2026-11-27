@@ -1,4 +1,4 @@
-# 02. Alur produksi studio (Atelier v3.0 — 2.5D Reference Edition)
+# 02. Alur produksi studio (Atelier v4.0 — 2.5D Volumetric 360° Edition)
 
 | Fase | Nama | Agent utama | Keluaran | Gate |
 |------|------|-------------|----------|------|
@@ -6,12 +6,12 @@
 | 1 | Naskah | story-architect | `SCRIPT.md` dengan sumber & cast sheet | **G1** |
 | 2 | Suara | voice-director | `voice.wav`, `words.json`, `timeline.json`, `rms.json` | |
 | 3 | Blocking | cinematographer, set-designer, character-animator | `set.tsx`, `cast.ts`, `shots.ts` | |
-| **3.5** | **Spatial & Collision Audit** | **set-designer, character-animator, cinematographer, qa-inspector** | **Lulus 100% `engine/core/spatial.ts` (`checkPropOverlap`, `checkBillboardSweep`, `checkCounterVisibility`, `checkSafeFraming`, `checkSightline`) & `npm run check`** | **Wajib pra-G2** |
+| **3.5** | **Spatial & Rig360 Audit** | **set-designer, character-animator, cinematographer, qa-inspector** | **Lulus 100% `engine/core/spatial.ts`, `rig360` 360°, zero duplikat/leak, & `npm run check`** | **Wajib pra-G2** |
 | 4 | Look-dev stills | set-designer, character-animator, light-colorist, qa-inspector | stills di `out/<slug>/stills` + laporan QA 2-lapis | **G2** |
-| 5 | Motion preview | cinematographer, character-animator, qa-inspector | klip 1–3 detik per beat (Move → Settle, akting & lip-sync) | **G3** |
+| 5 | Motion preview | cinematographer, character-animator, qa-inspector | klip 1–3 detik per beat (Move → Settle, 360° orbit, akting & lip-sync) | **G3** |
 | 6 | Sound | sound-designer | `mix.wav` | |
 | 7 | Master render | render-engineer | `video_silent.mp4` | |
-| 8 | Mux, QA & Cleanup | render-engineer, qa-inspector, showrunner | `<slug>_final.mp4`, laporan `npm run qa`, workspace bersih | **G4** |
+| 8 | Mux, QA & Cleanup | render-engineer, qa-inspector, showrunner | `<slug>_final.mp4`, `UPLOAD.md` (`.agents/youtube-skills/`), laporan `npm run qa`, workspace bersih (`__pycache__=0`, `.blend1=0`) | **G4** |
 
 ## Aturan gate & Spatial Audit
 - **Fase 3.5 wajib hijau sebelum Gate G2**: Showrunner dilarang mempresentasikan still Gate G2 bila masih ada 1 pelanggaran spasial (aset dempet/nembus, billboard menyapu bangku/meja saat rotasi `yaw`, kepala penjaga konter tenggelam, atau wajah/papan nama terpotong).

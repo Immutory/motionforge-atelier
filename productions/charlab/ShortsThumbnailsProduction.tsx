@@ -1,17 +1,17 @@
 import React, { useEffect, useMemo } from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
-import { useThree } from '@react-three/fiber';
-import type { PerspectiveCamera } from 'three';
 import * as THREE from 'three';
 import {
   ActorBillboard,
+  CameraRig,
   CatBillboard,
   NOINK,
   PostStack,
   Stage,
   WARKOP_SPOTS,
   WarkopSet,
+  seatCardPos,
   useTwoToneMaterial,
   type CamPose,
   type PostParams,
@@ -30,7 +30,6 @@ import {
   STOOLS,
   SetPieces as Ep03SetPieces,
   bonLinesAt as ep03BonLinesAt,
-  seatCardPos,
   type SetState as Ep03SetState,
 } from '../ep03-tio-bakmie/set';
 import { EP03_BON_FRAMES } from '../ep03-tio-bakmie/cast';
@@ -44,7 +43,6 @@ import {
   EP04_SPOTS,
   STOOLS as EP04_STOOLS,
   SetPieces as Ep04SetPieces,
-  seatCardPos as ep04SeatCardPos,
   type SetState as Ep04SetState,
 } from '../ep04-karyawan-bakmie/set';
 import {
@@ -53,6 +51,13 @@ import {
   lightFor as ep04LightFor,
   postFor as ep04PostFor,
 } from '../ep04-karyawan-bakmie/look';
+import {
+  EP05_SPOTS,
+  KARDUS_BELANG_HALF,
+  SetPieces as Ep05SetPieces,
+  type SetState as Ep05SetState,
+} from '../ep05-parkir-gratis-utoh/set';
+import { EP05_LIGHT_ID, LOOK as EP05_LOOK, lightFor as ep05LightFor, postFor as ep05PostFor } from '../ep05-parkir-gratis-utoh/look';
 
 /**
  * Komposisi Thumbnail 9:16 (1080×1920) bergaya YouTube Shorts / Reels / TikTok viral:
@@ -65,16 +70,6 @@ import {
  * 3. Bawah-Tengah (~56%–84%): Prop fokus bercahaya (Laptop ✓ 0 ERROR hijau / Dandang & Bakmie hangat)
  *    + semburan asap/uap kartun kerucut bergaya flat-toon dengan bintik kecil.
  */
-
-const CameraRig: React.FC<{ pose: CamPose }> = ({ pose }) => {
-  const cam = useThree().camera as PerspectiveCamera;
-  cam.position.set(pose.pos[0], pose.pos[1], pose.pos[2]);
-  cam.fov = pose.fov;
-  cam.lookAt(pose.look[0], pose.look[1], pose.look[2]);
-  cam.rotateZ((pose.roll * Math.PI) / 180);
-  cam.updateProjectionMatrix();
-  return null;
-};
 
 // ---------------------------------------------------------------------------------------------------------
 // Overlay 2D/SVG: Headline 2 baris kuning-emas, Pill Badge krem-marun, Focal Glow, & Cartoon Smoke Jets
@@ -864,7 +859,7 @@ const Ep04ShortsThumb: React.FC = () => {
           {/* Si Oyen duduk angkuh di kursi merah di depan papan MANDOR QC */}
           <CatBillboard
             cat="oyen"
-            position={ep04SeatCardPos(EP04_SPOTS.oyenSeat, EP04_STOOLS.oyen.half, EP04_THUMB_CAM.pos)}
+            position={seatCardPos(EP04_SPOTS.oyenSeat, EP04_STOOLS.oyen.half, EP04_THUMB_CAM.pos)}
             faceTo={EP04_THUMB_CAM.pos}
             height={0.58}
             pose={{
@@ -901,12 +896,140 @@ const Ep04ShortsThumb: React.FC = () => {
 };
 
 // ---------------------------------------------------------------------------------------------------------
-// Komposisi Utama: Frame 0 = EP02, Frame 1 = EP03, Frame 2 = EP04
+// Frame 3: Thumbnail EP05 "Parkir Gratis 0 Rupiah, Tapi Keluarnya Bayar 10 Ribu?!" (Safe-Zone 4 Platform)
+// ---------------------------------------------------------------------------------------------------------
+
+const EP05_THUMB_CAM: CamPose = {
+  pos: [-30.85, 1.38, 9.55],
+  look: [-30.9, 1.32, 4.18],
+  fov: 47,
+  roll: 0,
+};
+
+const Ep05ShortsThumb: React.FC = () => {
+  const { width, height } = useVideoConfig();
+  const baseLight = useMemo(() => ep05LightFor(EP05_LIGHT_ID), []);
+  const post: PostParams = useMemo(() => ep05PostFor(0.18, 4.7), []);
+
+  const setState: Ep05SetState = useMemo(
+    () => ({
+      frame: 2520,
+      kardusPop: 0.4,
+      tallyMode: 'total320',
+      activeMotor: 'pakBudi',
+      motorPos: [-32.72, 0, 4.75],
+      motorYaw: Math.PI,
+      motorRoll: 0,
+      suratVisible: false,
+      suratPop: 0,
+      cashVisible: false,
+      cashPos: [0, 0, 0],
+      floatingBills: false,
+    }),
+    [],
+  );
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: '#6db3e8' }}>
+      <ThreeCanvas
+        width={width}
+        height={height}
+        shadows="percentage"
+        camera={{ fov: EP05_THUMB_CAM.fov, near: 0.05, far: 120, position: EP05_THUMB_CAM.pos }}
+        gl={{ antialias: true, toneMapping: THREE.NoToneMapping, preserveDrawingBuffer: true }}
+        style={{ width, height }}
+      >
+        <CameraRig pose={EP05_THUMB_CAM} />
+        <Stage
+          light={baseLight}
+          ground={EP05_LOOK.ground}
+          showGround={false}
+          camPos={EP05_THUMB_CAM.pos}
+          camLook={EP05_THUMB_CAM.look}
+        >
+          <Ep05SetPieces state={setState} />
+
+          {/* Pak Budi kalem & berwibawa di sisi kiri (utuh 100% di dalam bingkai!) */}
+          <ActorBillboard
+            actor="pakBudi"
+            position={[-31.82, 0, 4.65]}
+            faceTo={EP05_THUMB_CAM.pos}
+            height={1.94}
+            pose={{
+              face: 'smug',
+              stance: 'stand',
+              view: 'front',
+              leftArm: 'hip',
+              rightArm: 'point',
+              facing: 0.25,
+              lean: 1,
+            }}
+            castShadow={baseLight.card.castShadow}
+            blobColor={baseLight.card.blob}
+          />
+
+          {/* Bang Utoh syok total di sisi kanan dekat kardus PARKIR GRATIS */}
+          <ActorBillboard
+            actor="bangUtoh"
+            position={[-30.52, 0, 4.32]}
+            faceTo={EP05_THUMB_CAM.pos}
+            height={1.96}
+            pose={{
+              face: 'shock',
+              stance: 'stand',
+              view: 'front',
+              leftArm: 'raise',
+              rightArm: 'raise',
+              facing: -0.15,
+              lean: -3,
+              fx: 'shock',
+              hatPop: 0.8,
+            }}
+            castShadow={baseLight.card.castShadow}
+            blobColor={baseLight.card.blob}
+          />
+
+          {/* Belang cuek di atas kotak kardus kanan */}
+          <CatBillboard
+            cat="belang"
+            position={seatCardPos(EP05_SPOTS.belangSeat, KARDUS_BELANG_HALF, EP05_THUMB_CAM.pos)}
+            faceTo={EP05_THUMB_CAM.pos}
+            height={0.54}
+            pose={{
+              face: 'neutral',
+              stance: 'sit',
+              facing: -0.2,
+              tailPhase: 0.9,
+              pawRaise: 'right',
+            }}
+            castShadow={baseLight.card.castShadow}
+            blobColor={baseLight.card.blob}
+          />
+        </Stage>
+        <PostStack params={post} />
+      </ThreeCanvas>
+
+      {/* Safe-Zone 4 Platform: Headline & Pill berada di y >= 295 px agar 100% aman di YT Shorts, IG Reels, FB Reels, TikTok */}
+      <ShortsThumbOverlay
+        line1="PARKIR GRATIS"
+        line2="0 RUPIAH?!"
+        pillText="KELUAR BAYAR 10RB!"
+        headlineSize={94}
+        pillWidth={660}
+        topOffset={145}
+      />
+    </AbsoluteFill>
+  );
+};
+
+// ---------------------------------------------------------------------------------------------------------
+// Komposisi Utama: Frame 0 = EP02, Frame 1 = EP03, Frame 2 = EP04, Frame 3 = EP05
 // ---------------------------------------------------------------------------------------------------------
 
 export const ShortsThumbnailsProduction: React.FC = () => {
   const frame = useCurrentFrame();
   if (frame === 1) return <Ep03ShortsThumb />;
   if (frame === 2) return <Ep04ShortsThumb />;
+  if (frame === 3) return <Ep05ShortsThumb />;
   return <Ep02ShortsThumb />;
 };

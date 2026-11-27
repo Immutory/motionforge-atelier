@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   ActorBillboard,
+  CameraRig,
   CatBillboard,
   DEFAULT_POST,
   GRADE_PRESETS,
@@ -28,16 +28,6 @@ import { SetPieces } from './LabStageSet';
 
 const FPS = 30;
 const SHOCK_AT = 215;
-
-const CameraRig: React.FC<{ pose: CamPose; shake: { dx: number; dy: number; droll: number } }> = ({ pose, shake }) => {
-  const cam = useThree().camera as THREE.PerspectiveCamera;
-  cam.position.set(pose.pos[0] + shake.dx, pose.pos[1] + shake.dy, pose.pos[2]);
-  cam.fov = pose.fov;
-  cam.lookAt(...pose.look);
-  cam.rotateZ(((pose.roll + shake.droll) * Math.PI) / 180);
-  cam.updateProjectionMatrix();
-  return null;
-};
 
 // Kamera animasi live action di depan WARKOP 24 JAM (diambil dari sudut kiri jalan agar bebas tiang lampu x=0,z=4.4!)
 const ANIM_CAMS: CamKey[] = [

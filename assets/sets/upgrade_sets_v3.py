@@ -438,12 +438,54 @@ def polish_materials_soft_matte():
                     node.inputs["Strength"].default_value = 0.42
                     norms_softened += 1
 
-        # Lewati emissive, kaca/transparan, logam, dan keramik semi-gloss
+        # v3.7 fix: matikan emisi neon siang hari pada 6 material non-lampu (297 mesh) agar tidak jadi blok datar menyilaukan
+        if mat.name in ("KG_SignBlue", "KG_SignOrange", "KG_SignYellow"):
+            if "Emission Strength" in bsdf.inputs:
+                bsdf.inputs["Emission Strength"].default_value = 0.0
+            bsdf.inputs["Roughness"].default_value = 0.86
+            bsdf.inputs["Metallic"].default_value = 0.0
+            if "Specular IOR Level" in bsdf.inputs and not bsdf.inputs["Specular IOR Level"].is_linked:
+                bsdf.inputs["Specular IOR Level"].default_value = 0.14
+            updated += 1
+            continue
+        if mat.name == "KG_Gold":
+            if "Emission Strength" in bsdf.inputs:
+                bsdf.inputs["Emission Strength"].default_value = 0.0
+            bsdf.inputs["Roughness"].default_value = 0.42
+            bsdf.inputs["Metallic"].default_value = 0.65
+            if "Specular IOR Level" in bsdf.inputs and not bsdf.inputs["Specular IOR Level"].is_linked:
+                bsdf.inputs["Specular IOR Level"].default_value = 0.35
+            updated += 1
+            continue
+        if mat.name in ("KG_WinWarm", "KG_WinGlow"):
+            # Siang: shaded berkusen/tirai (`window_night_warm.jpg`); Sore/Malam: dinyalakan dinamis oleh `GlbSet.tsx`
+            if "Emission Strength" in bsdf.inputs:
+                bsdf.inputs["Emission Strength"].default_value = 0.0
+            bsdf.inputs["Roughness"].default_value = 0.48
+            bsdf.inputs["Metallic"].default_value = 0.0
+            if "Specular IOR Level" in bsdf.inputs and not bsdf.inputs["Specular IOR Level"].is_linked:
+                bsdf.inputs["Specular IOR Level"].default_value = 0.22
+            updated += 1
+            continue
+
+        # Lewati emissive, kaca/transparan, logam, cat kendaraan satin (`M_Veh_Paint_*`), dan keramik semi-gloss
         emit_s = bsdf.inputs["Emission Strength"].default_value if "Emission Strength" in bsdf.inputs else 0.0
         alpha = bsdf.inputs["Alpha"].default_value if "Alpha" in bsdf.inputs else 1.0
         metal = bsdf.inputs["Metallic"].default_value if "Metallic" in bsdf.inputs else 0.0
         trans = bsdf.inputs["Transmission Weight"].default_value if "Transmission Weight" in bsdf.inputs else 0.0
         if emit_s > 0.1 or alpha < 0.95 or metal > 0.35 or trans > 0.1:
+            continue
+
+        # Cat bodi kendaraan real-life & fasad UV/bayangan kontak dikecualikan dari clamp matte polos
+        if lname.startswith(("m_veh_paint_", "m_veh_contactshadow", "m_rl_minimarketfront", "m_rl_atmfront")):
+            continue
+
+        # Bug fix v3.5: cek `rooftile` / `roof` SEBELUM `tile` agar KG_RoofTile mendapat matte 0.88 (bukan keramik 0.58)
+        if "rooftile" in lname or "roof_tile" in lname:
+            bsdf.inputs["Roughness"].default_value = 0.88
+            if "Specular IOR Level" in bsdf.inputs and not bsdf.inputs["Specular IOR Level"].is_linked:
+                bsdf.inputs["Specular IOR Level"].default_value = 0.14
+            updated += 1
             continue
 
         # Keramik & ubin tetap semi-matte (0.58) agar tidak tampak seperti cermin plastik
@@ -466,30 +508,82 @@ def polish_materials_soft_matte():
             if bsdf.inputs["Specular IOR Level"].default_value > 0.18:
                 bsdf.inputs["Specular IOR Level"].default_value = 0.14
 
-    # Beri tekstur beton/plester matte halus pada KG2_Concrete bila masih warna polos
-    conc = bpy.data.materials.get("KG2_Concrete")
-    if conc and conc.use_nodes and conc.node_tree:
-        nt = conc.node_tree
+    # Beri tekstur matte 512px pada permukaan col_mat polos utama (Fase 3 v3.5)
+    flat_tex_bindings = {
+        "KG2_Concrete": ("cracked_plaster_diff.jpg", "cracked_plaster_norm.jpg", 0.92, 0.34),
+        "KG_ParkConcrete": ("park_concrete_diff.jpg", None, 0.90, 0.0),
+        "KG_VendorPaver": ("vendor_paver_diff.jpg", None, 0.88, 0.0),
+        "KG_CourtGreen": ("court_lines_diff.jpg", None, 0.88, 0.0),
+        "KG_CourtTerracotta": ("court_terracotta_diff.jpg", None, 0.90, 0.0),
+        "KG_WoodPlank": ("teak_wood_planks_diff.jpg", "teak_wood_planks_norm.jpg", 0.88, 0.34),
+        "KG_GerobakWoodFrame": ("teak_wood_planks_diff.jpg", "teak_wood_planks_norm.jpg", 0.88, 0.34),
+        "KG_DomeGreen": ("dome_panel_diff.jpg", None, 0.84, 0.0),
+        "KG2_KaliWater": ("kali_water_diff.jpg", None, 0.24, 0.0),
+        "KG2_PotClay": ("pot_clay_diff.jpg", None, 0.90, 0.0),
+        "KG2_LeafGreen": ("banana_leaf_diff.jpg", None, 0.84, 0.0),
+        "KG2_BananaLeaf": ("banana_leaf_diff.jpg", None, 0.84, 0.0),
+        "KG2_BananaTrunk": ("teak_wood_dark_diff.jpg", None, 0.90, 0.0),
+    }
+    bound_count = 0
+    for mat_name, (diff_f, norm_f, rough_v, norm_s) in flat_tex_bindings.items():
+        m = bpy.data.materials.get(mat_name)
+        if not (m and m.use_nodes and m.node_tree):
+            continue
+        nt = m.node_tree
         has_img = any(n.type == "TEX_IMAGE" for n in nt.nodes)
         bsdf = next((n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"), None)
-        if not has_img and bsdf is not None:
-            cp_diff = load_or_reload_texture("cracked_plaster_diff.jpg", non_color=False)
-            cp_norm = load_or_reload_texture("cracked_plaster_norm.jpg", non_color=True)
-            if cp_diff is not None:
-                td = nt.nodes.new("ShaderNodeTexImage")
-                td.image = cp_diff
-                nt.links.new(td.outputs["Color"], bsdf.inputs["Base Color"])
-            if cp_norm is not None:
+        if has_img or bsdf is None:
+            continue
+        d_img = load_or_reload_texture(diff_f, non_color=False)
+        if d_img is not None:
+            td = nt.nodes.new("ShaderNodeTexImage")
+            td.image = d_img
+            nt.links.new(td.outputs["Color"], bsdf.inputs["Base Color"])
+            bound_count += 1
+        if norm_f:
+            n_img = load_or_reload_texture(norm_f, non_color=True)
+            if n_img is not None:
                 tn = nt.nodes.new("ShaderNodeTexImage")
-                tn.image = cp_norm
+                tn.image = n_img
                 nm = nt.nodes.new("ShaderNodeNormalMap")
-                nm.inputs["Strength"].default_value = 0.34
+                nm.inputs["Strength"].default_value = norm_s
                 nt.links.new(tn.outputs["Color"], nm.inputs["Color"])
                 nt.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
-            bsdf.inputs["Roughness"].default_value = 0.92
-            print("UPGRADE KG2_Concrete -> matte plaster texture")
+        bsdf.inputs["Roughness"].default_value = rough_v
+        if "Specular IOR Level" in bsdf.inputs and not bsdf.inputs["Specular IOR Level"].is_linked and rough_v >= 0.80:
+            bsdf.inputs["Specular IOR Level"].default_value = 0.12
 
-    print(f"POLISH soft-matte OK: {updated} materials raised to matte, {norms_softened} normal maps softened")
+    # Kalibrasi spesifik material non-standar (Fase 3 v3.5)
+    explicit_tweaks = {
+        "KG_WarkopTitleDark": (0.0, 0.86),
+        "M_Tio_LampShade": (0.0, 0.78),
+        "KG_Steel": (0.65, 0.52),
+    }
+    for mat_name, (met_v, rgh_v) in explicit_tweaks.items():
+        m = bpy.data.materials.get(mat_name)
+        if m and m.use_nodes and m.node_tree:
+            bsdf = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+            if bsdf is not None:
+                bsdf.inputs["Metallic"].default_value = met_v
+                bsdf.inputs["Roughness"].default_value = rgh_v
+                updated += 1
+
+    # v3.6: Pasang tekstur jendela malam bertirai & berkusen (`window_night_warm.jpg`) pada KG_WinWarm & KG_WinGlow
+    win_img = load_or_reload_texture("window_night_warm.jpg", non_color=False)
+    if win_img is not None:
+        for wname in ("KG_WinWarm", "KG_WinGlow"):
+            wm = bpy.data.materials.get(wname)
+            if wm and wm.use_nodes and wm.node_tree:
+                nt = wm.node_tree
+                bsdf = next((n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"), None)
+                has_img = any(n.type == "TEX_IMAGE" for n in nt.nodes)
+                if bsdf is not None and not has_img:
+                    td = nt.nodes.new("ShaderNodeTexImage")
+                    td.image = win_img
+                    nt.links.new(td.outputs["Color"], bsdf.inputs["Base Color"])
+                    bound_count += 1
+
+    print(f"POLISH soft-matte OK: {updated} materials raised to matte, {norms_softened} normal maps softened, {bound_count} flat mats textured")
 
 
 def optimize_heavy_sign_meshes():
@@ -547,8 +641,8 @@ def export_collection(col_name: str, out_stem: str):
     )
     size_mb = round(out_path.stat().st_size / 1e6, 2)
     print(f"EXPORT {out_stem}.glb -> {size_mb} MB")
-    if out_stem == "kampung" and size_mb > 29.0:
-        raise RuntimeError(f"kampung.glb melampaui budget v3.5 29.0 MB ({size_mb} MB)")
+    if out_stem == "kampung" and size_mb > 28.0:
+        raise RuntimeError(f"kampung.glb melampaui hard-cap v3.5 28.0 MB ({size_mb} MB)")
 
 
 def main():

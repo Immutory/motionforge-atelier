@@ -1,6 +1,6 @@
 import { GRADE_PRESETS, LIGHTS, POST_HYBRID_25D, indoorLight, type LightPreset, type PostParams } from '../../engine';
 
-/** Milik agent light-colorist (standar Atelier v3.0 — 2.5D Reference Edition). */
+/** Milik agent light-colorist (standar Atelier v4.0 — 2.5D Volumetric 360° + Soft-Lit Polish). */
 export const LOOK = {
   ground: '#d9c59b',
 };

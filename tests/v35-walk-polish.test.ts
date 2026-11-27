@@ -8,9 +8,20 @@ import {
   CAT_PRESETS,
   DiegeticNote3D,
   DrinkCup3D,
+  Galon3D,
+  GorenganPlate3D,
+  KAMPUNG_SPOTS,
+  KardusMie3D,
+  Kentongan3D,
   LIGHTS,
   Laptop3D,
+  MegaphoneToa3D,
+  PapanCatur3D,
   Phone3D,
+  SandalJepit3D,
+  SapuLidi3D,
+  TabungGas3kg3D,
+  ToplesKerupuk3D,
   actorHandPoint,
   actorWalkCycleMeters,
   catWalkCycleMeters,
@@ -180,11 +191,12 @@ test('v3.5 Fase 2 · Anti-plastic GlbSet classifyGlbSurface, LIGHTS.noon soft-li
   }
 });
 
-test('v3.5 Fase 2 · Aset GLB & boxes.json sinkron: kampung.glb <= 29 MB & pallet maxY persis 0.30 / 0.44 m', () => {
+test('v3.5 Fase 2 · Aset GLB & boxes.json sinkron: kampung.glb <= 28 MB (target <= 24 MB) & pallet maxY persis 0.30 / 0.44 m', () => {
   const root = process.cwd();
   const kampungGlb = path.join(root, 'public', 'sets', 'kampung.glb');
   const sizeMb = fs.statSync(kampungGlb).size / 1e6;
-  assert.ok(sizeMb <= 29.0, `kampung.glb (${sizeMb.toFixed(2)} MB) wajib <= 29.0 MB`);
+  assert.ok(sizeMb <= 28.0, `kampung.glb (${sizeMb.toFixed(2)} MB) wajib <= 28.0 MB`);
+  assert.ok(sizeMb <= 24.0, `kampung.glb (${sizeMb.toFixed(2)} MB) wajib memenuhi target overhaul <= 24.0 MB`);
 
   for (const stem of ['kampung', 'warkop', 'kost', 'kampus']) {
     assert.ok(fs.existsSync(path.join(root, 'public', 'sets', `${stem}.glb`)), `${stem}.glb wajib ada`);
@@ -200,6 +212,102 @@ test('v3.5 Fase 2 · Aset GLB & boxes.json sinkron: kampung.glb <= 29 MB & palle
   assert.ok(tioPallet && Math.abs(tioPallet.max[1] - 0.3) < 0.005, `tioPallet maxY harus 0.30 m, dapat ${tioPallet?.max[1]}`);
   assert.ok(yuniPallet && Math.abs(yuniPallet.max[1] - 0.3) < 0.005, `yuniPallet maxY harus 0.30 m, dapat ${yuniPallet?.max[1]}`);
   assert.ok(wkPallet && Math.abs(wkPallet.max[1] - 0.44) < 0.005, `wkPallet maxY harus 0.44 m, dapat ${wkPallet?.max[1]}`);
+});
+
+test('v3.5 KampungSet Overhaul · 0 floating, 0 overlap FIK, kendaraan real-life instanced, detail RT 04, & 7 prop 3D baru', () => {
+  const root = process.cwd();
+  const kgBoxes = JSON.parse(fs.readFileSync(path.join(root, 'public', 'sets', 'kampung.boxes.json'), 'utf8')) as {
+    boxes: { name: string; min: [number, number, number]; max: [number, number, number] }[];
+  };
+  const boxes = kgBoxes.boxes;
+  const byName = (n: string) => boxes.find((b) => b.name === n);
+
+  // 1. 0 floating: kursi kantor, pohon barat/sekolah & jemuran, atap Pos Satpam, motor bengkel, sepeda sekolah
+  const f1Chairs = boxes.filter((b) => b.name.includes('_F1_') && b.name.includes('Chair'));
+  assert.ok(f1Chairs.length > 0);
+  for (const c of f1Chairs) {
+    assert.ok(Math.abs(c.min[1] - 0.15) < 0.005, `${c.name} minY harus 0.150 m, dapat ${c.min[1]}`);
+  }
+  for (const t of boxes.filter(
+    (b) =>
+      b.name.startsWith('KG2_West_Banana_') ||
+      b.name.startsWith('KG2_West_Mango_') ||
+      b.name.startsWith('KG2_School_Tree_') ||
+      b.name.endsWith('_Jemuran'),
+  )) {
+    assert.ok(Math.abs(t.min[1] - -0.06) < 0.005, `${t.name} minY harus -0.060 m, dapat ${t.min[1]}`);
+  }
+  const satRoof = byName('KG_P5_Satpam_Roof');
+  const satBooth = byName('KG_P5_Satpam_Booth');
+  assert.ok(satRoof && satBooth && satRoof.min[1] <= satBooth.max[1] + 0.001, 'KG_P5_Satpam_Roof wajib duduk rapat di atas booth');
+
+  for (const m of boxes.filter((b) => b.name.startsWith('KG2_Bengkel_Motor_'))) {
+    assert.ok(Math.abs(m.min[1] - 0.12) < 0.003, `${m.name} minY harus 0.120 m, dapat ${m.min[1]}`);
+  }
+  for (const bk of boxes.filter((b) => b.name.startsWith('KG2_School_Bike_'))) {
+    assert.ok(Math.abs(bk.min[1] - 0.08) < 0.003, `${bk.name} minY harus 0.080 m, dapat ${bk.min[1]}`);
+  }
+
+  // 2. 0 overlap FIK: pohon 02 dihapus & KG2_FIK_Plaza dipecah 3 objek bersih
+  assert.equal(byName('KG_TreeCrownMain_02'), undefined);
+  assert.equal(byName('KG_TreeTrunk_02'), undefined);
+  assert.equal(byName('KG2_FIK_Plaza'), undefined);
+  assert.ok(byName('KG2_FIK_PlazaFloor') && byName('KG2_FIK_FlagPole') && byName('KG2_FIK_Planter'));
+
+  // 3. Kendaraan real-life instanced + EP05 Angkot AABB lock
+  const parkedMots = boxes.filter((b) => b.name.startsWith('KG_P5_Mot_Bebek'));
+  assert.equal(parkedMots.length, 10, `Motor parkir harus 10 node instanced (bukan 340), dapat ${parkedMots.length}`);
+  for (const pm of parkedMots) {
+    assert.ok(Math.abs(pm.min[1]) < 0.003, `${pm.name} harus menapak aspal y=0`);
+  }
+  for (const angName of ['KG_P5_Car_Angkot01', 'KG_P5_Car_Angkot02']) {
+    const a = byName(angName);
+    assert.ok(a, `${angName} wajib ada`);
+    assert.ok(Math.abs(a.min[1]) < 0.003, `${angName} minY harus 0`);
+    assert.ok(Math.abs(a.max[0] - a.min[0] - 3.82) < 0.02, `${angName} panjang harus ~3.82 m`);
+    assert.ok(Math.abs(a.max[1] - a.min[1] - 1.635) < 0.02, `${angName} tinggi harus ~1.635 m`);
+    assert.ok(Math.abs(a.max[2] - a.min[2] - 1.735) < 0.02, `${angName} lebar harus ~1.735 m`);
+  }
+  assert.ok(byName('KG_P5_Car_CityCar1') && byName('KG_P5_Car_CityCar2'));
+  assert.ok(byName('KG2_RL_Car_Pickup01') && byName('KG2_RL_Car_Pickup02'));
+
+  // 4. Detail RT 04 terpasang & tidak menabrak 48 KAMPUNG_SPOTS (radius 0.25 m pada tinggi badan)
+  for (const det of [
+    'KG2_RL_Masjid_Upgrade',
+    'KG2_RL_Kanstin_Got',
+    'KG2_RL_PosRonda_Props',
+    'KG2_RL_Kos_FIK_Spanduk',
+    'KG2_RL_WestZone_Details',
+  ]) {
+    assert.ok(byName(det), `Detail ${det} wajib ada di kampung.boxes.json`);
+  }
+  const rlObstacles = boxes.filter(
+    (b) => b.name.startsWith('KG2_RL_') && b.name !== 'KG2_RL_Kanstin_Got' && !b.name.includes('SpeedBump') && !b.name.includes('Spanduk') && !b.name.includes('WestZone'),
+  );
+  for (const [spotName, p] of Object.entries(KAMPUNG_SPOTS)) {
+    for (const ob of rlObstacles) {
+      if (ob.max[1] <= p[1] + 0.08 || ob.min[1] >= p[1] + 1.8) continue;
+      const dx = Math.max(ob.min[0] - p[0], 0, p[0] - ob.max[0]);
+      const dz = Math.max(ob.min[2] - p[2], 0, p[2] - ob.max[2]);
+      assert.ok(Math.hypot(dx, dz) >= 0.24, `KAMPUNG_SPOTS.${spotName} terlalu dekat detail baru ${ob.name}`);
+    }
+  }
+
+  // 5. Seluruh 7 paket prop 3D baru diekspor penuh dari engine
+  for (const comp of [
+    Kentongan3D,
+    SandalJepit3D,
+    ToplesKerupuk3D,
+    GorenganPlate3D,
+    TabungGas3kg3D,
+    Galon3D,
+    SapuLidi3D,
+    PapanCatur3D,
+    KardusMie3D,
+    MegaphoneToa3D,
+  ]) {
+    assert.equal(typeof comp, 'function');
+  }
 });
 
 test('v3.5 Fase 4 · EP04 ZERO XZ sliding: setiap frame perpindahan bangUtoh & tio wajib stance walk + planted', () => {

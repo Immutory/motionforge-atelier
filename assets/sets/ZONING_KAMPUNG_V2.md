@@ -134,11 +134,10 @@ di sepanjang X −130…130 sisi utara jalan utama, ditambah lampu di Jl. Kampun
     dan `KS_ChairMetal` (sebelumnya tekstur dinding bata dan seng). Skrip: `assets/sets/fix_kost_materials.py`.
 - Ada gedung latar low-poly bernama `GedungFakultasTI` di distrik kampus (Y 37…46). Gedung ini diganti nama menjadi `GedungPascasarjana` supaya tidak tertukar dengan gedung kampus baru.
 
-## 6. Anggaran performa
-- Sekarang: `kampung.glb` 22 MB, sekitar 314 ribu face, 42 gambar tekstur.
-- Target v2: ≤ 35 MB dan ≤ 550 ribu face, dicapai dengan:
-  - instancing untuk benda berulang,
-  - LOD rendah untuk gedung latar,
-  - tekstur 1K–2K dengan kompresi JPEG/WebP,
-  - interior hanya dimodelkan untuk ruangan yang punya spot.
-- Kalau target terlampaui, `kampung.glb` dipecah per zona (`kampung_core`, `kampung_barat`, `kampung_pendidikan`) dan dimuat bersama oleh `KampungSet`.
+## 6. Anggaran performa & Overhaul v3.5 (Real-Life Indonesia Edition)
+- **Status v3.5 aktual:** `public/sets/kampung.glb` **`<= 24.0 MB`** (hard-cap `<= 28.0 MB`, turun drastis dari `28.94 MB`), `~3.400` node, tekstur 512/1024px + 1 atlas UV tanda/plat/spanduk (`reallife_signs_atlas.jpg`).
+- **Modul Overhaul:** `assets/sets/kampung_reallife_v35.py` (dipanggil otomatis oleh `build_kampung_v2.py` lalu dipoles & diekspor oleh `upgrade_sets_v3.py`):
+  - **Diet Geometri:** 96+ mesh teks 3D dirampingkan & twin-shared (`~209k → ~28k` verts), 23 pohon legacy di-instance ke 2 prototype Crown + 2 prototype Trunk, duplikat normal map dihapus & diarahkan ke induk 512px.
+  - **Perbaikan Floating & Overlap:** Kursi kantor `minY=0.150`, pohon barat/sekolah & jemuran `minY=-0.060`, atap Pos Satpam `minY=2.430`, motor bengkel `minY=0.120`, sepeda sekolah `minY=0.080`; `KG_TreeCrownMain_02`/`KG_TreeTrunk_02` dihapus; `KG2_FIK_Plaza` dipecah menjadi `KG2_FIK_PlazaFloor`, `KG2_FIK_FlagPole`, & `KG2_FIK_Planter`.
+  - **Kendaraan Real-Life Ter-Instance:** 340 node motor lama → 10 motor instanced (`Proto_Motor_Matic`, `Proto_Motor_Bebek`, `Proto_Motor_Ojol` + helm spion & phone holder) + 8 motor Bengkel/Rumah; 48 node mobil balok → 2 Angkot (`KG_P5_Car_Angkot01/02`, EP05 AABB lock `3.82 × 1.635 × 1.735`), 2 City Car, & 2 Pikap Zona Barat bermuatan galon/kardus/terpal; 8 sepeda sekolah ber-keranjang.
+  - **Detail Kampung RT 04 (0 objek di 3 koridor steril EP02/EP03-04/EP05 & 48 `KAMPUNG_SPOTS`):** Masjid Al-Khawarizmi (serambi bertiang, lengkung islami, rak sandal, tempat wudhu, bedug, kotak amal, papan kas UV), kanstin belang hitam-putih, grill got, 2 polisi tidur jalan utama, toren air, outdoor AC, box KWh, tong sampah pilah, pot ban bekas, props Pos Ronda (tikar, jadwal ronda UV, teko, toples kerupuk, papan catur, sandal), jemuran balkon Kos, mading/dispenser FIK, serta detail Kali/Bengkel/Kelontong/kandang burung.

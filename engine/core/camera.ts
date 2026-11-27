@@ -2,7 +2,7 @@ import { Vec3, lerp, lerp3, smootherstep } from './easing';
 
 export type CamPose = { pos: Vec3; look: Vec3; fov: number; roll: number };
 
-export type CamPath = 'linear' | 'dolly' | 'whip' | 'orbit';
+export type CamPath = 'linear' | 'dolly' | 'whip' | 'orbit' | 'punch' | 'dive';
 
 export type CamKey = {
   /** Frame saat pose ini sudah tercapai penuh. */
@@ -20,6 +20,8 @@ export type CamKey = {
    * - `dolly`: skala bingkai (jarak × tan(fov/2)) berubah geometris (log) untuk macro ↔ medium.
    * - `whip`: akselerasi cepat + damped spring settle 8–14f untuk reaksi komedi tajam.
    * - `orbit`: orbit melengkung C²-smooth analitis mengelilingi `orbitCenter` (default `next.pose.look`) hanya dengan 2 keyframe!
+   * - `punch`: kurva simetris cepat + overshoot teredam lembut gaya punch-in referensi `(1).mp4`.
+   * - `dive`: penurunan ketinggian eksponensial + skala dolly logaritmis untuk aerial crane dive.
    */
   path?: CamPath;
   /** Pusat orbit opsional untuk `path: 'orbit'` (default `next.pose.look`). */
@@ -33,7 +35,14 @@ export type CamKey = {
   handheld?: number;
 };
 
-export type Kick = { frame: number; strength: number; length?: number };
+export type KickMode = 'harmonic' | 'snap15hz' | 'trauma';
+export type Kick = {
+  frame: number;
+  strength: number;
+  length?: number;
+  mode?: KickMode;
+  fovPunch?: number;
+};
 
 export type CameraShake = {
   dx: number;
@@ -41,15 +50,17 @@ export type CameraShake = {
   /** Offset Z dunia (diisi saat `kickOffset` menerima `pose` untuk getaran basis lokal kamera). */
   dz?: number;
   droll: number;
+  /** Offset FOV opsional (derajat) untuk punch benturan skala besar gaya `(1).mp4`. */
+  dfov?: number;
 };
 
 /**
  * Kecepatan push-in default per frame saat kamera menahan pose.
  * v2.0/v3.0 (Sinematika Referensi `contohvideo/`): `0` — hold dialog/panggung duduk mantap & percaya diri.
- * Opsi `creepRate` per key atau argumen `rate` tetap didukung penuh bila sebuah beat secara sadar
- * membutuhkan slow tension push-in.
+ * Untuk shot tensi gaya `contohvideo/(1).mp4` (median 0,14%/f di `motion.md`), gunakan `creepRate: REF_PUSH_CREEP`.
  */
 export const DEFAULT_CREEP = 0;
+export const REF_PUSH_CREEP = 0.0014;
 
 const creep = (p: CamPose, framesIn: number, rate: number): CamPose => {
   const k = Math.min(Math.max(framesIn, 0) * rate, 0.35);
@@ -73,6 +84,25 @@ function whipCurve(u: number): number {
   const overshoot = 2.1 * x * x * x * om * om;
   return base + overshoot;
 }
+
+/** Kurva punch-in simetris cepat dengan sedikit settle lembut (~4,5% overshoot) gaya `(1).mp4`. */
+function punchCurve(u: number): number {
+  const x = Math.max(0, Math.min(1, u));
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const s = smootherstep(x);
+  return s + 0.72 * x * x * (1 - x) * (1 - x);
+}
+
+/** Interpolasi `dive`: penurunan elevasi eksponensial + skala dolly logaritmis untuk aerial crane dive. */
+const mixDive = (a: CamPose, b: CamPose, t: number): CamPose => {
+  const dPos = mixDolly(a, b, t);
+  const yCurve = 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 1.65);
+  return {
+    ...dPos,
+    pos: [dPos.pos[0], lerp(a.pos[1], b.pos[1], yCurve), dPos.pos[2]],
+  };
+};
 
 /** Interpolasi `dolly`: skala bingkai (jarak × tan(fov/2)) berubah dengan laju log seragam. */
 const mixDolly = (a: CamPose, b: CamPose, t: number): CamPose => {
@@ -194,6 +224,10 @@ export function sampleCamera(
       hh = lerp(cur.handheld ?? 0, next.handheld ?? 0, su);
       if (next.path === 'whip') {
         pose = mix(held, next.pose, whipCurve(u));
+      } else if (next.path === 'punch') {
+        pose = mixDolly(held, next.pose, punchCurve(u));
+      } else if (next.path === 'dive') {
+        pose = mixDive(held, next.pose, su);
       } else if (next.path === 'orbit') {
         pose = mixOrbit(held, next.pose, su, next.orbitCenter, next.orbitDeltaDeg);
       } else if (next.path === 'dolly') {
@@ -304,18 +338,36 @@ export function kickOffset(kicks: Kick[], frame: number, pose?: CamPose): Camera
   let rightAmp = 0;
   let upAmp = 0;
   let droll = 0;
+  let dfov = 0;
   for (const k of kicks) {
     const len = Math.max(1, k.length ?? 8);
     const d = frame - k.frame;
     if (d < 0 || d >= len) continue;
     const p = d / len;
-    // Peluruhan harmonik teredam: puncak kuat di d=0, berayun alami, tepat 0 saat d >= len.
-    const env = Math.exp(-3.2 * p) * (1 - p);
-    const oscR = Math.cos(d * 2.15);
-    const oscU = Math.cos(d * 1.85 + 0.3);
+    const mode = k.mode ?? 'harmonic';
+    let oscR: number;
+    let oscU: number;
+    let env: number;
+    if (mode === 'snap15hz') {
+      // Pembalikan tanda tiap frame (15 Hz di 30fps) sesuai pengukuran motion.md pada benturan referensi (1).mp4!
+      const alt = d % 2 === 0 ? 1 : -1;
+      env = Math.exp(-2.8 * p) * (1 - p);
+      oscR = alt;
+      oscU = alt * 0.72;
+    } else if (mode === 'trauma') {
+      const alt = d % 2 === 0 ? 1 : -1;
+      env = Math.exp(-2.1 * p) * (1 - p);
+      oscR = alt * 0.78 + Math.sin(d * 3.1) * 0.35;
+      oscU = alt * 0.65 + Math.cos(d * 2.7) * 0.4;
+    } else {
+      env = Math.exp(-3.2 * p) * (1 - p);
+      oscR = Math.cos(d * 2.15);
+      oscU = Math.cos(d * 1.85 + 0.3);
+    }
     rightAmp += k.strength * env * oscR * 0.62;
     upAmp += -k.strength * env * oscU;
-    droll += k.strength * env * oscR * 1.3;
+    droll += k.strength * env * oscR * (mode === 'snap15hz' ? 1.85 : 1.3);
+    if (k.fovPunch) dfov += k.fovPunch * env;
   }
   if (pose) {
     const { right, up } = cameraBasis(pose);
@@ -324,9 +376,10 @@ export function kickOffset(kicks: Kick[], frame: number, pose?: CamPose): Camera
       dy: right[1] * rightAmp + up[1] * upAmp,
       dz: right[2] * rightAmp + up[2] * upAmp,
       droll,
+      ...(dfov !== 0 ? { dfov } : {}),
     };
   }
-  return { dx: rightAmp, dy: upAmp, droll };
+  return { dx: rightAmp, dy: upAmp, droll, ...(dfov !== 0 ? { dfov } : {}) };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -497,5 +550,118 @@ export function craneTransition(
   return [
     { frame: fromFrame, pose: highPose, cut: true, creepRate: 0 },
     { frame: fromFrame + span, pose: lowPose, glide: span, path, creepRate: 0 },
+  ];
+}
+
+/**
+ * Punch-In Referensi (`(1).mp4` 00:02 nota, 00:08 kartu P-618, 00:19 stopwatch):
+ * luncuran simetris cepat + settle lembut mendekat ke `targetLook` dengan faktor zoom `zoomFactor`.
+ */
+export function punchIn(
+  fromFrame: number,
+  basePose: CamPose,
+  targetLook: Vec3 = basePose.look,
+  zoomFactor = 1.45,
+  glideFrames = 14,
+  rollDeg = basePose.roll,
+): CamKey[] {
+  const span = Math.max(4, Math.round(glideFrames));
+  const z = Math.max(1.05, zoomFactor);
+  const dx = basePose.pos[0] - targetLook[0];
+  const dy = basePose.pos[1] - targetLook[1];
+  const dz = basePose.pos[2] - targetLook[2];
+  const endPose: CamPose = {
+    pos: [targetLook[0] + dx / z, targetLook[1] + dy / z, targetLook[2] + dz / z],
+    look: targetLook,
+    fov: basePose.fov,
+    roll: rollDeg,
+  };
+  return [
+    { frame: fromFrame, pose: basePose, cut: true, creepRate: 0 },
+    { frame: fromFrame + span, pose: endPose, glide: span, path: 'punch', creepRate: 0 },
+  ];
+}
+
+/**
+ * Aerial-to-Ground Crane Dive (`(1).mp4` 00:39-00:44): turunan eksponensial logaritmis mulus
+ * dari establishing udara tinggi turun hingga level aksi di permukaan.
+ */
+export function craneDive(
+  fromFrame: number,
+  aerialPose: CamPose,
+  groundPose: CamPose,
+  glideFrames = 56,
+): CamKey[] {
+  const span = Math.max(8, Math.round(glideFrames));
+  return [
+    { frame: fromFrame, pose: aerialPose, cut: true, creepRate: 0 },
+    { frame: fromFrame + span, pose: groundPose, glide: span, path: 'dive', creepRate: 0 },
+  ];
+}
+
+/**
+ * Portal / Frame-Through Push (`(1).mp4` 00:44 -> 00:47): dorongan logaritmis menembus
+ * kusen pintu/jendela/monitor masuk ke ruang inti.
+ */
+export function portalPush(
+  fromFrame: number,
+  framePose: CamPose,
+  interiorPose: CamPose,
+  glideFrames = 26,
+  holdBeforeFrames = 0,
+): CamKey[] {
+  const hold = Math.max(0, Math.round(holdBeforeFrames));
+  const span = Math.max(1, Math.round(glideFrames));
+  return [
+    { frame: fromFrame, pose: framePose, cut: true, creepRate: 0 },
+    { frame: fromFrame + hold + span, pose: interiorPose, glide: span, path: 'dolly', creepRate: 0 },
+  ];
+}
+
+/**
+ * Stepped Escalation (`(1).mp4` 00:47 -> 00:50): eskalasi berirama multi-tahap semakin dekat
+ * untuk dialog hitungan mundur/tensi sebelum klimaks benturan.
+ */
+export function steppedEscalate(
+  fromFrame: number,
+  poses: readonly CamPose[],
+  stepHold = 16,
+  stepGlide = 8,
+): CamKey[] {
+  if (poses.length === 0) return [];
+  const hold = Math.max(1, Math.round(stepHold));
+  const glide = Math.max(1, Math.round(stepGlide));
+  const out: CamKey[] = [{ frame: fromFrame, pose: poses[0], cut: true, creepRate: 0 }];
+  let cursor = fromFrame;
+  for (let i = 1; i < poses.length; i++) {
+    cursor += hold + glide;
+    out.push({ frame: cursor, pose: poses[i], glide, path: 'punch', creepRate: 0 });
+  }
+  return out;
+}
+
+/**
+ * Swipe-Track (`(1).mp4` 00:00-00:02): pan/track bermotivasi mengikuti ayunan tangan/prop
+ * dengan sedikit banking `rollDeg` di puncak gerak lalu kembali tegak saat settle.
+ */
+export function swipeTrack(
+  fromFrame: number,
+  startPose: CamPose,
+  endPose: CamPose,
+  rollDeg = 3.5,
+  glideFrames = 22,
+): CamKey[] {
+  const span = Math.max(6, Math.round(glideFrames));
+  const midFrame = fromFrame + Math.round(span * 0.45);
+  const midPose: CamPose = {
+    pos: lerp3(startPose.pos, endPose.pos, 0.45),
+    look: lerp3(startPose.look, endPose.look, 0.45),
+    fov: lerp(startPose.fov, endPose.fov, 0.45),
+    roll: rollDeg,
+  };
+  return [
+    { frame: fromFrame, pose: startPose, cut: true, creepRate: 0 },
+    { frame: midFrame, pose: midPose, glide: midFrame - fromFrame, path: 'linear', creepRate: 0 },
+    { frame: fromFrame + span, pose: endPose, glide: fromFrame + span - midFrame, path: 'linear', creepRate: 0 },
   ];
 }

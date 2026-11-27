@@ -34,9 +34,17 @@ export const CameraRig: React.FC<CameraRigProps> = ({ pose, shake }) => {
     }
   }
 
+  const lookDx = pose.look[0] - pose.pos[0];
+  const lookDy = pose.look[1] - pose.pos[1];
+  const lookDz = pose.look[2] - pose.pos[2];
+  const lookDist = Math.hypot(lookDx, lookDy, lookDz);
+  const tx = lookDist < 1e-4 ? pose.pos[0] : pose.look[0];
+  const ty = lookDist < 1e-4 ? pose.pos[1] : pose.look[1];
+  const tz = lookDist < 1e-4 ? pose.pos[2] - 1 : pose.look[2];
+
   cam.position.set(pose.pos[0] + ox, pose.pos[1] + oy, pose.pos[2] + oz);
-  cam.fov = pose.fov;
-  cam.lookAt(pose.look[0] + ox, pose.look[1] + oy, pose.look[2] + oz);
+  cam.fov = Math.max(12, Math.min(110, pose.fov + (shake?.dfov ?? 0)));
+  cam.lookAt(tx + ox, ty + oy, tz + oz);
   cam.rotateZ(((pose.roll + droll) * Math.PI) / 180);
   cam.updateProjectionMatrix();
   return null;

@@ -1,9 +1,9 @@
 ---
 name: atelier-light-grade
-description: Set up soft-lit matte 2.5D lighting, hemisphere sky-ground wrap, soft PCF shadows (`shadow.radius = 3.0`), motivated sky/fog, soft-clamped local lights (`uLocalLight`), real `receiveShadow`/`castShadow` (active even on `LIGHTS.noon`), palette, and color grade aligned with `contohvideo/download.mp4`, `(1).mp4`, and `references/reports/{lighting,grade}.md`.
+description: Set up soft-lit matte 2.5D lighting, `uReliefMap` per-pixel 3D character normal/AO/Fresnel rim shading, hemisphere sky-ground wrap, soft PCF shadows (`shadow.radius = 3.0`), motivated sky/fog, soft-clamped local lights (`uLocalLight`), real `receiveShadow`/`castShadow`, and color grade aligned with `contohvideo/download.mp4`, `(1).mp4`, and `references/reports/{lighting,grade}.md` (Atelier v4.0).
 ---
 
-# Light and Grade (Atelier v3.5 — Soft-Lit Matte 3D Polish)
+# Light and Grade (Atelier v4.0 — Volumetric 360° + Soft-Lit Matte 3D Polish)
 
 Light integrates 2D characters physically into a soft-lit matte 3D world (`download.mp4` & `(1).mp4`). Every light must have a motivated diegetic source and zero plastic specular sheen.
 
@@ -15,8 +15,8 @@ Light integrates 2D characters physically into a soft-lit matte 3D world (`downl
   - All presets configure `shadow.radius` (`2.8–3.0`) passed to `<directionalLight shadow-radius={...} />` in `Stage.tsx` to eliminate jagged shadow edges.
 - **`uLocalLight` + Reinhard Soft-Clamp (Anti-Overbloom)**:
   - Active by default (`TONE.uLocalLight = 1.0`, configurable via `LightPreset.tone.localLight`), clamping `<pointLight>`/`<spotLight>` below bloom threshold `1.0` with scalar headroom anti-hue-shift (**0% white washout**).
-- **Spherical/Cylindrical Volume + `receiveShadow` + `castShadow`**:
-  - `cardShade()` applies smooth spherical head / cylindrical torso wrap and receives real directional shadows (`receiveShadow`) while keeping facial expressions crisp.
+- **Volumetric `uReliefMap` + `receiveShadow` + `castShadow` (`cardShade()` v4.0)**:
+  - `cardShade()` applies smooth spherical/cylindrical wrap by default AND samples per-pixel `uReliefMap` (3D surface normals, contact AO `0.74..1.0`, and headroom-clamped Fresnel rim light) whenever `yawDeg` is active (`atelierCardV4`), receiving real directional shadows (`receiveShadow`) while keeping facial expressions crisp.
   - Pair with `POST_HYBRID_25D` in `look.ts` for `download.mp4`-style atmospheric depth where 2D characters pop naturally.
 
 ## Presets (`engine/stage/lights.ts` & `engine/sets/`)

@@ -126,6 +126,18 @@ def fix_existing():
         log(f"{prefix}: geser {tuple(round(v, 2) for v in d)}")
     move_group("KG_P5_Halte_", "KG_P5_Halte_Platform", (19.8, -2.95, 0.08))
     move_group("KG_P5_Satpam_", "KG_P5_Satpam_Booth", (17.5, -0.75, 1.255))  # alas di atas paving plaza (Z 0,08)
+    # Fase 1 fix: pastikan atap Pos Satpam duduk rapat di atas booth (minZ <= 2.430, nol celah 1 cm; idempoten)
+    sat_roof = bpy.data.objects.get("KG_P5_Satpam_Roof")
+    sat_booth = bpy.data.objects.get("KG_P5_Satpam_Booth")
+    if sat_roof is not None and sat_booth is not None:
+        bpy.context.view_layer.update()
+        roof_min_z = world_bb(sat_roof)[2]
+        booth_max_z = world_bb(sat_booth)[5]
+        if roof_min_z > booth_max_z - 0.005:
+            dz_fix = (booth_max_z - 0.005) - roof_min_z
+            sat_roof.location.z += dz_fix
+            bpy.context.view_layer.update()
+            log(f"KG_P5_Satpam_Roof diturunkan {dz_fix:.3f} m agar duduk rapat di booth")
     base = bpy.data.objects.get("KG_P5_Portal_Base")
     arm = bpy.data.objects.get("KG_P5_Portal_Arm")
     if base is not None and arm is not None:
@@ -148,8 +160,12 @@ def fix_existing():
     for o in COL.all_objects:
         if o.name.startswith("KG_GedungFakultasTI"):
             o.name = o.name.replace("KG_GedungFakultasTI", "KG_GedungPascasarjana")
-    # Pohon lama yang tumbuh di tengah badan gang
+    # Pohon lama yang tumbuh di tengah badan gang atau menembus gedung FIK (`KG_TreeCrownMain_02` & `KG_TreeTrunk_02`)
     for o in list(COL.all_objects):
+        if o.name in ("KG_TreeCrownMain_02", "KG_TreeTrunk_02"):
+            log("pohon overlap FIK dihapus:", o.name)
+            remove_obj(o)
+            continue
         if o.name.startswith(("KG_TreeCrownMain", "KG_TreeTrunk")):
             bx0, by0, _, bx1, by1, _ = world_bb(o)
             cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
@@ -237,13 +253,11 @@ def setup_materials():
     for c in ("white", "cream", "mint", "sky", "peach", "sage"):
         M["paint_" + c] = tex_mat(f"KG2_Paint_{c.title()}", f"weathered_paint_{c}_diff.jpg", "weathered_paint_norm.jpg", 0.88, 3.0, 0.6)
     M["stone"] = existing("KG_StoneWall"); TILE["KG_StoneWall"] = 2.5
-    M["floor_tile"] = existing("KP_Floor") if bpy.data.materials.get("KP_Floor") else tex_mat(
-        "KG2_FloorTile", "kampus_tile_floor_diff.jpg", "kampus_tile_floor_norm.jpg", 0.4, 1.6)
-    M["floor_tile"] = tex_mat("KG2_FloorTile", "kampus_tile_floor_diff.jpg", "kampus_tile_floor_norm.jpg", 0.4, 1.6)
-    M["ceramic"] = tex_mat("KG2_Ceramic", "ceramic_floor_tile_diff.jpg", "ceramic_floor_tile_norm.jpg", 0.45, 1.6)
+    M["floor_tile"] = tex_mat("KG2_FloorTile", "kampus_tile_floor_diff.jpg", "ceramic_floor_tile_norm.jpg", 0.58, 1.6)
+    M["ceramic"] = tex_mat("KG2_Ceramic", "ceramic_floor_tile_diff.jpg", "ceramic_floor_tile_norm.jpg", 0.58, 1.6)
     M["wood_dark"] = existing("KG_DarkWood"); TILE["KG_DarkWood"] = 1.5
     M["teak"] = existing("KG_TeakWood"); TILE["KG_TeakWood"] = 1.5
-    M["desk_wood"] = tex_mat("KG2_DeskWood", "teak_wood_light_diff.jpg", "teak_wood_light_norm.jpg", 0.6, 1.2)
+    M["desk_wood"] = tex_mat("KG2_DeskWood", "teak_wood_light_diff.jpg", "teak_wood_planks_norm.jpg", 0.84, 1.2)
     M["roof_tile"] = existing("KG_RoofTile"); TILE["KG_RoofTile"] = 2.5
     M["brick"] = existing("KG_BrickWall"); TILE["KG_BrickWall"] = 2.5
     M["foliage"] = existing("KG_Foliage")
@@ -597,8 +611,11 @@ def build_office_chair(mb):
     mb.cyl(0, 0, 0.08, 0.44, 0.025, M["chrome"], 8)
     for i in range(5):
         a = 2 * math.pi * i / 5
-        mb.beam((0, 0, 0.08), (0.27 * math.cos(a), 0.27 * math.sin(a), 0.04), 0.03, M["iron"])
-    return 0.01
+        rx, ry = 0.27 * math.cos(a), 0.27 * math.sin(a)
+        mb.beam((0, 0, 0.08), (rx, ry, 0.04), 0.03, M["iron"])
+        # Roda kastor menapak eksak z = 0.000 (nol floating 2,7 cm)
+        mb.cyl(rx, ry, 0.0, 0.042, 0.022, M["black"], 6)
+    return 0.0
 
 
 def build_server_rack(mb):
@@ -723,7 +740,7 @@ def build_motor(mb):
     mb.box(0.5, -0.35, 1.0, 0.56, 0.35, 1.03, M["chrome"])
     mb.box(0.58, -0.08, 0.86, 0.66, 0.08, 0.98, M["paper"])
     mb.beam((-0.62, 0.12, 0.25), (0.1, 0.12, 0.3), 0.06, M["chrome"])
-    return 0.01
+    return 0.0
 
 
 def build_tire_stack(mb):
@@ -860,7 +877,7 @@ def build_ground_roads():
         c.box(xa, 19.4, -0.1, xb, 19.65, 0.1, M["concrete"])
     c.box(84.75, -2.2, -0.1, 85.0, 15.35, 0.1, M["concrete"])
     c.box(88.6, -3.65, -0.1, 88.85, 36.2, 0.1, M["concrete"])
-    c.finish("KG2_Road_Curbs", bevel=0.02)
+    c.finish("KG2_Road_Curbs", bevel=0.0)
 
     lines = MB()
     for xa, xb in ((-132, -85.0), (85.0, 132)):
@@ -891,7 +908,6 @@ def build_ground_roads():
     j = MB()
     # jembatan jalan utama (deck beton + railing)
     j.box(-100.6, -9.4, -0.45, -96.4, -3.6, -0.1, M["concrete"])
-    j.box(-100.6, -9.4, -0.1, -96.4, -3.9, 0.0, M["asphalt"]) if False else None
     for y in (-9.45, -3.55):
         j.box(-100.8, y - 0.12, 0.0, -96.2, y + 0.12, 0.75, M["concrete"])
         j.box(-100.9, y - 0.15, 0.75, -96.1, y + 0.15, 0.85, M["white"])
@@ -1010,7 +1026,7 @@ def multistorey(prefix, x0, y0, x1, y1, floors, fh, wall_mat, base_mat, rooms, s
                 frame.box(x0, y0 + 0.0, z + 1.05, x1, y0 + 0.14, z + 1.1, accent or M["iron"])
         # plint bawah dinding luar
         shell.box(x0 - 0.02, y1 - 0.02, z, x1 + 0.02, y1 + 0.02, z + 0.35, base_mat)
-        shell.finish(f"{prefix}_F{f+1}_Shell", bevel=0.025)
+        shell.finish(f"{prefix}_F{f+1}_Shell", bevel=0.0)
         frame.finish(f"{prefix}_F{f+1}_Frames")
         glass.finish(f"{prefix}_F{f+1}_{'Win1' if f == 0 else 'Win2'}_Glass")
         # tangga beton 2 bordes per lantai
@@ -1030,7 +1046,7 @@ def multistorey(prefix, x0, y0, x1, y1, floors, fh, wall_mat, base_mat, rooms, s
                 yy0 = land_y - (i + 1) * run
                 st.box(sx0 + w2, yy0, z, sx1 - 0.1, yy0 + run, z + half * rh + (i + 1) * rh, M["terrace"])
             st.beam((sx0 + w2, ys, z + 1.0), (sx0 + w2, land_y, z + half * rh + 1.0), 0.05, M["iron"])
-            st.finish(f"{prefix}_F{f+1}_Stair", bevel=0.01)
+            st.finish(f"{prefix}_F{f+1}_Stair", bevel=0.0)
     # atap
     ztop = 0.15 + floors * fh - slab
     rf = MB()
@@ -1061,7 +1077,7 @@ def multistorey(prefix, x0, y0, x1, y1, floors, fh, wall_mat, base_mat, rooms, s
         for ya in (y0 - ov, y1 + ov):  # lisplang + talang
             rf.box(x0 - ov, ya - 0.04, ztop + 0.12, x1 + ov, ya + 0.04, ztop + 0.4, M["white"])
             rf.hcyl((x0 + x1) / 2, ya + (-0.12 if ya < ym else 0.12), ztop + 0.15, x1 - x0 + 2 * ov, 0.07, M["sma_grey"], axis="x", seg=8)
-    rf.finish(f"{prefix}_Roof", bevel=0.02)
+    rf.finish(f"{prefix}_Roof", bevel=0.0)
     if sign:
         text, loc, size, face = sign
         # Papan latar solid di belakang huruf supaya terbaca dari jauh di siang, sore, dan malam
@@ -1172,17 +1188,18 @@ def furnish_room(prefix, rx0, rx1, ry0, ry1, z, fh, kind, idx):
                 for b in range(5):
                     yb_ = ya + 0.2 + b * 0.26
                     lab.cyl(lx + 0.2, yb_, zz + 0.02, zz + 0.16 + 0.05 * (b % 2), 0.05, M[("book1", "green_sign", "orange", "glass", "book4")[b]], 8, 0.035)
-        lab.box(rx0 + 0.12, ry0 + 3.2, z + 1.1, rx0 + 0.14, ry0 + 5.6, z + 2.3, M["paper"])  # tabel periodik
-        for i in range(18):
-            for j in range(6):
-                if j < 2 and 1 < i < 16:
-                    continue
-                col = ("book0", "book1", "book2", "book3", "book4")[(i + j) % 5]
-                lab.box(rx0 + 0.141, ry0 + 3.28 + i * 0.125, z + 1.2 + j * 0.17, rx0 + 0.146, ry0 + 3.39 + i * 0.125, z + 1.35 + j * 0.17, M[col])
+        lab.box(rx0 + 0.12, ry0 + 3.2, z + 1.1, rx0 + 0.14, ry0 + 5.6, z + 2.3, M["paper"])  # tabel periodik (panel hemat)
+        for bi, (ya_, yb_, z0_, z1_, col) in enumerate((
+            (3.28, 3.66, 1.22, 2.20, "book0"),
+            (3.72, 4.92, 1.22, 1.88, "book1"),
+            (4.98, 5.52, 1.22, 2.20, "book3"),
+            (3.72, 5.30, 1.94, 2.18, "book2"),
+        )):
+            lab.box(rx0 + 0.141, ry0 + ya_, z + z0_, rx0 + 0.146, ry0 + yb_, z + z1_, M[col])
         lab.box(rx0 + 0.12, ry1 - 1.6, z + 1.5, rx0 + 0.14, ry1 - 1.0, z + 2.1, M["yellow"])  # rambu K3
         lab.box(cx - 0.6, ry1 - 0.75, z, cx + 0.6, ry1 - 0.2, z + 0.86, M["white"])  # meja guru demo
         lab.box(cx - 0.65, ry1 - 0.8, z + 0.86, cx + 0.65, ry1 - 0.15, z + 0.9, M["black"])
-        lab.finish(f"{prefix}_LabFurniture", bevel=0.006)
+        lab.finish(f"{prefix}_LabFurniture", bevel=0.0)
         text_mesh(f"{prefix}_PosterSub_Periodik", "TABEL PERIODIK", (rx0 + 0.15, ry0 + 4.4, z + 2.42), 0.12, M["blue_sign"], ROT_FACE["E"], 0.002)
         text_mesh(f"{prefix}_PosterSub_K3", "UTAMAKAN K3", (rx0 + 0.15, ry1 - 1.3, z + 1.8), 0.08, M["black"], ROT_FACE["E"], 0.002)
     elif kind in ("perpus",):
@@ -1266,18 +1283,24 @@ def build_fik():
     a.box(10.5, -1.6, 3.3, 15.2, 0.5, 3.45, M["fik_blue"])
     a.box(10.5, -1.62, 3.2, 15.2, -1.55, 3.3, M["fik_accent"])
     a.finish("KG2_FIK_FacadeAccent", bevel=0.02)
-    # plaza: paving, tiang bendera, taman kecil, papan nama berdiri
-    p = MB()
-    p.box(7.0, -2.2, 0.0, 22.8, 0.5, 0.08, M["cobble"])
-    p.box(7.0, -2.2, 0.0, 22.8, -2.0, 0.18, M["concrete"])
-    p.cyl(21.2, -1.2, 0.08, 8.5, 0.05, M["chrome"], 10, 0.035)
-    p.box(21.2, -1.22, 7.4, 22.6, -1.18, 7.85, M["red"])
-    p.box(21.2, -1.22, 6.95, 22.6, -1.18, 7.4, M["white"])
-    p.box(20.6, -1.8, 0.08, 21.8, -0.6, 0.3, M["stone"])
-    p.box(7.6, -1.9, 0.08, 9.4, -0.3, 0.45, M["stone"])
-    p.box(7.7, -1.8, 0.45, 9.3, -0.4, 0.5, M["grass"])
-    p.box(11.0, -1.9, 0.08, 14.6, -1.6, 1.0, M["fik_blue"])
-    p.finish("KG2_FIK_Plaza", bevel=0.015)
+    # plaza dipisah 3 objek bersih (PlazaFloor, FlagPole, Planter) agar 0 false-overlap AABB udara dengan Pos Satpam & Palang
+    pf = MB()
+    pf.box(7.0, -2.2, 0.0, 22.8, 0.5, 0.08, M["cobble"])
+    pf.box(7.0, -2.2, 0.0, 22.8, -2.0, 0.18, M["concrete"])
+    pf.finish("KG2_FIK_PlazaFloor", bevel=0.0)
+
+    fp = MB()
+    fp.cyl(21.2, -1.2, 0.08, 8.5, 0.05, M["chrome"], 10, 0.035)
+    fp.box(21.2, -1.22, 7.4, 22.6, -1.18, 7.85, M["red"])
+    fp.box(21.2, -1.22, 6.95, 22.6, -1.18, 7.4, M["white"])
+    fp.box(20.6, -1.8, 0.08, 21.8, -0.6, 0.3, M["stone"])
+    fp.finish("KG2_FIK_FlagPole", bevel=0.0)
+
+    pl = MB()
+    pl.box(7.6, -1.9, 0.08, 9.4, -0.3, 0.45, M["stone"])
+    pl.box(7.7, -1.8, 0.45, 9.3, -0.4, 0.5, M["grass"])
+    pl.box(11.0, -1.9, 0.08, 14.6, -1.6, 1.0, M["fik_blue"])
+    pl.finish("KG2_FIK_Planter", bevel=0.0)
     text_mesh("KG2_FIK_SignSub_Plaza", "FIK RAWA SARI", (12.8, -1.92, 0.6), 0.28, M["white"], ROT_FACE["S"], 0.02)
     instance(proto("Banana", build_banana), "KG2_FIK_Banana", (8.5, -1.1, 0.5))
 
@@ -1375,7 +1398,7 @@ def build_school():
         instance(bike, f"KG2_School_Bike_{i}", (120.8 + (i % 4) * 1.8, 30.2 + (i // 4) * 2.4, 0.08), math.pi / 2)
     for i, (x, y) in enumerate(((91.5, 2.5), (126.5, 2.5), (91.5, 12.5), (126.5, 12.5))):
         instance(proto("Banana", build_banana) if i % 2 else PROTOS.get("Mango") or proto("Banana", build_banana),
-                 f"KG2_School_Tree_{i}", (x, y, 0.0))
+                 f"KG2_School_Tree_{i}", (x, y, -0.06))
 
 
 # ----------------------------------------------------------------------------- rumah warga, bengkel, kelontong, musala
@@ -1464,7 +1487,7 @@ def house(prefix, x0, x1, ybody0, ybody1, facing, floors, paint, roof_mat, fence
     fr.box(gx0, yfe - 0.03, 1.35, gx1, yfe + 0.03, 1.4, fence)
     # halaman paving
     sh.box(x0, min(yfe, ty0), -0.02, x1, max(yfe, ty1), 0.04, M["cobble"])
-    sh.finish(prefix + "_Body", bevel=0.02)
+    sh.finish(prefix + "_Body", bevel=0.0)
     fr.finish(prefix + "_Frames")
     g = gl.finish(prefix + "_Win1_Glass")
     # props teras: motor, pot, jemuran
@@ -1475,7 +1498,7 @@ def house(prefix, x0, x1, ybody0, ybody1, facing, floors, paint, roof_mat, fence
     for i in range(3):
         instance(pot, f"{prefix}_Pot_{i}", (x1 - 0.5 - i * 0.55, (ty0 + 0.35) if facing == "S" else (ty1 - 0.35), 0.15))
     if random.random() < 0.6:
-        instance(proto("Jemuran", build_jemuran), prefix + "_Jemuran", ((x0 + x1) / 2, yb + (0.9 if facing == "S" else -0.9), 0.0))
+        instance(proto("Jemuran", build_jemuran), prefix + "_Jemuran", ((x0 + x1) / 2, yb + (0.9 if facing == "S" else -0.9), -0.06))
 
 
 def build_west_zone():
@@ -1528,15 +1551,15 @@ def build_west_zone():
         w.box(-95.6, -19.7, z, -88.6, -19.3, z + 0.03, M["teak"])
         x = -95.5
         while x < -88.8:
-            bw = rnd2.uniform(0.12, 0.3)
-            w.box(x, -19.65, z + 0.03, x + bw, -19.35, z + rnd2.uniform(0.15, 0.32), M[rnd2.choice(["book0", "book1", "book2", "book3", "yellow", "orange"])])
-            x += bw + 0.03
+            bw = rnd2.uniform(0.36, 0.62)
+            w.box(x, -19.65, z + 0.03, min(x + bw, -88.7), -19.35, z + rnd2.uniform(0.18, 0.32), M[rnd2.choice(["book0", "book1", "book2", "book3", "yellow", "orange"])])
+            x += bw + 0.06
     w.hull([(-96.6, -12.0, 3.0), (-87.4, -12.0, 3.0), (-87.4, -14.0, 3.4), (-96.6, -14.0, 3.4)],
            [(-96.6, -12.0, 3.06), (-87.4, -12.0, 3.06), (-87.4, -14.0, 3.46), (-96.6, -14.0, 3.46)], M["zinc_rust"])
     w.hull([(-96.4, -20.4, 3.4), (-87.6, -20.4, 3.4), (-87.6, -13.8, 4.4), (-96.4, -13.8, 4.4)],
            [(-96.4, -20.4, 3.5), (-87.6, -20.4, 3.5), (-87.6, -13.8, 4.5), (-96.4, -13.8, 4.5)], M["roof_moss"])
     w.box(-96.2, -13.95, 2.6, -87.8, -13.8, 3.3, M["orange"])
-    w.finish("KG2_Kelontong_Body", bevel=0.012)
+    w.finish("KG2_Kelontong_Body", bevel=0.0)
     lb = MB()
     for bx in (-94.5, -91.5, -89.0):
         lb.cyl(bx, -13.3, 2.85, 3.0, 0.08, M["bulb"], 8)
@@ -1569,11 +1592,11 @@ def build_west_zone():
     text_mesh("KG2_Musala_SignMain", "MUSALA AL-IKHLAS", (-122.0, 27.55, 3.2), 0.32, M["green_sign"], ROT_FACE["S"], 0.02)
     ban = proto("Banana", build_banana)
     for i, p in enumerate(((-127.0, 21.0), (-105.0, 33.0), (-108.0, 21.5), (-99.0, 10.0), (-99.0, -20.0), (-84.0, 12.0))):
-        instance(ban, f"KG2_West_Banana_{i}", (p[0], p[1], 0.0))
+        instance(ban, f"KG2_West_Banana_{i}", (p[0], p[1], -0.06))
     tr = PROTOS.get("Mango")
     if tr:
         for i, p in enumerate(((-116.0, 31.0), (-110.0, 30.0), (-130.0, -6.0), (-104.0, -24.0), (-125.0, -26.0))):
-            instance(tr, f"KG2_West_Mango_{i}", (p[0], p[1], 0.0))
+            instance(tr, f"KG2_West_Mango_{i}", (p[0], p[1], -0.06))
     # papan RT/RW + spanduk + tong sampah
     s = MB()
     s.box(-102.0, -2.6, 0.0, -101.9, -2.5, 2.4, M["iron"])
@@ -1864,6 +1887,11 @@ def main():
     build_utilities()
     build_greenery_far()
     build_kampus_standalone()
+    # Modul Real-Life v3.5 (Fase 1: Diet Legacy + Fase 2: Kendaraan + Fase 3: Detail Kampung RT 04)
+    sys.path.insert(0, str(Path(bpy.path.abspath("//")).parent))
+    sys.dont_write_bytecode = True
+    import kampung_reallife_v35
+    kampung_reallife_v35.apply_all(COL, TEX_DIR, log)
     n_obj = len(COL.all_objects)
     faces = sum(len(o.data.polygons) for o in COL.all_objects if o.type == "MESH" and not o.hide_render)
     log(f"KampungSet: {n_obj} objek, ~{faces} face (sebelum bevel)")
@@ -1875,6 +1903,7 @@ def main():
     for key, n in sorted(groups.items(), key=lambda kv: -kv[1])[:15]:
         log(f"  {key}: {n}")
     if SAVE:
+        bpy.context.preferences.filepaths.save_version = 0
         bpy.ops.wm.save_mainfile()
         log("disimpan:", bpy.data.filepath)
     for line in LOG:

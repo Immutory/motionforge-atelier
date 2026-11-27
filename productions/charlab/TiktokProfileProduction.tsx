@@ -1,171 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion';
-import { ACTOR_H, ACTOR_W, drawActor } from '../../engine';
-import { CHAR_H, CHAR_W, drawPrototype, type ProtoId, type ProtoMode } from './prototypes';
-
-type Ctx = CanvasRenderingContext2D;
-const TAU = Math.PI * 2;
-const TT_CYAN = '#25F4EE';
-const TT_PINK = '#FE2C55';
-const INK = '#1f192d';
-
-/** Buat kanvas offscreen karakter + garis tepi stiker komik (putih + tinta luar + opsi glitch TikTok) super tajam! */
-function makeStickerSprite(
-  w: number,
-  h: number,
-  drawFn: (ctx: Ctx) => void,
-  outlineW: number,
-  opts?: { innerColor?: string; outerColor?: string; glitchOffset?: number },
-): HTMLCanvasElement {
-  const innerColor = opts?.innerColor ?? '#fffaf0';
-  const outerColor = opts?.outerColor ?? INK;
-  const glitchOffset = opts?.glitchOffset ?? 0;
-
-  const pad = Math.ceil(outlineW * 2.4 + Math.abs(glitchOffset)) + 14;
-  const cw = w + pad * 2;
-  const ch = h + pad * 2;
-
-  const base = document.createElement('canvas');
-  base.width = cw;
-  base.height = ch;
-  const bCtx = base.getContext('2d')!;
-  bCtx.save();
-  bCtx.translate(pad, pad);
-  drawFn(bCtx);
-  bCtx.restore();
-
-  const out = document.createElement('canvas');
-  out.width = cw;
-  out.height = ch;
-  const oCtx = out.getContext('2d')!;
-
-  const sil = document.createElement('canvas');
-  sil.width = cw;
-  sil.height = ch;
-  const sCtx = sil.getContext('2d')!;
-
-  const stampRing = (col: string, rad: number, ox = 0, oy = 0) => {
-    sCtx.globalCompositeOperation = 'source-over';
-    sCtx.clearRect(0, 0, cw, ch);
-    sCtx.drawImage(base, 0, 0);
-    sCtx.globalCompositeOperation = 'source-in';
-    sCtx.fillStyle = col;
-    sCtx.fillRect(0, 0, cw, ch);
-
-    const steps = 32;
-    for (const r of [rad * 0.55, rad]) {
-      for (let i = 0; i < steps; i++) {
-        const a = (i / steps) * TAU;
-        oCtx.drawImage(sil, ox + Math.cos(a) * r, oy + Math.sin(a) * r);
-      }
-    }
-  };
-
-  if (glitchOffset > 0) {
-    stampRing(TT_CYAN, outlineW + 6, -glitchOffset, -glitchOffset * 0.35);
-    stampRing(TT_PINK, outlineW + 6, glitchOffset, glitchOffset * 0.35);
-  }
-  if (outerColor) stampRing(outerColor, outlineW + 10);
-  stampRing(innerColor, outlineW);
-  oCtx.drawImage(base, 0, 0);
-  return out;
-}
-
-function drawProtoSprite(id: ProtoId, mode: ProtoMode, scale = 2.0, outlineW = 15): HTMLCanvasElement {
-  const sw = Math.round(CHAR_W * scale);
-  const sh = Math.round(CHAR_H * scale);
-  return makeStickerSprite(
-    sw,
-    sh,
-    (ctx) => {
-      ctx.scale(scale, scale);
-      drawPrototype(id, ctx, mode);
-    },
-    outlineW,
-  );
-}
-
-function drawBangUtohSprite(scale = 2.3, outlineW = 18, glitchOffset = 0): HTMLCanvasElement {
-  const sw = Math.round(ACTOR_W * scale);
-  const sh = Math.round(ACTOR_H * scale);
-  return makeStickerSprite(
-    sw,
-    sh,
-    (ctx) => {
-      ctx.scale(scale, scale);
-      drawActor(ctx, 'bangUtoh', {
-        face: 'happy',
-        stance: 'stand',
-        view: 'threeQuarter',
-        leftArm: 'hip',
-        rightArm: 'wave',
-        leftProp: 'none',
-        rightProp: 'none',
-        facing: 0.08,
-        lean: 0,
-        fx: 'none',
-      });
-    },
-    outlineW,
-    { glitchOffset },
-  );
-}
-
-function drawHalftoneDots(
-  ctx: Ctx,
-  cx: number,
-  cy: number,
-  maxR: number,
-  color: string,
-  spacing = 42,
-  maxDotR = 13,
-) {
-  ctx.save();
-  ctx.fillStyle = color;
-  for (let y = cy - maxR; y <= cy + maxR; y += spacing) {
-    const rowShift = Math.round(y / spacing) % 2 === 0 ? 0 : spacing * 0.5;
-    for (let x = cx - maxR; x <= cx + maxR; x += spacing) {
-      const px = x + rowShift;
-      const d = Math.hypot(px - cx, y - cy) / maxR;
-      if (d > 1.05) continue;
-      const r = maxDotR * Math.pow(Math.max(0, d - 0.18), 1.15);
-      if (r > 1.4) {
-        ctx.beginPath();
-        ctx.arc(px, y, r, 0, TAU);
-        ctx.fill();
-      }
-    }
-  }
-  ctx.restore();
-}
-
-function drawSparkleStar(ctx: Ctx, x: number, y: number, r: number, fill: string, ink = INK) {
-  ctx.save();
-  ctx.translate(x, y);
-  const starPath = () => {
-    ctx.beginPath();
-    ctx.moveTo(0, -r);
-    ctx.quadraticCurveTo(r * 0.18, -r * 0.18, r, 0);
-    ctx.quadraticCurveTo(r * 0.18, r * 0.18, 0, r);
-    ctx.quadraticCurveTo(-r * 0.18, r * 0.18, -r, 0);
-    ctx.quadraticCurveTo(-r * 0.18, -r * 0.18, 0, -r);
-    ctx.closePath();
-  };
-  ctx.save();
-  ctx.translate(4, 6);
-  starPath();
-  ctx.fillStyle = ink;
-  ctx.fill();
-  ctx.restore();
-
-  starPath();
-  ctx.fillStyle = fill;
-  ctx.fill();
-  ctx.strokeStyle = ink;
-  ctx.lineWidth = 7;
-  ctx.stroke();
-  ctx.restore();
-}
+import {
+  PROFILE_INK as INK,
+  PROFILE_TAU as TAU,
+  TT_CYAN,
+  TT_PINK,
+  drawBangUtohSprite,
+  drawHalftoneDots,
+  drawPlacedSprite,
+  drawProtoSprite,
+  drawSparkleStar,
+  type ProfileCtx as Ctx,
+} from './profileCanvasShared';
 
 /** Not musik kecil khas TikTok dengan split kromatik Cyan + Hot Pink + Putih */
 function drawTikTokNote(ctx: Ctx, x: number, y: number, scale: number, rotDeg = 10) {
@@ -196,30 +42,6 @@ function drawTikTokNote(ctx: Ctx, x: number, y: number, scale: number, rotDeg = 
   drawShape(-9 * scale, -5 * scale, TT_CYAN);
   drawShape(9 * scale, 5 * scale, TT_PINK);
   drawShape(0, 0, '#ffffff');
-}
-
-function drawPlacedSprite(
-  ctx: Ctx,
-  sprite: HTMLCanvasElement,
-  cx: number,
-  cy: number,
-  drawScale: number,
-  rotDeg: number,
-  shadowAlpha = 0.34,
-) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate((rotDeg * Math.PI) / 180);
-  if (shadowAlpha > 0) {
-    ctx.shadowColor = `rgba(18, 12, 34, ${shadowAlpha})`;
-    ctx.shadowBlur = 38;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 18;
-  }
-  const dw = sprite.width * drawScale;
-  const dh = sprite.height * drawScale;
-  ctx.drawImage(sprite, -dw / 2, -dh / 2, dw, dh);
-  ctx.restore();
 }
 
 function renderTiktokMatchingProfile(ctx: Ctx, size: number, variant: 0 | 1) {

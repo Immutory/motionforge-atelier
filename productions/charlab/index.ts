@@ -14,6 +14,26 @@ export { TiktokProfileProduction } from './TiktokProfileProduction';
 export { ShortsThumbnailsProduction } from './ShortsThumbnailsProduction';
 export { KampungUpgradeProduction } from './KampungUpgradeProduction';
 export { KampungV2Production, KAMPUNG_V2_SLIDES } from './KampungV2Production';
+export { Turntable360Production } from './Turntable360Production';
+export { HairSpinProduction } from './HairSpinProduction';
+
+export const hairSpinMeta: ProductionMeta = {
+  id: 'hairspin',
+  title: 'QC Rambut 360° Close-Up (13 Karakter · 15 detik)',
+  width: 1920,
+  height: 1080,
+  fps: 30,
+  durationInFrames: 450,
+};
+
+export const turntable360Meta: ProductionMeta = {
+  id: 'turntable360',
+  title: 'QC Turnaround 360° (13 Manusia + 3 Kucing · uReliefMap Atelier v4.0)',
+  width: 1920,
+  height: 1080,
+  fps: 30,
+  durationInFrames: 180,
+};
 
 export const kampungV2Meta: ProductionMeta = {
   id: 'kampungv2',
@@ -125,11 +145,11 @@ export const tiktokProfileMeta: ProductionMeta = {
 
 export const shortsThumbsMeta: ProductionMeta = {
   id: 'shortsthumbs',
-  title: 'Shorts Thumbnails 9:16 (1080x1920) — EP02 Konsultan Oyen, EP03 Curhat Bakmie, & EP04 Karyawan Baru',
+  title: 'Shorts Thumbnails 9:16 (1080x1920) — EP02 Konsultan Oyen, EP03 Curhat Bakmie, EP04 Karyawan Baru, & EP05 Parkir Gratis',
   width: 1080,
   height: 1920,
   fps: 30,
-  durationInFrames: 3,
+  durationInFrames: 4,
 };
 
 export const kampungUpgradeMeta: ProductionMeta = {

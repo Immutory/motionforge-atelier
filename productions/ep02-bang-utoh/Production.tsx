@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { AbsoluteFill, Audio, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
-import { useThree } from '@react-three/fiber';
-import type { PerspectiveCamera } from 'three';
 import * as THREE from 'three';
 import {
   ActorBillboard,
+  CameraRig,
   CatBillboard,
   NOINK,
   PostStack,
@@ -14,6 +13,7 @@ import {
   sampleCamera,
   shotAt,
   useTwoToneMaterial,
+  viewAxisFocus,
   type CamPose,
   type Vec3,
   type Word,
@@ -58,30 +58,7 @@ import {
 import { CAMS, DOF, DOF_TARGET, FOREGROUND, FPS, KICKS, SHOTS } from './shots';
 import { EP02_LOOP_CUT_FRAME, PREVIEW_VOICE, VOICE_LINES, WORDS } from './words';
 
-const CameraRig: React.FC<{ pose: CamPose; shake: { dx: number; dy: number; droll: number } }> = ({ pose, shake }) => {
-  const cam = useThree().camera as PerspectiveCamera;
-  cam.position.set(pose.pos[0] + shake.dx, pose.pos[1] + shake.dy, pose.pos[2]);
-  cam.fov = pose.fov;
-  cam.lookAt(pose.look[0], pose.look[1], pose.look[2]);
-  cam.rotateZ(((pose.roll + shake.droll) * Math.PI) / 180);
-  cam.updateProjectionMatrix();
-  return null;
-};
-
-/**
- * Jarak fokus sepanjang sumbu pandang kamera (`references/reports/depth.md`):
- * proyeksi vektor `(target - camPos)` pada arah pandang ternormalisasi `normalize(camLook - camPos)`.
- */
-export function viewAxisFocus(camPos: Vec3, camLook: Vec3, target: Vec3): number {
-  const fx = camLook[0] - camPos[0];
-  const fy = camLook[1] - camPos[1];
-  const fz = camLook[2] - camPos[2];
-  const fl = Math.hypot(fx, fy, fz) || 1;
-  const dx = target[0] - camPos[0];
-  const dy = target[1] - camPos[1];
-  const dz = target[2] - camPos[2];
-  return Math.max(0.25, (dx * fx + dy * fy + dz * fz) / fl);
-}
+export { viewAxisFocus } from '../../engine';
 
 /**
  * Pengali CoC sisi dekat untuk shot OTS ber-foreground (`FOREGROUND` di shots.ts). Dengan DOF 0,6

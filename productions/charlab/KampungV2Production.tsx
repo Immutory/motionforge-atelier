@@ -1,10 +1,10 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   ActorBillboard,
+  CameraRig,
   DEFAULT_POST,
   GRADE_PRESETS,
   KAMPUNG_MODES,
@@ -69,15 +69,6 @@ export const KAMPUNG_V2_SLIDES: Slide[] = [
   { mode: 'malam', pose: P([-10.4, 1.9, 22.2], [-13.2, 1.35, 18.1], 50), title: 'AREA PEDAGANG — TIO (MALAM)',
     actors: [{ id: 'tio', at: [S.bakmieTioVendor[0], KAMPUNG_SPOT_META.bakmieTioVendor?.ergonomicBaseY ?? 0.3, S.bakmieTioVendor[2]], pose: { face: 'happy', talk: 0.6, leftArm: 'hold', leftProp: 'sodet', rightArm: 'hold', rightProp: 'bakmie' } }] },
 ];
-
-const CameraRig: React.FC<{ pose: CamPose }> = ({ pose }) => {
-  const cam = useThree().camera as THREE.PerspectiveCamera;
-  cam.position.set(...pose.pos);
-  cam.fov = pose.fov;
-  cam.lookAt(...pose.look);
-  cam.updateProjectionMatrix();
-  return null;
-};
 
 const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 

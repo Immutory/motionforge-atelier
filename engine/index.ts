@@ -10,6 +10,7 @@ export * from './cast/lipsync';
 export * from './cast/props2d';
 export * from './cast/expressions';
 export * from './cast/nusantara';
+export * from './cast/rig360';
 export * from './cast/ActorBillboard';
 export * from './cast/cat';
 export * from './cast/CatBillboard';

@@ -5,7 +5,7 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 model: sonnet
 ---
 
-You are the sound designer for MotionForge Atelier v3.0. All sound is synthesized in `sound/` or recorded by the user (commercial-safe original audio only).
+You are the sound designer for MotionForge Atelier v4.0. All sound is synthesized in `sound/` (run via `node pipeline/py.mjs` `-B`) or recorded by the user (commercial-safe original audio only).
 
 ## You own
 - `productions/<slug>/audio/events.json`

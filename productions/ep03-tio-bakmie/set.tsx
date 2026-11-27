@@ -130,32 +130,17 @@ export const STOOLS = {
   oyen: { center: [-12.8, 16.8] as [number, number], half: 0.15, color: '#c8343a' },
 } as const;
 
-/**
- * Posisi kartu billboard tokoh yang duduk: dari pusat kursi digeser horizontal ke tepi kursi yang menghadap kamera
- * (+2 cm), sehingga seluruh dudukan berada di belakang kartu untuk kamera aktif. `y` tetap (Utoh 0, Oyen = dudukan).
- */
-export function seatCardPos(seat: Vec3, half: number, camPos?: Vec3): Vec3 {
-  if (!camPos) return seat;
-  const dx = camPos[0] - seat[0];
-  const dz = camPos[2] - seat[2];
-  const l = Math.hypot(dx, dz) || 1;
-  const ux = dx / l;
-  const uz = dz / l;
-  const d = half / Math.max(Math.abs(ux), Math.abs(uz), 1e-3) + 0.02;
-  return [seat[0] + ux * d, seat[1], seat[2] + uz * d];
-}
+export { seatCardPos } from '../../engine';
 const PALLET = { x0: -13.45, x1: -12.65, z0: 18.15, z1: 18.65 };
 const PALLET_YUNI = { x0: -10.0, x1: -9.3, z0: 18.13, z1: 18.63 };
 
-/** Kotak AABB semua prop tambahan EP03 (dipakai audit spasial). */
+/** Kotak AABB semua prop tambahan EP03 (dipakai audit spasial; palet pedagang memakai mesh berbilah dari kampung.glb). */
 export const EP03_PROP_BOXES: NamedBox[] = [
   ...Object.entries(STOOLS).map(([k, s]) => ({
     name: `EP03_Stool_${k}`,
     min: [s.center[0] - s.half, 0, s.center[1] - s.half] as Vec3,
     max: [s.center[0] + s.half, BENCH_SEAT_Y, s.center[1] + s.half] as Vec3,
   })),
-  { name: 'EP03_Pallet', min: [PALLET.x0, 0, PALLET.z0], max: [PALLET.x1, PALLET_TOP_Y, PALLET.z1] },
-  { name: 'EP03_PalletYuni', min: [PALLET_YUNI.x0, 0, PALLET_YUNI.z0], max: [PALLET_YUNI.x1, PALLET_TOP_Y, PALLET_YUNI.z1] },
   boxFromCenter('EP03_BonBoard', EP03_SPOTS.board, [BOARD_SIZE[0], BOARD_SIZE[1], 0.02]),
   boxFromCenter('EP03_SignKaryawan', EP03_SPOTS.sign, [SIGN_SIZE[0], SIGN_SIZE[1], 0.02]),
   boxFromFoot('EP03_Bowl', EP03_SPOTS.bowl, 0.15, 0.08, 0.15),
@@ -182,9 +167,6 @@ export const EP03_HIDE_NAMES = [
   'KG_Grb_BakmieTio_DandangBroth',
   'KG_Grb_BakmieTio_SerokanBasket',
   'KG_Grb_BakmieTio_SerokanHandle',
-  // v3.0: EP03 sudah menggambar pijakan prosedural EP03_Pallet/EP03_PalletYuni sendiri.
-  'KG_Grb_BakmieTio_VendorPallet',
-  'KG_Grb_EsBuahYuni_VendorPallet',
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -504,8 +486,6 @@ export const SetPieces: React.FC<{ state: SetState }> = ({ state }) => {
   const plateAt = (i: number) => platePosAt(i, state.frame, state.plates, state.platesFrom);
   const platePos = EP03_SPOTS.plates.map((_, i) => plateAt(i));
 
-  const palC: Vec3 = [(PALLET.x0 + PALLET.x1) / 2, 0, (PALLET.z0 + PALLET.z1) / 2];
-
   return (
     <group name="EP03_Set">
       <KampungSet mode="malam" hideNames={EP03_HIDE_NAMES} />
@@ -532,19 +512,7 @@ export const SetPieces: React.FC<{ state: SetState }> = ({ state }) => {
         );
       })}
 
-      {/* Pijakan papan Tio di balik gerobak */}
-      <mesh name="EP03_Pallet" position={[palC[0], PALLET_TOP_Y / 2, palC[2]]} castShadow receiveShadow material={woodDark}>
-        <boxGeometry args={[PALLET.x1 - PALLET.x0, PALLET_TOP_Y, PALLET.z1 - PALLET.z0]} />
-      </mesh>
-      <mesh
-        name="EP03_PalletYuni"
-        position={[(PALLET_YUNI.x0 + PALLET_YUNI.x1) / 2, PALLET_TOP_Y / 2, (PALLET_YUNI.z0 + PALLET_YUNI.z1) / 2]}
-        castShadow
-        receiveShadow
-        material={woodDark}
-      >
-        <boxGeometry args={[PALLET_YUNI.x1 - PALLET_YUNI.x0, PALLET_TOP_Y, PALLET_YUNI.z1 - PALLET_YUNI.z0]} />
-      </mesh>
+      {/* Pijakan Tio & Mbak Yuni memakai palet kayu berbilah bertekstur langsung dari kampung.glb */}
 
       <BonBoard lines={state.bon} frame={state.frame} />
       <SignKaryawan />

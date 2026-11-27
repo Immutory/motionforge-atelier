@@ -1,19 +1,17 @@
 import React from 'react';
 import { AbsoluteFill, Audio, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
-import { useThree } from '@react-three/fiber';
-import type { PerspectiveCamera } from 'three';
 import * as THREE from 'three';
 import {
   ActorBillboard,
+  CameraRig,
   CatBillboard,
   PostStack,
   Stage,
   kickOffset,
   sampleCamera,
   shotAt,
-  type CamPose,
-  type Vec3,
+  viewAxisFocus,
   type Word,
 } from '../../engine';
 import { ACTORS, BELANG_HEIGHT, actorPositionAt, belangPoseAt, belangPositionAt, poseFor, setStateAt } from './cast';
@@ -22,24 +20,7 @@ import { SetPieces } from './set';
 import { CAMS, DOF, DOF_TARGET, FPS, KICKS, SHOTS } from './shots';
 import { EP05_LOOP_CUT_FRAME, PREVIEW_VOICE, VOICE_LINES, WORDS } from './words';
 
-/** Milik agent post-compositor: komposisi EP05, subtitle putih polos (label-above, zona 1485-1690), ZERO 2D HUD. */
-
-const CameraRig: React.FC<{ pose: CamPose; shake: { dx: number; dy: number; droll: number } }> = ({ pose, shake }) => {
-  const cam = useThree().camera as PerspectiveCamera;
-  cam.position.set(pose.pos[0] + shake.dx, pose.pos[1] + shake.dy, pose.pos[2]);
-  cam.fov = pose.fov;
-  cam.lookAt(pose.look[0], pose.look[1], pose.look[2]);
-  cam.rotateZ(((pose.roll + shake.droll) * Math.PI) / 180);
-  cam.updateProjectionMatrix();
-  return null;
-};
-
-export function viewAxisFocus(camPos: Vec3, camLook: Vec3, target: Vec3): number {
-  const f = [camLook[0] - camPos[0], camLook[1] - camPos[1], camLook[2] - camPos[2]];
-  const fl = Math.hypot(f[0], f[1], f[2]) || 1;
-  const d = [target[0] - camPos[0], target[1] - camPos[1], target[2] - camPos[2]];
-  return Math.max(0.25, (d[0] * f[0] + d[1] * f[1] + d[2] * f[2]) / fl);
-}
+/** Milik agent post-compositor: komposisi EP05 (Cinema Camera v3.0), subtitle putih polos (label-above, zona 1485-1690), ZERO 2D HUD. */
 
 export const SUB_CHUNK = { maxWords: 3, maxChars: 22, gapFrames: 6, holdFrames: 8, minFrames: 10, holdGapFrames: 45 } as const;
 export const SUB_ZONE_PX = { top: 1485, bottom: 1690 } as const;
@@ -144,7 +125,7 @@ export const Ep05ParkirGratisUtohProduction: React.FC = () => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const pose = sampleCamera(CAMS, frame);
-  const shake = kickOffset(KICKS, frame);
+  const shake = kickOffset(KICKS, frame, pose);
   const shot = shotAt(SHOTS, frame);
   const light = lightFor(shot.light);
   const post = postFor(DOF[shot.id] ?? 0, viewAxisFocus(pose.pos, pose.look, DOF_TARGET[shot.id] ?? pose.look));

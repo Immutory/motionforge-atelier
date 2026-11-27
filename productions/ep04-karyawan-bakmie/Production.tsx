@@ -1,19 +1,17 @@
 import React from 'react';
 import { AbsoluteFill, Audio, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
-import { useThree } from '@react-three/fiber';
-import type { PerspectiveCamera } from 'three';
 import * as THREE from 'three';
 import {
   ActorBillboard,
+  CameraRig,
   CatBillboard,
   PostStack,
   Stage,
   kickOffset,
   sampleCamera,
   shotAt,
-  type CamPose,
-  type Vec3,
+  viewAxisFocus,
   type Word,
 } from '../../engine';
 import { ACTORS, OYEN_HEIGHT, actorPositionAt, oyenPoseAt, oyenPositionAt, poseFor, setStateAt } from './cast';
@@ -24,24 +22,6 @@ import { EP04_LOOP_CUT_FRAME, PREVIEW_VOICE, VOICE_LINES, WORDS } from './words'
 
 /** Milik agent post-compositor: komposisi EP04, subtitle bertumpuk (label-above, zona 1485-1690), ZERO 2D HUD. */
 
-const CameraRig: React.FC<{ pose: CamPose; shake: { dx: number; dy: number; droll: number } }> = ({ pose, shake }) => {
-  const cam = useThree().camera as PerspectiveCamera;
-  cam.position.set(pose.pos[0] + shake.dx, pose.pos[1] + shake.dy, pose.pos[2]);
-  cam.fov = pose.fov;
-  cam.lookAt(pose.look[0], pose.look[1], pose.look[2]);
-  cam.rotateZ(((pose.roll + shake.droll) * Math.PI) / 180);
-  cam.updateProjectionMatrix();
-  return null;
-};
-
-export function viewAxisFocus(camPos: Vec3, camLook: Vec3, target: Vec3): number {
-  const f = [camLook[0] - camPos[0], camLook[1] - camPos[1], camLook[2] - camPos[2]];
-  const fl = Math.hypot(f[0], f[1], f[2]) || 1;
-  const d = [target[0] - camPos[0], target[1] - camPos[1], target[2] - camPos[2]];
-  return Math.max(0.25, (d[0] * f[0] + d[1] * f[1] + d[2] * f[2]) / fl);
-}
-
-export const SUB_ACCENT = { money: '#facc15', alert: '#ff6b7a', tech: '#38bdf8', cat: '#fdba74' } as const;
 export const SUB_CHUNK = { maxWords: 3, maxChars: 22, gapFrames: 6, holdFrames: 8, minFrames: 10, holdGapFrames: 45 } as const;
 export const SUB_POP_FRAMES = 3;
 export const SUB_ZONE_PX = { top: 1485, bottom: 1690 } as const;
@@ -64,10 +44,6 @@ export type SubToken = { text: string; color?: string };
 export type SubChunk = { speaker: string; line: string; tokens: SubToken[]; from: number; to: number };
 type SubLine = { id: string; speaker: string; start: number; end: number };
 
-export function accentColors(words: readonly Word[]): (string | undefined)[] {
-  return words.map(() => undefined);
-}
-
 const lineIdOf = (w: Word, lines: readonly SubLine[]) =>
   lines.find((x) => x.speaker === w.speaker && w.start >= x.start - 0.05 && w.start <= x.end + 0.05)?.id ?? `?${w.speaker}@${w.start}`;
 
@@ -78,7 +54,6 @@ export function buildSubtitleChunks(
   lines: readonly SubLine[],
   shotCuts: readonly number[],
 ): SubChunk[] {
-  const colors = accentColors(words);
   const lineOf = words.map((w) => lineIdOf(w, lines));
   const groups: { speaker: string; line: string; idx: number[] }[] = [];
   words.forEach((w, i) => {
@@ -106,7 +81,7 @@ export function buildSubtitleChunks(
     return {
       speaker: g.speaker,
       line: g.line,
-      tokens: g.idx.map((k) => ({ text: words[k].text, color: colors[k] })),
+      tokens: g.idx.map((k) => ({ text: words[k].text })),
       from,
       to: Math.max(lastEnd, from + SUB_CHUNK.minFrames),
     };

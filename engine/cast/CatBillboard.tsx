@@ -14,6 +14,7 @@ import {
   type CatSpec,
 } from './cat';
 import { computeBillboardTiltX, seatCardPos } from './nusantara';
+import { paintReliefPrimitives, type ReliefPrimitive } from './rig360';
 import { BLOB_FRAG, BLOB_VERT, stampStickerOutline, type StickerOutline } from './sticker';
 
 export type CatBillboardProps = {
@@ -70,12 +71,16 @@ export function catPoseKey(pose: CatPose): string {
     pose.facing ?? '',
     pose.breathPhase ?? 'u',
     pose.stretch ?? 0,
+    pose.yawDeg !== undefined ? pose.yawDeg.toFixed(1) : '',
+    pose.headYawDeg !== undefined ? pose.headYawDeg.toFixed(1) : '',
+    pose.pitchDeg !== undefined ? pose.pitchDeg.toFixed(1) : '',
   ]);
 }
 
 /**
- * Komponen 2,5D siap pakai untuk Karakter Animasi Kucing 2D (`Si Oyen`, `Mpus Abu`, `Si Belang`):
- * - Supersample 2x Canvas2D di layer `NOINK` (tanpa outline ganda)
+ * Komponen 2,5D siap pakai (Atelier v4.0) untuk Karakter Animasi Kucing 2D (`Si Oyen`, `Mpus Abu`, `Si Belang`):
+ * - Supersample 2x Canvas2D persisten di layer `NOINK` (tanpa outline ganda / alokasi ulang VRAM)
+ * - Rig volumetrik 360° + `uReliefMap` per-piksel normal/AO/Fresnel saat `yawDeg` aktif
  * - `cardShade` + `receiveShadow` + `uLocalLight` Reinhard soft-clamp + `DoubleSide` silhouette `castShadow`
  * - `seatRadius` anti-tembus kursi, `groundY`, & `tiltComp` berporos cakar `y = 0`
  */
@@ -102,54 +107,58 @@ export const CatBillboard: React.FC<CatBillboardProps> = ({
     ? `${stickerOutline.color ?? '#fff'}_${stickerOutline.width ?? 16}_${stickerOutline.outerColor ?? ''}`
     : '';
 
-  const texture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = CAT_W * 2;
-    canvas.height = CAT_H * 2;
-    const ctx = canvas.getContext('2d')!;
-    if (!stickerOutline) {
-      ctx.scale(2, 2);
-      drawCat(ctx, spec, pose);
-    } else {
-      stampStickerOutline(
-        ctx,
-        CAT_W * 2,
-        CAT_H * 2,
-        (c) => drawCat(c, spec, pose),
-        (c) => drawCat(c, spec, { ...pose, fx: 'none' }),
-        stickerOutline,
-      );
-    }
+  const RELIEF_W = CAT_W / 2;
+  const RELIEF_H = CAT_H / 2;
 
-    const t = new THREE.CanvasTexture(canvas);
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 8;
-    return t;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, poseKey, stickerKey]);
+  const buffers = useMemo(() => {
+    const colorCanvas = document.createElement('canvas');
+    colorCanvas.width = CAT_W * 2;
+    colorCanvas.height = CAT_H * 2;
+    const colorCtx = colorCanvas.getContext('2d')!;
+    const texture = new THREE.CanvasTexture(colorCanvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
+
+    const reliefCanvas = document.createElement('canvas');
+    reliefCanvas.width = RELIEF_W;
+    reliefCanvas.height = RELIEF_H;
+    const reliefCtx = reliefCanvas.getContext('2d')!;
+    const reliefTex = new THREE.CanvasTexture(reliefCanvas);
+    reliefTex.colorSpace = THREE.NoColorSpace;
+    reliefTex.minFilter = THREE.LinearFilter;
+    reliefTex.magFilter = THREE.LinearFilter;
+    reliefTex.generateMipmaps = false;
+
+    return { colorCanvas, colorCtx, texture, reliefCanvas, reliefCtx, reliefTex };
+  }, [RELIEF_W, RELIEF_H]);
 
   const cardMat = useMemo(() => {
     const m = cardShade(
       new THREE.MeshLambertMaterial({
-        map: texture,
+        map: buffers.texture,
         transparent: false,
         alphaTest: 0.35,
         side: THREE.DoubleSide,
       }),
+      {
+        map: buffers.reliefTex,
+        texel: [1 / RELIEF_W, 1 / RELIEF_H],
+        enabled: false,
+      },
     );
     m.alphaToCoverage = true;
     return m;
-  }, []);
+  }, [buffers, RELIEF_W, RELIEF_H]);
 
   const depthMat = useMemo(
     () =>
       new THREE.MeshDepthMaterial({
         depthPacking: THREE.RGBADepthPacking,
-        map: texture,
+        map: buffers.texture,
         alphaTest: 0.35,
         side: THREE.DoubleSide,
       }),
-    [],
+    [buffers],
   );
 
   const blobMat = useMemo(
@@ -172,19 +181,53 @@ export const CatBillboard: React.FC<CatBillboardProps> = ({
   );
 
   useLayoutEffect(() => {
-    cardMat.map = texture;
-    depthMat.map = texture;
-    (blobMat.uniforms.uRatio.value as THREE.Color).setRGB(blobColor[0], blobColor[1], blobColor[2]);
-  }, [cardMat, depthMat, blobMat, texture, blobColor[0], blobColor[1], blobColor[2]]);
+    const reliefPrimitives: ReliefPrimitive[] = [];
+    const wantRelief = pose.yawDeg !== undefined;
+    const { colorCtx, texture, reliefCtx, reliefTex } = buffers;
+    colorCtx.setTransform(1, 0, 0, 1, 0, 0);
+    colorCtx.clearRect(0, 0, CAT_W * 2, CAT_H * 2);
 
-  useEffect(() => () => texture.dispose(), [texture]);
+    if (!stickerOutline) {
+      colorCtx.save();
+      colorCtx.scale(2, 2);
+      drawCat(colorCtx, spec, pose, wantRelief ? reliefPrimitives : undefined);
+      colorCtx.restore();
+    } else {
+      stampStickerOutline(
+        colorCtx,
+        CAT_W * 2,
+        CAT_H * 2,
+        (c) => drawCat(c, spec, pose, wantRelief ? reliefPrimitives : undefined),
+        (c) => drawCat(c, spec, { ...pose, fx: 'none' }),
+        stickerOutline,
+      );
+    }
+    texture.needsUpdate = true;
+
+    const rUniform = cardMat.userData.cardRelief as
+      | { uHasRelief: { value: number } }
+      | undefined;
+    if (wantRelief && reliefPrimitives.length > 0) {
+      paintReliefPrimitives(reliefCtx, RELIEF_W, RELIEF_H, CAT_W, CAT_H, reliefPrimitives);
+      reliefTex.needsUpdate = true;
+      if (rUniform) rUniform.uHasRelief.value = 1.0;
+    } else {
+      if (rUniform) rUniform.uHasRelief.value = 0.0;
+    }
+
+    (blobMat.uniforms.uRatio.value as THREE.Color).setRGB(blobColor[0], blobColor[1], blobColor[2]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spec, poseKey, stickerKey, buffers, cardMat, blobMat, RELIEF_W, RELIEF_H, blobColor[0], blobColor[1], blobColor[2]]);
+
   useEffect(
     () => () => {
+      buffers.texture.dispose();
+      buffers.reliefTex.dispose();
       cardMat.dispose();
       depthMat.dispose();
       blobMat.dispose();
     },
-    [cardMat, depthMat, blobMat],
+    [buffers, cardMat, depthMat, blobMat],
   );
 
   const effectivePos = seatRadius ? seatCardPos(position, seatRadius, faceTo) : position;

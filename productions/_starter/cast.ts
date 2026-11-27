@@ -18,10 +18,10 @@ export type Actor = {
 };
 
 /**
- * Milik agent character-animator (standar Atelier v3.0 — 2.5D Reference Edition).
+ * Milik agent character-animator (standar Atelier v4.0 — 2.5D Volumetric 360° Edition).
  * Memakai Modular Rig 13 Karakter Indonesia (`CAST_PRESETS` termasuk `ebot`) + 3 Kucing 2D (`CAT_PRESETS`),
- * 1 siluet vektor utuh bervolume 2,5D (spherical face parallax, 8-arah via `resolve25DView`, interaksi prop 3D
- * via `actorHandWorldPos`, kedip 4-frame `blinkLidAt`, dan lip-sync RMS-gated `talkGated`).
+ * 1 siluet vektor utuh bervolume 2,5D (proyeksi 360° `rig360.ts`, `uReliefMap`, 8-arah via `resolve25DView`,
+ * interaksi prop 3D via `actorHandWorldPos`, kedip 4-frame `blinkLidAt`, dan lip-sync RMS-gated `talkGated`).
  */
 export const ACTORS: Actor[] = [
   { id: 'bangUtoh', preset: 'bangUtoh', base: STARTER_SPOTS.utoh, worldYaw: 25, facing: 0.35, height: 1.96 },

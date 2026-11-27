@@ -1,9 +1,9 @@
 ---
 name: atelier-sound-lab
-description: Synthesize sound effects, music beds, ambience, loop crossfades, and final mixes with ducking and `-16.0 LUFS / TP <= -1.5 dBTP` loudness targets (Atelier v3.0).
+description: Synthesize sound effects, music beds, ambience, loop crossfades, and final mixes with ducking and `-16.0 LUFS / TP <= -1.5 dBTP` loudness targets (Atelier v4.0).
 ---
 
-# Sound Lab (Atelier v3.0)
+# Sound Lab (Atelier v4.0)
 
 Sound sells the picture. Every visible impact (`strikeEnvelope`, footsteps, prop drops, poster `PLAK!`, cat meows) has a frame-accurate sound.
 

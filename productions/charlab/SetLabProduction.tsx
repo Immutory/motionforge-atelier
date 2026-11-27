@@ -1,10 +1,10 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   ActorBillboard,
+  CameraRig,
   DEFAULT_POST,
   GRADE_PRESETS,
   KAMPUS_SPOTS,
@@ -21,16 +21,6 @@ import {
   type PostParams,
   type Vec3,
 } from '../../engine';
-
-const CameraRig: React.FC<{ pose: CamPose }> = ({ pose }) => {
-  const cam = useThree().camera as THREE.PerspectiveCamera;
-  cam.position.set(...pose.pos);
-  cam.fov = pose.fov;
-  cam.lookAt(...pose.look);
-  cam.rotateZ((pose.roll * Math.PI) / 180);
-  cam.updateProjectionMatrix();
-  return null;
-};
 
 const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 

@@ -1,9 +1,9 @@
 ---
 name: atelier-ink-lens
-description: Configure the post-processing chain (`engine/post/`): `POST_HYBRID_25D` (recommended default for new v3.5 productions) & `DEFAULT_POST` ink outlines with `NOINK` mask, thin-lens DOF, bloom, neutral tone mapping, grade, canonical `<CameraRig />` wiring, `SUB_STACK = 'label-above'` subtitles, and shot transitions.
+description: Configure the post-processing chain (`engine/post/`): `POST_HYBRID_25D` (recommended default for new v4.0 productions) & `DEFAULT_POST` ink outlines with `NOINK` mask, thin-lens DOF, bloom, neutral tone mapping, grade, canonical `<CameraRig />` wiring (never duplicated), `SUB_STACK = 'label-above'` subtitles, and shot transitions.
 ---
 
-# Ink and Lens (Atelier v3.5 — Soft-Lit 2.5D Polish)
+# Ink and Lens (Atelier v4.0 — 2.5D Volumetric 360° & Soft-Lit Polish)
 
 Post turns the soft-lit matte 3D scene and 2.5D characters into a cohesive illustration aligned with `contohvideo/download.mp4`, `contohvideo/(1).mp4`, and `references/reports/{outlines,depth,grade}.md`.
 
@@ -17,11 +17,11 @@ Post turns the soft-lit matte 3D scene and 2.5D characters into a cohesive illus
 MSAA 4 on the composer target; automatic `composer.setSize` sync on DPR/buffer resize.
 
 ## Post Presets (`engine/post/PostStack.tsx`)
-- **`POST_HYBRID_25D` (Recommended v3.5 Default for New Episodes)**: Subtle world outlines (`strength: 0.42`, `thickness: 1.6`), atmospheric depth, and foreground/background shallow DOF (`nearScale: 1.6`) so 2D characters with Canvas2D ink *pop* cleanly against soft-lit matte 3D worlds (`download.mp4`).
+- **`POST_HYBRID_25D` (Recommended v4.0 Default for New Episodes)**: Subtle world outlines (`strength: 0.42`, `thickness: 1.6`), atmospheric depth, and foreground/background shallow DOF (`nearScale: 1.6`) so 2.5D characters with Canvas2D ink *pop* cleanly against soft-lit matte 3D worlds (`download.mp4`).
 - **`DEFAULT_POST`**: Crisp comic world outlines (`strength: 0.96`, `thickness: 3.4`) — 100% preserved for EP01–EP04 backward compatibility.
 
 ## Wiring, Subtitles & Resolution Scaling (`Production.tsx`)
-- Import `<CameraRig />`, `viewAxisFocus`, `actorHandWorldPos`, and reusable 3D props (`engine/props/`) directly from `engine`.
+- Import `<CameraRig />`, `viewAxisFocus`, `seatCardPos`, `actorHandWorldPos`, and reusable 3D props (`engine/props/`) directly from `engine`. Never duplicate `<CameraRig />`, `viewAxisFocus`, or `seatCardPos` inside production files, and dispose every dynamic `CanvasTexture` cleanly on unmount (`useEffect`).
 - Multiply every pixel-sized parameter by `pxScale(outputHeight)` (`outputHeight / 1920`) so 0.5x stills, native `1.0` (`1080×1920`) masters, and optional `--scale 1.3333` 2K renders match identically apart from sharpness.
 - **Pure Cinema & `SUB_STACK = 'label-above'`**: ZERO 2D HUD boxes/banners. Bottom subtitles sit strictly in `1485–1690 px` (`@1920`), speaker label above text, max 3 words/line, clear of mouths, and off during the closing loop tail (`loopCutFrame..TOTAL_FRAMES`).
 - **Film grain**: Default off.

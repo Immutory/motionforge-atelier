@@ -4,6 +4,7 @@ import {
   clamp,
   computeWalkState,
   lerp3,
+  resolve25DView,
   smootherstep,
   springPop,
   strikeEnvelope,
@@ -82,20 +83,8 @@ export const EP04_LOOP_POSE_FROM = L('U12').startFrame - 6;
 const yawVec = (deg: number): Vec3 => [Math.sin((deg * Math.PI) / 180), 0, Math.cos((deg * Math.PI) / 180)];
 
 export function viewFor(pos: Vec3, forward: Vec3, camPos: Vec3): { view: ActorView; facing: number } {
-  const tx = camPos[0] - pos[0];
-  const tz = camPos[2] - pos[2];
-  const tl = Math.hypot(tx, tz) || 1;
-  const fl = Math.hypot(forward[0], forward[2]) || 1;
-  const fx = forward[0] / fl;
-  const fz = forward[2] / fl;
-  const cos = (fx * tx + fz * tz) / tl;
-  const ang = (Math.acos(clamp(cos, -1, 1)) * 180) / Math.PI;
-  const side = (fx * tz - fz * tx) / tl;
-  const sign = side >= 0 ? 1 : -1;
-  if (ang < 35) return { view: 'front', facing: clamp(side * 1.6, -0.45, 0.45) };
-  if (ang < 75) return { view: 'threeQuarter', facing: 0.7 * sign };
-  if (ang < 120) return { view: 'side', facing: sign };
-  return { view: 'back', facing: 0.4 * sign };
+  const { view, facing } = resolve25DView(pos, forward, camPos, { fourWayThresholds: [35, 75, 120] });
+  return { view, facing };
 }
 
 const WORDS_BY: Record<VoiceSpeaker, ReturnType<typeof wordsOf>> = {

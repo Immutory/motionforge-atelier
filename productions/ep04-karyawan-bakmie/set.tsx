@@ -22,8 +22,6 @@ export const EP04_HIDE_NAMES: readonly string[] = [
   'KG_Grb_BakmieTio_LadleBowl',
   'KG_Grb_BakmieTio_SerokanBasket',
   'KG_Grb_BakmieTio_SerokanHandle',
-  'KG_Grb_BakmieTio_VendorPallet',
-  'KG_Grb_EsBuahYuni_VendorPallet',
 ];
 
 export const EP04_SPOTS = {
@@ -89,23 +87,12 @@ export const STOOLS = {
   oyen: { center: [-12.8, 16.8] as [number, number], half: 0.15, color: '#c8343a' },
 } as const;
 
-export function seatCardPos(seat: Vec3, half: number, camPos?: Vec3): Vec3 {
-  if (!camPos) return seat;
-  const dx = camPos[0] - seat[0];
-  const dz = camPos[2] - seat[2];
-  const l = Math.hypot(dx, dz) || 1;
-  const ux = dx / l;
-  const uz = dz / l;
-  const d = half / Math.max(Math.abs(ux), Math.abs(uz), 1e-3) + 0.02;
-  return [seat[0] + ux * d, seat[1], seat[2] + uz * d];
-}
+export { seatCardPos } from '../../engine';
 
 export const PALLET = { x0: -13.8, x1: -12.65, z0: 18.15, z1: 18.65 } as const;
 export const PALLET_YUNI = { x0: -9.95, x1: -9.3, z0: 18.15, z1: 18.65 } as const;
 
 export const EP04_PROP_BOXES: NamedBox[] = [
-  boxFromFoot('EP04_Pallet', [(PALLET.x0 + PALLET.x1) / 2, 0, (PALLET.z0 + PALLET.z1) / 2], PALLET.x1 - PALLET.x0, PALLET_TOP_Y, PALLET.z1 - PALLET.z0),
-  boxFromFoot('EP04_PalletYuni', [(PALLET_YUNI.x0 + PALLET_YUNI.x1) / 2, 0, (PALLET_YUNI.z0 + PALLET_YUNI.z1) / 2], PALLET_YUNI.x1 - PALLET_YUNI.x0, PALLET_TOP_Y, PALLET_YUNI.z1 - PALLET_YUNI.z0),
   boxFromFoot('EP04_StoolUjang', [STOOLS.pakUjang.center[0], 0, STOOLS.pakUjang.center[1]], STOOLS.pakUjang.half * 2, BENCH_SEAT_Y, STOOLS.pakUjang.half * 2),
   boxFromFoot('EP04_StoolOyen', [STOOLS.oyen.center[0], 0, STOOLS.oyen.center[1]], STOOLS.oyen.half * 2, BENCH_SEAT_Y, STOOLS.oyen.half * 2),
   boxFromFoot('EP04_Dandang', [DANDANG.x, DANDANG.baseY, DANDANG.z], DANDANG.radius * 2, DANDANG.height + 0.015, DANDANG.radius * 2),
@@ -716,23 +703,7 @@ export const SetPieces: React.FC<{ state: SetState }> = ({ state }) => {
     <group name="EP04_Set">
       <KampungSet mode="malam" hideNames={[...EP04_HIDE_NAMES]} />
 
-      {/* Pijakan Utoh & Mbak Yuni */}
-      <mesh
-        name="EP04_Pallet"
-        position={[(PALLET.x0 + PALLET.x1) / 2, PALLET_TOP_Y / 2, (PALLET.z0 + PALLET.z1) / 2]}
-        material={palletMat}
-        receiveShadow
-      >
-        <boxGeometry args={[PALLET.x1 - PALLET.x0, PALLET_TOP_Y, PALLET.z1 - PALLET.z0]} />
-      </mesh>
-      <mesh
-        name="EP04_PalletYuni"
-        position={[(PALLET_YUNI.x0 + PALLET_YUNI.x1) / 2, PALLET_TOP_Y / 2, (PALLET_YUNI.z0 + PALLET_YUNI.z1) / 2]}
-        material={palletMat}
-        receiveShadow
-      >
-        <boxGeometry args={[PALLET_YUNI.x1 - PALLET_YUNI.x0, PALLET_TOP_Y, PALLET_YUNI.z1 - PALLET_YUNI.z0]} />
-      </mesh>
+      {/* Pijakan Utoh & Mbak Yuni memakai palet kayu berbilah bertekstur dari kampung.glb */}
 
       {/* Kursi Pak Ujang & Si Oyen */}
       <Stool center={STOOLS.pakUjang.center} half={STOOLS.pakUjang.half} color={STOOLS.pakUjang.color} />

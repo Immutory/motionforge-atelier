@@ -130,12 +130,18 @@ export function drawComicFx(ctx: Ctx, fx: ComicFx, cx: number, headTop: number, 
   if (fx === 'shock') {
     ctx.strokeStyle = ink;
     ctx.lineWidth = 6.5;
-    const r = headW * 0.55;
-    for (const deg of [-148, -126, -54, -32]) {
+    // Jika headTop terangkat tinggi oleh headgear + hatPop (mis. Pak Ujang satpamCap di f0160),
+    // jaga titik pusat & panjang pancaran agar ke-4 garis kejut 100% utuh di atas topi tanpa terpotong tepi atas kanvas (y >= 14)!
+    const lifted = headTop < 140;
+    const originY = lifted ? Math.max(146, headTop + 26) : headTop - 16;
+    const angles = lifted ? [-154, -134, -46, -26] : [-148, -126, -54, -32];
+    const rayLen = lifted ? 26 : 34;
+    for (const deg of angles) {
       const a = (deg * Math.PI) / 180;
+      const r0 = lifted && (deg === -154 || deg === -26) ? headW * 0.64 : headW * 0.56;
       ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(a) * r, headTop - 16 + Math.sin(a) * r);
-      ctx.lineTo(cx + Math.cos(a) * (r + 34), headTop - 16 + Math.sin(a) * (r + 34));
+      ctx.moveTo(cx + Math.cos(a) * r0, originY + Math.sin(a) * r0);
+      ctx.lineTo(cx + Math.cos(a) * (r0 + rayLen), originY + Math.sin(a) * (r0 + rayLen));
       ctx.stroke();
     }
   } else if (fx === 'sweat') {
@@ -238,7 +244,66 @@ export type FaceRenderParams = {
   blushColor?: string;
   /** Titik kilau putih di pupil (opsional, default false). */
   eyeShine?: boolean;
+  /** Opsional (v4.0): sudut yaw kepala kontinu dalam radian [-PI, PI] untuk proyeksi bola wajah 360°. */
+  yawRad?: number;
+  /** Opsional (v5.1): alpha kontinu hidung profil samping [0..1] agar hidung tidak muncul mendadak saat berputar. */
+  noseAlpha?: number;
 };
+
+function smoothstepFace(e0: number, e1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Geometri mata & proyeksi bola wajah 360° kontinu (Atelier v4.0 / v5.1):
+ * - Mata menempati azimut `±theta` pada bola kepala `R_face = headW * 0.45`.
+ * - Saat berputar hingga ±105°, mata jauh menyempit (`cos(alpha)`) & memudar mulus (`eyeAlpha`) tanpa pop di tepi pipi.
+ * - Ujung hidung memproyeksikan profil siluet alami dengan arah `dirSmooth` kontinu melewati `0°`.
+ */
+export function computeEyeGeom360(cx: number, cy: number, headW: number, eyeStyle: EyeStyle, yawRad: number) {
+  const theta = eyeStyle === 'almond' ? 0.41 : eyeStyle === 'sclera' ? 0.34 : 0.36;
+  const rFace = headW * (eyeStyle === 'sclera' ? 0.415 : 0.45);
+  const eyeY = cy + (eyeStyle === 'almond' ? 8 : 12);
+  const sWrap = (s: number) => yawRad + s * theta;
+  const eyeVis = (s: number) => Math.cos(sWrap(s));
+  const eyeThresh = eyeStyle === 'sclera' ? 0.3 : 0.14;
+  const eyeAlpha = (s: number) => smoothstepFace(eyeThresh - 0.08, eyeThresh + 0.14, eyeVis(s));
+  const eyeVisible = (s: number) => eyeAlpha(s) > 0.01;
+  const ex = (s: number) => cx + rFace * Math.sin(sWrap(s));
+  const eyeScaleX = (s: number) => Math.max(0.06, eyeVis(s));
+  const frontVis = Math.cos(yawRad);
+  const shift = rFace * 0.96 * Math.sin(yawRad);
+  const noseX = cx + rFace * 1.12 * Math.sin(yawRad);
+  const noseAlpha = smoothstepFace(-0.22, -0.02, frontVis);
+  const noseVis = noseAlpha > 0.01;
+  const mouthShift = headW * 0.43 * Math.sin(yawRad);
+  const mouthAlpha = smoothstepFace(0.02, 0.22, frontVis);
+  const mouthScaleX = Math.max(0.06, frontVis);
+  const mouthVisible = mouthAlpha > 0.01;
+  const fSign = Math.sin(yawRad) >= 0 ? 1 : -1;
+  const dirSmooth = Math.tanh(Math.sin(yawRad) * 3.5);
+  return {
+    rFace,
+    eyeY,
+    shift,
+    fSign,
+    dirSmooth,
+    frontVis,
+    ex,
+    eyeScaleX,
+    eyeVis,
+    eyeAlpha,
+    eyeVisible,
+    noseX,
+    noseAlpha,
+    noseVis,
+    mouthShift,
+    mouthAlpha,
+    mouthScaleX,
+    mouthVisible,
+  };
+}
 
 /**
  * Geometri mata & spherical cosine foreshortening bersama (dipakai `drawFaceFeatures` dan kacamata di `nusantara.ts`)
@@ -262,7 +327,19 @@ export function computeEyeGeom(cx: number, cy: number, headW: number, eyeStyle: 
 /** Gambar mata, alis, hidung opsional, dan mulut (terintegrasi penuh dengan lip-sync talkAt & spherical 2,5D face parallax). */
 export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
   const { cx, cy, headW: W, skin, ink, eyeStyle, face, blink, facing } = p;
-  const { fSign, shift, ex, eyeScaleX, eyeY } = computeEyeGeom(cx, cy, W, eyeStyle, facing);
+  const is360 = p.yawRad !== undefined;
+  const g360 = is360 ? computeEyeGeom360(cx, cy, W, eyeStyle, p.yawRad!) : null;
+  const gLegacy = g360 ? null : computeEyeGeom(cx, cy, W, eyeStyle, facing);
+  const fSign = g360 ? g360.fSign : gLegacy!.fSign;
+  const shift = g360 ? g360.shift : gLegacy!.shift;
+  const ex = g360 ? g360.ex : gLegacy!.ex;
+  const eyeScaleX = g360 ? g360.eyeScaleX : gLegacy!.eyeScaleX;
+  const eyeAlpha = g360 ? g360.eyeAlpha : () => 1;
+  const eyeVisible = g360 ? g360.eyeVisible : () => true;
+  const eyeY = g360 ? g360.eyeY : gLegacy!.eyeY;
+  const dirSmooth = g360 ? g360.dirSmooth : fSign;
+  const lookFacing = g360 ? Math.sin(p.yawRad!) * 0.65 : facing;
+  const lookShift = lookFacing * W * 0.085;
   const talkSample: TalkSample =
     typeof p.talk === 'number'
       ? { open: p.talk, shape: p.talk > 0.65 ? 'wide' : p.talk > 0.3 ? 'mid' : p.talk > 0.16 ? 'small' : 'closed' }
@@ -281,12 +358,15 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
 
   // --- 0. RONA PIPI (opsional) ---
   if (p.blushColor && face !== 'shock') {
+    const baseBlushAlpha = face === 'happy' || face === 'laugh' || face === 'nervous' ? 0.7 : 0.45;
     ctx.save();
-    ctx.globalAlpha = face === 'happy' || face === 'laugh' || face === 'nervous' ? 0.7 : 0.45;
     ctx.fillStyle = p.blushColor;
     for (const s of [-1, 1]) {
+      const a = eyeAlpha(s);
+      if (a <= 0.01) continue;
+      ctx.globalAlpha = baseBlushAlpha * a;
       ctx.beginPath();
-      ctx.ellipse(ex(s) + s * 14, eyeY + 38, 24, 11, 0, 0, TAU);
+      ctx.ellipse(ex(s) + s * 14 * eyeScaleX(s), eyeY + 38, 24 * eyeScaleX(s), 11, 0, 0, TAU);
       ctx.fill();
     }
     ctx.restore();
@@ -294,9 +374,12 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
 
   // --- 1. MATA ---
   for (const s of [-1, 1]) {
+    const a = eyeAlpha(s);
+    if (a <= 0.01) continue;
     const x = ex(s);
     const sx = eyeScaleX(s);
     ctx.save();
+    if (a < 0.999) ctx.globalAlpha *= a;
     if (sx < 0.999) {
       ctx.translate(x, eyeY);
       ctx.scale(sx, 1);
@@ -355,7 +438,7 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.stroke();
       ctx.fillStyle = ink;
       ctx.beginPath();
-      ctx.arc(x + shift * 0.16, eyeY + (face === 'nervous' ? 3 : 0), face === 'shock' ? 6.8 : 7.5, 0, TAU);
+      ctx.arc(x + lookShift * 0.16, eyeY + (face === 'nervous' ? 3 : 0), face === 'shock' ? 6.8 : 7.5, 0, TAU);
       ctx.fill();
       ctx.restore();
       continue;
@@ -372,7 +455,7 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = ink;
-      const lookX = Math.max(-7, Math.min(7, facing * 18));
+      const lookX = Math.max(-7, Math.min(7, lookFacing * 18));
       const lookY = face === 'idea' ? -4 : face === 'sad' ? 4 : 1;
       ctx.beginPath();
       ctx.arc(x + lookX, eyeY + lookY, 8, 0, TAU);
@@ -411,7 +494,7 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
     if (eyeStyle === 'almond') {
       const rx = 25;
       const ry = face === 'idea' || face === 'happy' ? 14 : 12.8;
-      const lookX = Math.max(-6, Math.min(6, facing * 15));
+      const lookX = Math.max(-6, Math.min(6, lookFacing * 15));
       const lookY = face === 'idea' ? -2.5 : face === 'sad' ? 2.5 : 0.5;
       const lidDrop =
         face === 'tired'
@@ -539,12 +622,17 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
   const blen = eyeStyle === 'almond' ? 44 : 39;
   const bt = p.browThick ?? 10.5;
   const putBrow = (s: -1 | 1, bx: number, byPos: number, len: number, thick: number, deg: number) => {
+    const a = eyeAlpha(s);
+    if (a <= 0.01) return;
     const scaledLen = len * eyeScaleX(s);
+    ctx.save();
+    if (a < 0.999) ctx.globalAlpha *= a;
     if (p.browStyle === 'natural') {
       drawNaturalBrow(ctx, bx, byPos, s, scaledLen * 1.14, thick, deg, ink, p.browColor);
     } else {
       drawBrow(ctx, bx, byPos, scaledLen, thick, deg, ink);
     }
+    ctx.restore();
   };
   switch (face) {
     case 'shock':
@@ -588,21 +676,28 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
   // --- 2b. TAHI LALAT KHAS (opsional, mis. di tulang pipi kanan bawah mata Ebot) ---
   if (p.beautyMark && p.beautyMark !== 'none') {
     const ms = p.beautyMark === 'rightCheek' ? -1 : 1;
-    ctx.save();
-    ctx.fillStyle = '#38211d';
-    ctx.beginPath();
-    ctx.arc(ex(ms) + ms * 2, eyeY + 27, 2.3, 0, TAU);
-    ctx.fill();
-    ctx.restore();
+    const a = eyeAlpha(ms);
+    if (a > 0.01) {
+      ctx.save();
+      if (a < 0.999) ctx.globalAlpha *= a;
+      ctx.fillStyle = '#38211d';
+      ctx.beginPath();
+      ctx.arc(ex(ms) + ms * 2 * eyeScaleX(ms), eyeY + 27, 2.3, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   // --- 3. HIDUNG OPSIONAL ---
-  if (p.nose) {
+  const noseA = (g360 ? g360.noseAlpha : 1) * (p.noseAlpha ?? (p.nose ? 1 : 0));
+  if (noseA > 0.01) {
+    const noseCx = g360 ? g360.noseX : cx + shift;
+    const dir = dirSmooth;
+    ctx.save();
+    if (noseA < 0.999) ctx.globalAlpha *= noseA;
     if (p.noseStyle === 'rounded') {
-      const nx = cx + shift;
+      const nx = noseCx;
       const ny = eyeY + 32;
-      const dir = facing >= 0 ? 1 : -1;
-      ctx.save();
       // Bayangan lembut hangat di bawah ujung hidung membulat khas lokal
       ctx.fillStyle = 'rgba(146, 90, 64, 0.28)';
       ctx.beginPath();
@@ -627,20 +722,30 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.moveTo(nx - 8.5, ny + 4.5);
       ctx.quadraticCurveTo(nx + dir * 2, ny + 9.5, nx + 9.5, ny + 3.5);
       ctx.stroke();
-      ctx.restore();
     } else {
       ctx.strokeStyle = ink;
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(cx + shift + 4 * fSign, eyeY + 19);
-      ctx.quadraticCurveTo(cx + shift + 12 * fSign, eyeY + 27, cx + shift + 4 * fSign, eyeY + 32);
+      ctx.moveTo(noseCx + 4 * dir, eyeY + 19);
+      ctx.quadraticCurveTo(noseCx + 12 * dir, eyeY + 27, noseCx + 4 * dir, eyeY + 32);
       ctx.stroke();
     }
+    ctx.restore();
   }
 
   // --- 4. MULUT (sinkron dengan lip-sync talkAt jika aktif, atau bentuk ekspresi) ---
-  const mx = cx + shift;
+  const mAlpha = g360 ? g360.mouthAlpha : 1;
+  if (mAlpha <= 0.01) return;
+  const mx = cx + (g360 ? g360.mouthShift : shift);
   const my = cy + (eyeStyle === 'almond' ? 66 : 70);
+  const mScaleX = g360 ? g360.mouthScaleX : 1;
+  ctx.save();
+  if (mAlpha < 0.999) ctx.globalAlpha *= mAlpha;
+  if (mScaleX < 0.999) {
+    ctx.translate(mx, my);
+    ctx.scale(mScaleX, 1);
+    ctx.translate(-mx, -my);
+  }
   if (p.faintMustache && face !== 'shock') {
     ctx.save();
     ctx.fillStyle = 'rgba(96, 64, 54, 0.08)';
@@ -691,6 +796,7 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.restore();
       ctx.stroke();
     }
+    ctx.restore();
     return;
   }
 
@@ -851,4 +957,5 @@ export function drawFaceFeatures(ctx: Ctx, p: FaceRenderParams) {
       ctx.quadraticCurveTo(mx + 3, my + 10, mx + 19, my - 2);
       lipStroke();
   }
+  ctx.restore();
 }

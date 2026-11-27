@@ -136,7 +136,32 @@ uniform float uCharShade;
 uniform float uGrad;
 uniform float uBodyGrad;
 uniform vec3 uSideTint;
-uniform float uLocalLight;`;
+uniform float uLocalLight;
+uniform sampler2D uReliefMap;
+uniform vec2 uReliefTexel;
+uniform float uHasRelief;
+uniform float uReliefSlope;
+varying vec3 vCardRight;
+varying vec3 vCardUp;
+varying vec3 vCardFwd;
+varying vec3 vCardViewDir;`;
+
+const CARD_VERT_DECL = /* glsl */ `#include <common>
+varying vec3 vCardRight;
+varying vec3 vCardUp;
+varying vec3 vCardFwd;
+varying vec3 vCardViewDir;`;
+
+const CARD_VERT_BODY = /* glsl */ `#include <project_vertex>
+{
+  vec3 wRight = normalize((modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
+  vec3 wUp = normalize((modelMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+  vec3 wFwd = normalize(cross(wRight, wUp));
+  vCardRight = normalize((viewMatrix * vec4(wRight, 0.0)).xyz);
+  vCardUp = normalize((viewMatrix * vec4(wUp, 0.0)).xyz);
+  vCardFwd = normalize((viewMatrix * vec4(wFwd, 0.0)).xyz);
+  vCardViewDir = normalize(-mvPosition.xyz);
+}`;
 
 const CARD_BODY = /* glsl */ `
 vec3 outgoingLight = diffuseColor.rgb * uCharTint;
@@ -164,7 +189,30 @@ vec3 outgoingLight = diffuseColor.rgb * uCharTint;
   float lift = 1.0 + 0.035 * max( t, 0.0 );
   // Bayangan nyata (receiveShadow) dari atap/pohon/konter jatuh ke badan & wajah, ekspresi tetap jernih.
   float shadowFactor = mix( uCharShade, 1.0, sunVis );
-  outgoingLight *= shadowFactor * ( 1.0 - g * dark ) * sideK * top * lift * wrap;
+  if ( uHasRelief > 0.5 ) {
+    vec2 rC = texture2D( uReliefMap, cardUv ).rg;
+    float hL = texture2D( uReliefMap, cardUv - vec2( uReliefTexel.x, 0.0 ) ).r;
+    float hR = texture2D( uReliefMap, cardUv + vec2( uReliefTexel.x, 0.0 ) ).r;
+    float hD = texture2D( uReliefMap, cardUv - vec2( 0.0, uReliefTexel.y ) ).r;
+    float hU = texture2D( uReliefMap, cardUv + vec2( 0.0, uReliefTexel.y ) ).r;
+    float dx = ( hL - hR ) * uReliefSlope;
+    float dy = ( hD - hU ) * uReliefSlope;
+    vec3 rN = normalize( dx * vCardRight + dy * vCardUp + vCardFwd );
+    float rNdl = clamp( dot( rN, sunV ) * 0.5 + 0.5, 0.0, 1.0 );
+    float rDark = smoothstep( 0.12, 1.0, 1.0 - rNdl );
+    float rAO = mix( 0.74, 1.0, rC.g );
+    float ndv = clamp( dot( rN, normalize( vCardViewDir ) ), 0.0, 1.0 );
+    float fresnelRim = pow( 1.0 - ndv, 2.3 ) * smoothstep( 0.08, 0.45, rC.r ) * ( 0.35 + 0.65 * clamp( dot( vCardFwd, sunV ) * 0.5 + 0.5, 0.0, 1.0 ) );
+    vec3 rSideK = mix( vec3( 1.0 ), uSideTint, clamp( rDark * 0.42, 0.0, 1.0 ) );
+    float rLight = shadowFactor * mix( 1.0 - g * 0.72, 1.0 + g * 0.24, rNdl ) * rAO * wrap;
+    outgoingLight = outgoingLight * rLight * rSideK + directionalLights[ 0 ].color * ( fresnelRim * 0.20 ) * ( 1.0 - cardUv.y * 0.2 );
+  } else {
+    outgoingLight *= shadowFactor * ( 1.0 - g * dark ) * sideK * top * lift * wrap;
+  }
+  float cardPeak = max( outgoingLight.r, max( outgoingLight.g, outgoingLight.b ) );
+  if ( cardPeak > 0.94 ) {
+    outgoingLight *= 0.94 / cardPeak;
+  }
 #endif
   // Cahaya lokal (<pointLight>/<spotLight>) dengan Reinhard soft-clamp + scalar headroom anti hue-shift & anti over-bloom.
   vec3 rawCardLocal = max( localDirect * uLocalLight, vec3( 0.0 ) );
@@ -176,16 +224,37 @@ vec3 outgoingLight = diffuseColor.rgb * uCharTint;
 }
 `;
 
+export type CardReliefOptions = {
+  map: THREE.Texture | null;
+  texel: readonly [number, number];
+  enabled: boolean;
+  slope?: number;
+};
+
 /**
  * Shading khusus kartu karakter 2,5D (billboard): volume bola/silinder mengikuti arah matahari,
+ * mendukung `uReliefMap` per-piksel 3D normal + contact AO + Fresnel rim light (Atelier v4.0),
  * menerima bayangan nyata (`receiveShadow`) dari dunia 3D, dan merespons lampu lokal dengan Reinhard soft-clamp.
  */
-export function cardShade(material: THREE.MeshLambertMaterial): THREE.MeshLambertMaterial {
+export function cardShade(
+  material: THREE.MeshLambertMaterial,
+  relief?: CardReliefOptions,
+): THREE.MeshLambertMaterial {
   material.emissive.set(0x000000);
   material.emissiveIntensity = 0;
   material.emissiveMap = null;
+  const rUniforms = {
+    uReliefMap: { value: relief?.map ?? null },
+    uReliefTexel: { value: new THREE.Vector2(relief?.texel[0] ?? 1 / 350, relief?.texel[1] ?? 1 / 550) },
+    uHasRelief: { value: relief?.enabled ? 1.0 : 0.0 },
+    uReliefSlope: { value: relief?.slope ?? 2.4 },
+  };
+  material.userData.cardRelief = rUniforms;
   material.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, CHAR, { uLocalLight: TONE.uLocalLight });
+    Object.assign(shader.uniforms, CHAR, { uLocalLight: TONE.uLocalLight }, rUniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', CARD_VERT_DECL)
+      .replace('#include <project_vertex>', CARD_VERT_BODY);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', CARD_DECL)
       .replace('#include <lights_lambert_pars_fragment>', CARD_LAMBERT_PARS)
@@ -195,7 +264,7 @@ export function cardShade(material: THREE.MeshLambertMaterial): THREE.MeshLamber
         CARD_BODY,
       );
   };
-  material.customProgramCacheKey = () => 'atelierCardV3c';
+  material.customProgramCacheKey = () => 'atelierCardV4';
   return material;
 }
 

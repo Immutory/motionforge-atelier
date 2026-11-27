@@ -2,10 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_CREEP,
+  REF_PUSH_CREEP,
   sampleCamera,
   kickOffset,
   moveSettle,
   pullOutReveal,
+  punchIn,
+  craneDive,
+  portalPush,
+  steppedEscalate,
+  swipeTrack,
   orbitArc,
   topDownInsert,
   craneTransition,
@@ -198,4 +204,44 @@ test("path 'dolly': ujung pose tepat, skala bingkai geometris (laju zoom seragam
   const lin: CamKey[] = [keys[0], { ...keys[1], path: undefined }];
   const m = sampleCamera(lin, 20);
   assert.ok(Math.abs(m.pos[2] - (a.pos[2] + b.pos[2]) / 2) < 1e-9 && Math.abs(m.fov - (a.fov + b.fov) / 2) < 1e-9);
+});
+
+test('Atelier v4.5 referensi (1).mp4: REF_PUSH_CREEP, punchIn, craneDive, portalPush, steppedEscalate, swipeTrack, snap15hz & dfov', () => {
+  assert.equal(REF_PUSH_CREEP, 0.0014);
+  const base: CamPose = { pos: [0, 1.5, 6], look: [0, 1.2, 0], fov: 40, roll: 0 };
+
+  // punchIn mendekat logaritmis ke targetLook & settle
+  const pk = punchIn(0, base, [0.2, 1.3, 0], 1.6, 12);
+  assert.ok(distToLook(sampleCamera(pk, 12)) < distToLook(base));
+  assert.deepEqual(sampleCamera(pk, 30).pos, sampleCamera(pk, 12).pos);
+
+  // craneDive turun eksponensial dari aerial tinggi
+  const aerial: CamPose = { pos: [0, 18, 12], look: [0, 0.5, 0], fov: 46, roll: 0 };
+  const diveK = craneDive(0, aerial, base, 40);
+  assert.ok(sampleCamera(diveK, 20).pos[1] < 10 && sampleCamera(diveK, 20).pos[1] > base.pos[1]);
+
+  // portalPush, steppedEscalate, swipeTrack
+  const pp = portalPush(0, base, { pos: [0, 1.4, 2.2], look: [0, 1.3, 0], fov: 36, roll: 0 }, 20, 4);
+  const ppHold = sampleCamera(pp, 4);
+  for (let i = 0; i < 3; i++) {
+    assert.ok(Math.abs(ppHold.pos[i] - base.pos[i]) < 1e-6);
+  }
+  assert.ok(sampleCamera(pp, 24).pos[2] < 2.3);
+
+  const esc = steppedEscalate(0, [base, { ...base, pos: [0, 1.5, 4.5], roll: -1.5 }, { ...base, pos: [0, 1.5, 3.2], roll: 2 }], 10, 6);
+  assert.equal(esc.length, 3);
+  assert.equal(sampleCamera(esc, 16).roll, -1.5);
+
+  const st = swipeTrack(0, pose(-2), pose(2), 4.0, 20);
+  assert.ok(Math.abs(sampleCamera(st, 9).roll - 4.0) < 1e-6);
+  assert.ok(Math.abs(sampleCamera(st, 20).roll) < 1e-6);
+
+  // snap15hz membalik tanda setiap frame dan memancarkan dfov saat fovPunch disetel
+  const k0 = kickOffset([{ frame: 10, strength: 0.1, length: 8, mode: 'snap15hz', fovPunch: -3 }], 10);
+  const k1 = kickOffset([{ frame: 10, strength: 0.1, length: 8, mode: 'snap15hz', fovPunch: -3 }], 11);
+  assert.ok(k0.dx * k1.dx < 0, 'snap15hz harus membalik tanda tiap frame');
+  assert.ok((k0.dfov ?? 0) < 0 && Math.abs((k0.dfov ?? 0) + 3) < 1e-6);
+  const kEnd = kickOffset([{ frame: 10, strength: 0.1, length: 8, mode: 'snap15hz', fovPunch: -3 }], 18);
+  assert.equal(kEnd.dx, 0);
+  assert.equal(kEnd.dfov ?? 0, 0);
 });

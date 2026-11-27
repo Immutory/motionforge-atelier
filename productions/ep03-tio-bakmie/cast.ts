@@ -4,6 +4,7 @@ import {
   clamp,
   lerp,
   lerp3,
+  resolve25DView,
   smootherstep,
   talkGated,
   type ActorPose,
@@ -112,24 +113,10 @@ const yawVec = (deg: number): Vec3 => [Math.sin((deg * Math.PI) / 180), 0, Math.
 /**
  * Pilih `view` + `facing` dari arah hadap dunia tokoh (`forward`) dan posisi kamera:
  * sudut < 35° = front, < 75° = threeQuarter, < 120° = side, sisanya back.
- * `facing` = arah hadap proyeksi di layar (+ kanan, − kiri).
  */
 export function viewFor(pos: Vec3, forward: Vec3, camPos: Vec3): { view: ActorView; facing: number } {
-  const tx = camPos[0] - pos[0];
-  const tz = camPos[2] - pos[2];
-  const tl = Math.hypot(tx, tz) || 1;
-  const fl = Math.hypot(forward[0], forward[2]) || 1;
-  const fx = forward[0] / fl;
-  const fz = forward[2] / fl;
-  const cos = (fx * tx + fz * tz) / tl;
-  const ang = (Math.acos(clamp(cos, -1, 1)) * 180) / Math.PI;
-  // Sumbu kanan layar kamera = cross(arahPandang, up) = (tz, 0, -tx)/tl (arahPandang = -toCam).
-  const side = (fx * tz - fz * tx) / tl; // > 0: hadap ke kanan layar
-  const sign = side >= 0 ? 1 : -1;
-  if (ang < 35) return { view: 'front', facing: clamp(side * 1.6, -0.45, 0.45) };
-  if (ang < 75) return { view: 'threeQuarter', facing: 0.7 * sign };
-  if (ang < 120) return { view: 'side', facing: sign };
-  return { view: 'back', facing: 0.4 * sign };
+  const { view, facing } = resolve25DView(pos, forward, camPos, { fourWayThresholds: [35, 75, 120] });
+  return { view, facing };
 }
 
 // ---------------------------------------------------------------------------------------------

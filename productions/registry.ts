@@ -32,6 +32,10 @@ import {
   kampungUpgradeMeta,
   KampungV2Production,
   kampungV2Meta,
+  Turntable360Production,
+  turntable360Meta,
+  HairSpinProduction,
+  hairSpinMeta,
 } from './charlab';
 import { Ep02BangUtohProduction, ep02BangUtohMeta } from './ep02-bang-utoh';
 import { Ep03TioBakmieProduction, ep03TioBakmieMeta } from './ep03-tio-bakmie';
@@ -54,6 +58,8 @@ export const PRODUCTIONS: RegisteredProduction[] = [
   { meta: shortsThumbsMeta, Component: ShortsThumbnailsProduction },
   { meta: kampungUpgradeMeta, Component: KampungUpgradeProduction },
   { meta: kampungV2Meta, Component: KampungV2Production },
+  { meta: turntable360Meta, Component: Turntable360Production },
+  { meta: hairSpinMeta, Component: HairSpinProduction },
   { meta: setLabMeta, Component: SetLabProduction },
   { meta: charlabMeta, Component: CharlabProduction },
   { meta: nusantaraMeta, Component: NusantaraProduction },

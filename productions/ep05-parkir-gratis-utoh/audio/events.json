@@ -1,30 +1,71 @@
 {
+  "_doc": "Milik sound-designer. EP05 'Parkir Gratis 0 Rupiah, Tapi Keluarnya Bayar 10 Ribu?!' (2700f = 90,00 dtk, loopCutFrame = 2685). Frame SFX diturunkan langsung dari ekspor cast.ts (EP05_*). 22 VO asli pengguna + 1 meong Belang sudah menyatu di voice.wav.",
   "fps": 30,
   "master": {
-    "lufs": -16.0,
+    "lufs": -14.5,
     "true_peak_db": -1.5
   },
+  "loop": {
+    "cutFrame": 2685,
+    "xfade_ms": 15
+  },
   "duck": {
-    "depth_db": -6.0,
-    "pre_ms": 120,
+    "depth_db": -7.5,
+    "pre_ms": 110,
     "post_ms": 180,
-    "smooth_ms": 160
+    "smooth_ms": 150
   },
   "levels": {
-    "music_lu": -12,
-    "ambience_lu": -20
+    "music_lu": -16,
+    "ambience_lu": -24
   },
   "music": {
     "sections": [
-      { "from": 0, "to": 220, "style": "lazy", "gain_db": -4, "fade_in": 2, "fade_out": 8 }
+      {"from": 0,    "to": 160,  "style": "bright", "gain_db": -2, "fade_in": 2,  "fade_out": 8,  "note": "B1 Hook mid-action PLAK kardus"},
+      {"from": 160,  "to": 683,  "style": "lazy",   "gain_db": -2, "fade_in": 8,  "fade_out": 8,  "note": "B2 Setup loophole kalibrasi gravitasi"},
+      {"from": 683,  "to": 1667, "style": "bright", "gain_db": -2, "fade_in": 6,  "fade_out": 8,  "note": "B3 Bang Udin 6RB & B4 Raka freestyle 10RB"},
+      {"from": 1667, "to": 1884, "style": "bright", "gain_db": 0,  "fade_in": 4,  "fade_out": 8,  "note": "B5 Montage kemenangan 80RB & Boss Utoh"},
+      {"from": 1884, "to": 2104, "style": "sepia",  "gain_db": -2, "fade_in": 8,  "fade_out": 2,  "note": "B6 Pak Budi masuk kalem & dorong motor jalan kaki"},
+      {"from": 2104, "to": 2569, "style": "tense",  "gain_db": -1, "fade_in": 2,  "fade_out": 8,  "note": "B6-B7 Shock Utoh, Surat Denda RT 200RB & Total 320RB"},
+      {"from": 2569, "to": 2700, "style": "lazy",   "gain_db": -2, "fade_in": 6,  "fade_out": 12, "note": "B8 Belang cuek & callback seamless loop ke f0"}
     ]
   },
   "ambience": {
     "sections": [
-      { "from": 0, "to": 220, "style": "warkop", "gain_db": -6 }
+      {"from": 0, "to": 2700, "style": "kampung", "gain_db": 0, "fade_in": 0, "fade_out": 0}
     ]
   },
   "events": [
-    { "frame": 90, "sfx": "whoosh", "gain_db": -6 }
+    {"frame": 10,   "sfx": "slap",     "gain_db": -10, "duck": false, "note": "B1 PLAK tempel kardus PARKIR GRATIS (EP05_PLAK_FRAME)"},
+    {"frame": 62,   "sfx": "whoosh",   "gain_db": -17, "params": {"seconds": 0.28}, "note": "B1 lateral storyDolly reveal syarat kecil (EP05_PAN_SYARAT_FROM)"},
+    {"frame": 535,  "sfx": "scribble", "gain_db": -18, "params": {"seconds": 0.75, "seed": 501}, "note": "B2 Ebot menulis TARGET: 120RB"},
+    {"frame": 683,  "sfx": "skid",     "gain_db": -18, "params": {"seconds": 0.28}, "note": "B3 Bang Udin masuk ngebut (EP05_UDIN_FROM)"},
+    {"frame": 888,  "sfx": "thud",     "gain_db": -12, "duck": false, "params": {"seconds": 0.22}, "note": "B3 Udin tapak kaki #1 (EP05_UDIN_TAPS[0])"},
+    {"frame": 904,  "sfx": "thud",     "gain_db": -12, "duck": false, "params": {"seconds": 0.22}, "note": "B3 Udin tapak kaki #2 (EP05_UDIN_TAPS[1])"},
+    {"frame": 920,  "sfx": "thud",     "gain_db": -11, "duck": false, "params": {"seconds": 0.25}, "note": "B3 Udin tapak kaki #3 (EP05_UDIN_TAPS[2])"},
+    {"frame": 959,  "sfx": "scribble", "gain_db": -18, "params": {"seconds": 0.65, "seed": 502}, "note": "B3 Ebot menulis 3x2RB = 6RB"},
+    {"frame": 1090, "sfx": "pop",      "gain_db": -15, "note": "B3 Udin merogoh & bayar 6RB"},
+    {"frame": 1175, "sfx": "skid",     "gain_db": -17, "params": {"seconds": 0.30}, "note": "B4 Raka masuk pamer motor sporty (EP05_RAKA_FROM)"},
+    {"frame": 1332, "sfx": "thud",     "gain_db": -13, "duck": false, "params": {"seconds": 0.18}, "note": "B4 Raka tapak #1 (EP05_RAKA_TAPS[0])"},
+    {"frame": 1346, "sfx": "thud",     "gain_db": -13, "duck": false, "params": {"seconds": 0.18}, "note": "B4 Raka tapak #2 (EP05_RAKA_TAPS[1])"},
+    {"frame": 1360, "sfx": "thud",     "gain_db": -12, "duck": false, "params": {"seconds": 0.18}, "note": "B4 Raka tapak #3 (EP05_RAKA_TAPS[2])"},
+    {"frame": 1374, "sfx": "thud",     "gain_db": -12, "duck": false, "params": {"seconds": 0.18}, "note": "B4 Raka tapak #4 (EP05_RAKA_TAPS[3])"},
+    {"frame": 1388, "sfx": "thud",     "gain_db": -11, "duck": false, "params": {"seconds": 0.22}, "note": "B4 Raka tapak #5 (EP05_RAKA_TAPS[4])"},
+    {"frame": 1466, "sfx": "scribble", "gain_db": -18, "params": {"seconds": 0.70, "seed": 503}, "note": "B4 Ebot menulis 5x2RB = 10RB!"},
+    {"frame": 1578, "sfx": "pop",      "gain_db": -15, "note": "B4 Raka pasrah bayar 10RB"},
+    {"frame": 1667, "sfx": "ding",     "gain_db": -14, "duck": false, "params": {"freq": 1568.0, "seconds": 0.35}, "note": "B5 Papan kapur TERKUMPUL: 80RB! (EP05_TALLY80_FROM)"},
+    {"frame": 1718, "sfx": "swish",    "gain_db": -16, "note": "B5 Heroic push-in Boss Utoh + uang melayang (EP05_UTOH_BOS_FROM)"},
+    {"frame": 1926, "sfx": "step",     "gain_db": -22, "params": {"seconds": 0.10, "seed": 511}, "note": "B6 Langkah tenang Pak Budi dorong motor #1"},
+    {"frame": 1942, "sfx": "step",     "gain_db": -22, "params": {"seconds": 0.10, "seed": 512}, "note": "B6 Langkah tenang Pak Budi dorong motor #2"},
+    {"frame": 1958, "sfx": "step",     "gain_db": -22, "params": {"seconds": 0.10, "seed": 513}, "note": "B6 Langkah tenang Pak Budi dorong motor #3"},
+    {"frame": 1974, "sfx": "step",     "gain_db": -22, "params": {"seconds": 0.10, "seed": 514}, "note": "B6 Langkah tenang Pak Budi dorong motor #4"},
+    {"frame": 1990, "sfx": "step",     "gain_db": -22, "params": {"seconds": 0.10, "seed": 515}, "note": "B6 Langkah tenang Pak Budi dorong motor #5"},
+    {"frame": 2006, "sfx": "step",     "gain_db": -22, "params": {"seconds": 0.10, "seed": 516}, "note": "B6 Langkah tenang Pak Budi dorong motor #6"},
+    {"frame": 2104, "sfx": "slap",     "gain_db": -11, "duck": false, "note": "B6 Utoh shock: Kok didorong jalan kaki?! (EP05_U5_SHOCK_FRAME)"},
+    {"frame": 2328, "sfx": "swish",    "gain_db": -16, "note": "B7 Surat Resmi RT 04 disodorkan (EP05_SURAT_FROM)"},
+    {"frame": 2332, "sfx": "slap",     "gain_db": -10, "duck": false, "note": "B7 Stempel merah DENDA Rp 200.000! (EP05_SURAT_IMPACT)"},
+    {"frame": 2381, "sfx": "scribble", "gain_db": -18, "params": {"seconds": 0.80, "seed": 504}, "note": "B7 Ebot menulis 120RB + 200RB = 320RB!"},
+    {"frame": 2519, "sfx": "slap",     "gain_db": -10, "duck": false, "note": "B7 Utoh shock puncak: 320 ribu?! (EP05_U6_SHOCK_FRAME)"},
+    {"frame": 2569, "sfx": "pop",      "gain_db": -18, "note": "B8 Cut ke Belang tidur cuek (EP05_BELANG_FROM)"}
   ]
 }
