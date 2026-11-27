@@ -14,6 +14,7 @@ import {
 import type { TalkSample } from './lipsync';
 import { drawHandProp, type HandProp, type HandPropOptions } from './props2d';
 import {
+  cylSpan,
   degToRad,
   depthDarkenFactor,
   resolveYawAngle,
@@ -490,9 +491,9 @@ export const CAST_PRESETS: Record<CastPresetId, CharacterSpec> = {
     earDetail: true,
     mouthColor: '#4d1c26',
     tongueColor: '#e27d7b',
-    hairStyle: 'short',
+    hairStyle: 'bald',
     hairColor: '#261c2c',
-    hairHighlight: '#473a52',
+    hairHighlight: '#f7d8bb',
     headgear: 'peci',
     headgearColor: '#231e2f',
     headgearAccent: '#ebb44c',
@@ -2407,6 +2408,87 @@ function drawBackpackMesh(
   }
 }
 
+function draw3DBrimPass(
+  ctx: Ctx,
+  hy: number,
+  pass: 'back' | 'front',
+  outerRx: number,
+  outerY0: number,
+  outerYCos: number,
+  outerRz: number,
+  innerRx: number,
+  innerY0: number,
+  innerYCos: number,
+  innerRz: number,
+  fill: string,
+  ink: string,
+  lw: number,
+  shX: number,
+  shY: number,
+) {
+  const N = 32;
+  const tMin = -0.46 * Math.PI;
+  const tMax = 0.46 * Math.PI;
+  const outerAt = (t: number) =>
+    rotateYaw3D([outerRx * Math.sin(t), outerY0 + outerYCos * Math.cos(t), outerRz * Math.cos(t)], hy);
+  const innerAt = (t: number) =>
+    rotateYaw3D([innerRx * Math.sin(t), innerY0 + innerYCos * Math.cos(t), innerRz * Math.cos(t)], hy);
+
+  // Sisipkan titik potong eksak z = 0 agar perpindahan segmen 'back' (z < 0) <-> 'front' (z >= 0) 100% kontinu!
+  const ts: number[] = [];
+  for (let i = 0; i <= N; i++) {
+    const t = tMin + (i / N) * (tMax - tMin);
+    if (i > 0) {
+      const tPrev = tMin + ((i - 1) / N) * (tMax - tMin);
+      const z0 = (outerAt(tPrev).z + innerAt(tPrev).z) * 0.5;
+      const z1 = (outerAt(t).z + innerAt(t).z) * 0.5;
+      if ((z0 < 0 && z1 > 0) || (z0 > 0 && z1 < 0)) {
+        const frac = -z0 / (z1 - z0);
+        ts.push(tPrev + frac * (t - tPrev));
+      }
+    }
+    ts.push(t);
+  }
+
+  const segs: {
+    o0: { x: number; y: number; z: number };
+    o1: { x: number; y: number; z: number };
+    i0: { x: number; y: number; z: number };
+    i1: { x: number; y: number; z: number };
+    zMid: number;
+  }[] = [];
+  for (let k = 0; k < ts.length - 1; k++) {
+    const o0 = outerAt(ts[k]);
+    const o1 = outerAt(ts[k + 1]);
+    const i0 = innerAt(ts[k]);
+    const i1 = innerAt(ts[k + 1]);
+    segs.push({ o0, o1, i0, i1, zMid: (o0.z + o1.z + i0.z + i1.z) * 0.25 });
+  }
+
+  const keep = pass === 'back' ? (z: number) => z < 0 : (z: number) => z >= 0;
+  let runStart = -1;
+  const flushRun = (a: number, b: number) => {
+    const ribbon = () => {
+      ctx.beginPath();
+      ctx.moveTo(segs[a].o0.x, segs[a].o0.y);
+      for (let i = a; i <= b; i++) ctx.lineTo(segs[i].o1.x, segs[i].o1.y);
+      for (let i = b; i >= a; i--) ctx.lineTo(segs[i].i1.x, segs[i].i1.y);
+      ctx.lineTo(segs[a].i0.x, segs[a].i0.y);
+      ctx.closePath();
+    };
+    inked(ctx, ribbon, fill, ink, lw, shX, shY);
+  };
+  for (let i = 0; i < segs.length; i++) {
+    if (keep(segs[i].zMid)) {
+      if (runStart < 0) runStart = i;
+    } else if (runStart >= 0) {
+      flushRun(runStart, i - 1);
+      runStart = -1;
+    }
+  }
+  if (runStart >= 0) flushRun(runStart, segs.length - 1);
+}
+
 function drawHeadgear(
   ctx: Ctx,
   spec: CharacterSpec,
@@ -2419,6 +2501,7 @@ function drawHeadgear(
   headFacing = 0,
   headYawRad?: number,
   isSide = false,
+  pass: 'back' | 'front' | 'both' = 'both',
 ) {
   const { ink, headgear, headgearColor, headgearAccent } = spec;
   if (headgear === 'none') return;
@@ -2427,23 +2510,28 @@ function drawHeadgear(
   const frontVis = is360 ? Math.cos(hy) : isBack ? -1 : 1;
   const sideSin = is360 ? Math.sin(hy) : Math.max(-1, Math.min(1, headFacing));
   const effBack = is360 ? frontVis < -0.1 : isBack;
+  const drawBack = pass === 'back' || pass === 'both';
+  const drawFront = pass === 'front' || pass === 'both';
 
   const wPop = smoothstepHair(0, 0.35, pop);
   if (headgear === 'peci') {
+    if (!drawFront) return;
     const col = headgearColor ?? '#231e2f';
-    const pw = is360 ? W * 0.505 : Math.max(124, W * 0.495);
+    // Oval 3D dinamis: memanjang alami di profil samping (0.48 -> 0.57) & lipatan tengah terproyeksi kontinu
+    const pw = is360 ? W * (0.48 + 0.09 * sideSin * sideSin) : Math.max(124, W * 0.495);
+    const archTop = is360 ? 20 - 5 * sideSin * sideSin : 20;
+    const archBot = is360 ? 16 - 4 * sideSin * sideSin : 16;
     ctx.save();
     ctx.translate(CX + sideSin * 6, headTop + 26 - pop * 46);
-    // Anti-simetris murni terhadap sideSin + rotasi hatPop kontinu!
     const baseRot = is360 ? sideSin * 0.035 : -0.04;
     ctx.rotate(baseRot * (1 - wPop) + -0.14 * pop * wPop);
     const p = () => {
       ctx.beginPath();
       ctx.moveTo(-pw, 18);
       ctx.lineTo(-pw * 0.88, -76);
-      ctx.quadraticCurveTo(0, -96, pw * 0.88, -76);
+      ctx.quadraticCurveTo(0, -76 - archTop, pw * 0.88, -76);
       ctx.lineTo(pw, 18);
-      ctx.quadraticCurveTo(0, 34, -pw, 18);
+      ctx.quadraticCurveTo(0, 18 + archBot, -pw, 18);
       ctx.closePath();
     };
     const pg = ctx.createLinearGradient(-pw * 0.88, -80, pw * 0.88, 20);
@@ -2451,11 +2539,29 @@ function drawHeadgear(
     pg.addColorStop(0.45, col);
     pg.addColorStop(1, '#161220');
     inked(ctx, p, pg, ink, 5.5, 3, 4.5);
+    if (is360) {
+      // Proyeksi lipatan tengah atas peci mengikuti silinder oval 3D
+      const creaseX = pw * 0.78 * sideSin;
+      const creaseVis = smoothstepHair(-0.15, 0.35, frontVis);
+      if (creaseVis > 0.02) {
+        ctx.save();
+        p();
+        ctx.clip();
+        ctx.globalAlpha *= 0.24 * creaseVis;
+        ctx.strokeStyle = '#7c7398';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(creaseX, -88);
+        ctx.quadraticCurveTo(creaseX * 0.94, -32, creaseX * 0.88, 12);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
     ctx.strokeStyle = headgearAccent ?? '#ebb44c';
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(-pw * 0.93, 10);
-    ctx.quadraticCurveTo(0, 24, pw * 0.93, 10);
+    ctx.quadraticCurveTo(0, 10 + archBot * 0.88, pw * 0.93, 10);
     ctx.stroke();
     ctx.restore();
   } else if (headgear === 'cap') {
@@ -2468,6 +2574,8 @@ function drawHeadgear(
     const brimDir = isBack ? (headFacing >= 0 ? 1 : -1) : Math.abs(headFacing) >= 0.08 ? (headFacing >= 0 ? 1 : -1) : 1;
     const brimColor = col === '#249464' ? '#19704c' : col;
     const cw = is360 ? Math.max(138, W * 0.515) : 140;
+    const brimTipDrop = 18 + 6 * Math.max(0, frontVis);
+
     const drawCapCrown = () => {
       const crown = () => {
         ctx.beginPath();
@@ -2478,38 +2586,39 @@ function drawHeadgear(
         ctx.closePath();
       };
       inked(ctx, crown, col, ink, 5.5, 3.5, 4.5);
-      // Panel putih depan menyusut mulus sampai 0 (nol pop di ±95.7°!)
-      const panelVis = is360 ? smoothstepHair(-0.12, 0.42, frontVis) : frontVis > -0.1 ? 1 : 0;
-      if (panelVis > 0.02) {
-        const panelX = is360 ? cw * 0.72 * sideSin : Math.abs(headFacing) < 0.08 && !isSide ? 0 : 26 * brimDir;
-        const panelRx = is360 ? 68 * panelVis : 68;
-        ctx.save();
-        crown();
-        ctx.clip();
-        ctx.fillStyle = front;
-        ctx.beginPath();
-        ctx.ellipse(panelX, -24, panelRx, 72, 0, 0, TAU);
-        ctx.fill();
-        ctx.strokeStyle = ink;
-        ctx.lineWidth = 4;
-        ctx.stroke();
-        ctx.restore();
-      }
-      // Tali pengatur belakang muncul mulai 115°–145° agar tidak bertabrakan dengan paruh depan
+      // Panel putih depan silindris sejati via cylSpan (melengkung & menyusut tepat ke 0 px di tepi siluet!)
       if (is360) {
-        const strapVis = smoothstepHair(-0.42, -0.82, frontVis);
-        if (strapVis > 0.02) {
-          const sx = -sideSin * cw * 0.52;
-          const sw = 78 * strapVis;
+        const panelSpan = cylSpan(hy, -0.58, 0.58, cw);
+        if (panelSpan !== null) {
           ctx.save();
           crown();
           ctx.clip();
-          ctx.globalAlpha *= smoothstepHair(0.02, 0.28, strapVis);
+          ctx.fillStyle = front;
+          const pw = panelSpan.x1 - panelSpan.x0;
+          ctx.beginPath();
+          ctx.moveTo(panelSpan.x0, 26);
+          ctx.bezierCurveTo(panelSpan.x0 - pw * 0.06, -42, panelSpan.x0 + pw * 0.16, -84, panelSpan.midX, -86);
+          ctx.bezierCurveTo(panelSpan.x1 - pw * 0.16, -84, panelSpan.x1 + pw * 0.06, -42, panelSpan.x1, 26);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = ink;
+          ctx.lineWidth = 4;
+          ctx.stroke();
+          ctx.restore();
+        }
+        // Tali pengatur belakang silindris sejati via cylSpan(hy + PI)
+        const strapSpan = cylSpan(hy + Math.PI, -0.44, 0.44, cw);
+        if (strapSpan !== null && strapSpan.x1 - strapSpan.x0 > 6) {
+          const sw = strapSpan.x1 - strapSpan.x0;
+          ctx.save();
+          crown();
+          ctx.clip();
+          ctx.globalAlpha *= smoothstepHair(0.05, 0.35, strapSpan.vis);
           inked(
             ctx,
             () => {
               ctx.beginPath();
-              ctx.roundRect(sx - sw * 0.5, -4, sw, 18, 9);
+              ctx.roundRect(strapSpan.x0, -4, sw, 18, Math.min(9, sw * 0.45));
             },
             brimColor,
             ink,
@@ -2519,77 +2628,62 @@ function drawHeadgear(
           );
           ctx.restore();
         }
+      } else if (frontVis > -0.1) {
+        const panelX = Math.abs(headFacing) < 0.08 && !isSide ? 0 : 26 * brimDir;
+        ctx.save();
+        crown();
+        ctx.clip();
+        ctx.fillStyle = front;
+        ctx.beginPath();
+        ctx.ellipse(panelX, -24, 68, 72, 0, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.restore();
       }
       inked(ctx, () => { ctx.beginPath(); ctx.arc(0, -88, 12, 0, TAU); }, '#f2c144', ink, 4, 1.5, 2);
     };
-    const drawCapBrim = () => {
-      if (is360) {
-        // Jangkauan Z paruh topi proporsional (162) & ketebalan vertikal 15 px agar kokoh di profil (bukan jarum 6 px!)
-        const N = 16;
-        const brimTipDrop = 18 + 6 * Math.max(0, frontVis);
-        const brim = () => {
-          ctx.beginPath();
-          for (let i = 0; i <= N; i++) {
-            const t = -0.46 * Math.PI + (i / N) * (0.92 * Math.PI);
-            const p = rotateYaw3D([102 * Math.sin(t), 12 + brimTipDrop * Math.cos(t), 162 * Math.cos(t)], hy);
-            if (i === 0) ctx.moveTo(p.x, p.y);
-            else ctx.lineTo(p.x, p.y);
-          }
-          for (let i = N; i >= 0; i--) {
-            const t = -0.46 * Math.PI + (i / N) * (0.92 * Math.PI);
-            const p = rotateYaw3D([98 * Math.sin(t), -3 + 4 * Math.cos(t), 96 * Math.cos(t)], hy);
-            ctx.lineTo(p.x, p.y);
-          }
-          ctx.closePath();
-        };
-        inked(ctx, brim, brimColor, ink, 5, 2.5, 3.5);
-      } else if (isBack && !isBack34) {
-        inked(
-          ctx,
-          () => {
-            ctx.beginPath();
-            ctx.roundRect(-42, -10, 84, 20, 10);
-          },
-          brimColor,
-          ink,
-          4,
-          1.5,
-          2,
-        );
-      } else if (!isBack && !isSide && Math.abs(headFacing) < 0.08) {
-        const brim = () => {
-          ctx.beginPath();
-          ctx.moveTo(-108, 8);
-          ctx.quadraticCurveTo(0, 42, 108, 8);
-          ctx.quadraticCurveTo(0, 18, -108, 8);
-          ctx.closePath();
-        };
-        inked(ctx, brim, brimColor, ink, 5, 2.5, 3.5);
-      } else {
-        const brim = () => {
-          ctx.beginPath();
-          ctx.moveTo(brimDir * 116, 2);
-          ctx.quadraticCurveTo(brimDir * 204, 10, brimDir * 194, 26);
-          ctx.quadraticCurveTo(brimDir * 148, 32, brimDir * 92, 18);
-          ctx.closePath();
-        };
-        inked(ctx, brim, brimColor, ink, 5, 2.5, 3.5);
-      }
-    };
+
     if (is360) {
-      if (frontVis < 0) {
-        drawCapBrim();
-        drawCapCrown();
-      } else {
-        drawCapCrown();
-        drawCapBrim();
+      if (drawBack) {
+        draw3DBrimPass(ctx, hy, 'back', 102, 12, brimTipDrop, 162, 98, -3, 4, 96, brimColor, ink, 5, 2.5, 3.5);
       }
-    } else if (!isBack) {
-      drawCapCrown();
-      drawCapBrim();
-    } else {
-      drawCapBrim();
-      drawCapCrown();
+      if (drawFront) {
+        drawCapCrown();
+        draw3DBrimPass(ctx, hy, 'front', 102, 12, brimTipDrop, 162, 98, -3, 4, 96, brimColor, ink, 5, 2.5, 3.5);
+      }
+    } else if (drawFront) {
+      const drawLegacyBrim = () => {
+        if (isBack && !isBack34) {
+          inked(ctx, () => { ctx.beginPath(); ctx.roundRect(-42, -10, 84, 20, 10); }, brimColor, ink, 4, 1.5, 2);
+        } else if (!isBack && !isSide && Math.abs(headFacing) < 0.08) {
+          const brim = () => {
+            ctx.beginPath();
+            ctx.moveTo(-108, 8);
+            ctx.quadraticCurveTo(0, 42, 108, 8);
+            ctx.quadraticCurveTo(0, 18, -108, 8);
+            ctx.closePath();
+          };
+          inked(ctx, brim, brimColor, ink, 5, 2.5, 3.5);
+        } else {
+          const brim = () => {
+            ctx.beginPath();
+            ctx.moveTo(brimDir * 116, 2);
+            ctx.quadraticCurveTo(brimDir * 204, 10, brimDir * 194, 26);
+            ctx.quadraticCurveTo(brimDir * 148, 32, brimDir * 92, 18);
+            ctx.closePath();
+          };
+          inked(ctx, brim, brimColor, ink, 5, 2.5, 3.5);
+        }
+      };
+      if (!isBack) {
+        drawCapCrown();
+        drawLegacyBrim();
+      } else {
+        drawLegacyBrim();
+        drawCapCrown();
+      }
     }
     ctx.restore();
   } else if (headgear === 'iket') {
@@ -2598,57 +2692,113 @@ function drawHeadgear(
     ctx.save();
     ctx.translate(0, -pop * 18);
     const legDir = headFacing >= 0 ? 1 : -1;
-    const bw = is360 ? W * 0.505 : W * 0.52;
-    const band = () => {
-      ctx.beginPath();
-      ctx.moveTo(CX - bw, headTop + 42);
-      ctx.quadraticCurveTo(CX, headTop + 16, CX + bw, headTop + 40);
-      ctx.lineTo(CX + bw * 0.96, headTop - 2);
-      ctx.quadraticCurveTo(CX, headTop - 22, CX - bw * 0.96, headTop);
-      ctx.closePath();
-    };
-    // Sayap segitiga iket 3D dengan kedalaman Z nyata (`-58, -24, +14`) agar tetap terbaca sebagai lipatan kain segitiga di semua sudut (tidak menciut jadi tongkat di 72°–92°!)
-    const wA = is360 ? rotateYaw3D([46, headTop + 8, -58], hy) : { x: legDir * 38, y: headTop + 8, z: 0 };
-    const wB = is360 ? rotateYaw3D([110, headTop - 50, -24], hy) : { x: legDir * 110, y: headTop - 50, z: 0 };
-    const wC = is360 ? rotateYaw3D([110, headTop + 16, 14], hy) : { x: legDir * 116, y: headTop + 16, z: 0 };
+    const bw = is360 ? W * (0.495 + 0.03 * sideSin * sideSin) : W * 0.52;
+    // Jangkar pangkal sayap tepat pada radius silinder pita (rBand) agar selalu menempel rapat di 0°, 89°, 111°, & 180°!
+    const rBand = bw * 0.96;
+    const wA = is360 ? rotateYaw3D([rBand * Math.sin(0.46), headTop + 6, -rBand * Math.cos(0.46)], hy) : { x: legDir * 38, y: headTop + 8, z: 0 };
+    const wB = is360 ? rotateYaw3D([rBand * 1.18 * Math.sin(0.84), headTop - 52, -rBand * 0.55 * Math.cos(0.84)], hy) : { x: legDir * 110, y: headTop - 50, z: 0 };
+    const wC = is360 ? rotateYaw3D([rBand * Math.sin(1.12), headTop + 16, -rBand * Math.cos(1.12)], hy) : { x: legDir * 116, y: headTop + 16, z: 0 };
     const wingMidZ = (wA.z + wB.z + wC.z) / 3;
     const drawWing = () => {
+      const wingScale = is360 ? 0.9 + 0.1 * smoothstepHair(-90, 90, wingMidZ) : 1;
+      const cxW = (wA.x + wB.x + wC.x) / 3;
+      const cyW = (wA.y + wB.y + wC.y) / 3;
       const wing = () => {
         ctx.beginPath();
-        ctx.moveTo(CX + wA.x, wA.y);
-        ctx.lineTo(CX + wB.x, wB.y);
-        ctx.lineTo(CX + wC.x, wC.y);
+        ctx.moveTo(CX + cxW + (wA.x - cxW) * wingScale, cyW + (wA.y - cyW) * wingScale);
+        ctx.lineTo(CX + cxW + (wB.x - cxW) * wingScale, cyW + (wB.y - cyW) * wingScale);
+        ctx.lineTo(CX + cxW + (wC.x - cxW) * wingScale, cyW + (wC.y - cyW) * wingScale);
         ctx.closePath();
       };
       inked(ctx, wing, col, ink, 5, 2.5, 3.5);
     };
-    if (!is360 || wingMidZ < 0) drawWing();
-    inked(ctx, band, col, ink, 5.5, 3, 4.5);
-    ctx.save();
-    band();
-    ctx.clip();
-    // Periodik 2π terkuantisasi (13 siklus × 32 px = 416 px) agar chevron tidak loncat di ±180°!
-    const iScroll = is360 ? ((((hy / TAU) * 13 * 32) % 32) + 32) % 32 : 0;
-    ctx.strokeStyle = gold;
-    ctx.lineWidth = 4.5;
-    ctx.beginPath();
-    for (let x = CX - 160 + iScroll; x <= CX + 160; x += 32) {
-      ctx.moveTo(x, headTop - 16);
-      ctx.lineTo(x + 16, headTop + 16);
-      ctx.lineTo(x, headTop + 44);
-    }
-    ctx.stroke();
-    ctx.restore();
-    if (is360 && wingMidZ >= 0) drawWing();
-    // Simpul depan menyusut mulus sampai 0 (nol pop di ±84.3°!)
-    const knotVis = is360 ? smoothstepHair(0, 0.3, frontVis) : frontVis > 0.1 ? 1 : 0;
-    if (knotVis > 0.02) {
-      const knotX = is360 ? CX + 12 * Math.max(0, frontVis) + W * 0.42 * sideSin : CX + 22 * legDir;
-      const knotW = is360 ? 34 * knotVis : 36;
+
+    if (is360) {
+      if (drawBack && wingMidZ < 0) drawWing();
+      if (drawFront) {
+        const band = () => {
+          ctx.beginPath();
+          ctx.moveTo(CX - bw, headTop + 42);
+          ctx.quadraticCurveTo(CX, headTop + 16, CX + bw, headTop + 40);
+          ctx.lineTo(CX + bw * 0.96, headTop - 2);
+          ctx.quadraticCurveTo(CX, headTop - 22, CX - bw * 0.96, headTop);
+          ctx.closePath();
+        };
+        inked(ctx, band, col, ink, 5.5, 3, 4.5);
+        ctx.save();
+        band();
+        ctx.clip();
+        // Motif chevron diproyeksikan ke permukaan silinder via sudut azimut (menyempit perspektif di tepi siluet!)
+        const chevCount = 14;
+        const stepAng = TAU / chevCount;
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 4.5;
+        ctx.beginPath();
+        for (let k = 0; k < chevCount; k++) {
+          const a0 = k * stepAng;
+          const aMid = a0 + stepAng * 0.5;
+          const p0 = surfacePoint3D(CX, headTop, bw, bw, a0, hy);
+          const pm = surfacePoint3D(CX, headTop, bw, bw, aMid, hy);
+          if (p0.vis > -0.15 || pm.vis > -0.15) {
+            const sag0 = 14 * (1 - p0.nx * p0.nx);
+            const sagM = 14 * (1 - pm.nx * pm.nx);
+            ctx.moveTo(p0.x, headTop - 16 + sag0 * 0.4);
+            ctx.lineTo(pm.x, headTop + 16 - sagM * 0.2);
+            ctx.lineTo(p0.x, headTop + 44 - sag0 * 0.3);
+          }
+        }
+        ctx.stroke();
+        ctx.restore();
+        if (wingMidZ >= 0) drawWing();
+        // Simpul depan silindris via cylSpan (menyusut mulus sampai 0 px!)
+        const knotSpan = cylSpan(hy, -0.18, 0.18, bw * 0.92);
+        if (knotSpan !== null && knotSpan.x1 - knotSpan.x0 > 3) {
+          const kw = knotSpan.x1 - knotSpan.x0;
+          ctx.save();
+          ctx.globalAlpha *= smoothstepHair(0.05, 0.3, knotSpan.vis);
+          inked(
+            ctx,
+            () => {
+              ctx.beginPath();
+              ctx.roundRect(CX + knotSpan.x0, headTop - 4, kw, 38, Math.min(11, kw * 0.45));
+            },
+            '#b8373d',
+            ink,
+            4.5,
+            2,
+            3,
+          );
+          ctx.restore();
+        }
+      }
+    } else if (drawFront) {
+      drawWing();
+      const band = () => {
+        ctx.beginPath();
+        ctx.moveTo(CX - bw, headTop + 42);
+        ctx.quadraticCurveTo(CX, headTop + 16, CX + bw, headTop + 40);
+        ctx.lineTo(CX + bw * 0.96, headTop - 2);
+        ctx.quadraticCurveTo(CX, headTop - 22, CX - bw * 0.96, headTop);
+        ctx.closePath();
+      };
+      inked(ctx, band, col, ink, 5.5, 3, 4.5);
       ctx.save();
-      if (knotVis < 0.999) ctx.globalAlpha *= smoothstepHair(0.02, 0.28, knotVis);
-      inked(ctx, () => { ctx.beginPath(); ctx.roundRect(knotX - knotW / 2, headTop - 4, knotW, 38, 11); }, '#b8373d', ink, 4.5, 2, 3);
+      band();
+      ctx.clip();
+      ctx.strokeStyle = gold;
+      ctx.lineWidth = 4.5;
+      ctx.beginPath();
+      for (let x = CX - 160; x <= CX + 160; x += 32) {
+        ctx.moveTo(x, headTop - 16);
+        ctx.lineTo(x + 16, headTop + 16);
+        ctx.lineTo(x, headTop + 44);
+      }
+      ctx.stroke();
       ctx.restore();
+      if (frontVis > 0.1) {
+        const knotX = CX + 22 * legDir;
+        inked(ctx, () => { ctx.beginPath(); ctx.roundRect(knotX - 18, headTop - 4, 36, 38, 11); }, '#b8373d', ink, 4.5, 2, 3);
+      }
     }
     ctx.restore();
   } else if (headgear === 'helmet') {
@@ -2657,116 +2807,133 @@ function drawHeadgear(
     ctx.save();
     ctx.translate(CX, cy - pop * 36);
     ctx.rotate(-0.1 * pop * wPop);
-    const openRatio360 = is360 ? smoothstepHair(-0.55, 0.35, frontVis) : 1;
-    const helmWL = is360 ? 142 - 28 * smoothstepHair(0.25, 0.95, -sideSin) * openRatio360 : 142;
-    const helmWR = is360 ? 142 - 28 * smoothstepHair(0.25, 0.95, sideSin) * openRatio360 : 142;
-    const helm = () => {
+
+    const helmRx = 144;
+    // Batok bawah helm naik rapi di sekitar pipi (y=36) saat tampak depan/samping & turun penuh menutupi tengkuk (y=128) di tampak belakang!
+    const backDrop = is360 ? 36 + 92 * smoothstepHair(0.25, -0.58, frontVis) : 130;
+    const helmOuter = () => {
       ctx.beginPath();
-      if (is360) {
-        // Satu kontur batok helm 3D kontinu: puncak lengkung bukaan wajah `cutApexY` turun mulus dari `-76` ke `130`
-        // saat `openRatio360 → 0` -> MENGHAPUS total celah V lancip di ±111°–115.5° & loncatan sudut ±17.5°!
-        const backCurve = smoothstepHair(0.25, -0.55, frontVis);
-        const sideBackL = smoothstepHair(0.32, 0.92, sideSin) * (1 - backCurve) + backCurve;
-        const sideBackR = smoothstepHair(0.32, 0.92, -sideSin) * (1 - backCurve) + backCurve;
-        const dropL = 34 + 68 * sideBackL - 24 * smoothstepHair(0.35, 0.95, -sideSin) * openRatio360;
-        const dropR = 34 + 68 * sideBackR - 24 * smoothstepHair(0.35, 0.95, sideSin) * openRatio360;
-        ctx.moveTo(-helmWL, dropL);
-        ctx.bezierCurveTo(-helmWL - 12, -76, -88, -152, 0, -150);
-        ctx.bezierCurveTo(92, -152, helmWR + 12, -76, helmWR, dropR);
-
-        const rimX = sideSin * 108 * openRatio360;
-        const rimHalf = 116 * openRatio360;
-        const wR = smoothstepHair(0.12, 0.52, sideSin) * openRatio360;
-        const wL = smoothstepHair(0.12, 0.52, -sideSin) * openRatio360;
-        const baseRxR = Math.min(helmWR - 8, rimX + rimHalf);
-        const baseRxL = Math.max(-helmWL + 8, rimX - rimHalf);
-        const rxR = (baseRxR * (1 - wR) + helmWR * wR) * openRatio360 + 96 * (1 - openRatio360);
-        const rxL = (baseRxL * (1 - wL) + -helmWL * wL) * openRatio360 + -96 * (1 - openRatio360);
-        const cutBaseY = 26 + 84 * (1 - openRatio360);
-        const cutYR = (cutBaseY * (1 - wR) + dropR * wR) * openRatio360 + 118 * (1 - openRatio360);
-        const cutYL = (cutBaseY * (1 - wL) + dropL * wL) * openRatio360 + 118 * (1 - openRatio360);
-        const cutApexY = 130 * (1 - openRatio360) + -76 * openRatio360;
-        const cutCtrlY = 130 * (1 - openRatio360) + -44 * openRatio360;
-        const apexX = rimX * (1 - openRatio360 * 0.25);
-
-        ctx.quadraticCurveTo((helmWR + rxR) * 0.5, Math.max(dropR, cutYR) + 10 * openRatio360, rxR, cutYR);
-        ctx.bezierCurveTo(rxR, cutCtrlY, apexX + (rxR - apexX) * 0.58, cutApexY, apexX, cutApexY);
-        ctx.bezierCurveTo(apexX - (apexX - rxL) * 0.58, cutApexY, rxL, cutCtrlY, rxL, cutYL);
-        ctx.quadraticCurveTo((-helmWL + rxL) * 0.5, Math.max(dropL, cutYL) + 10 * openRatio360, -helmWL, dropL);
-        ctx.closePath();
-      } else if (isBack && !isBack34) {
-        ctx.arc(0, -14, 148, 0, TAU);
-      } else if (isBack34 || isSide) {
-        const bDir = headFacing >= 0 ? 1 : -1;
-        const openEdge = isSide ? 86 : 116;
-        ctx.moveTo(bDir * openEdge, 62);
-        ctx.quadraticCurveTo(bDir * (openEdge - 22), 4, bDir * (openEdge + 8), -42);
-        ctx.bezierCurveTo(bDir * 136, -124, bDir * 52, -162, 0, -162);
-        ctx.bezierCurveTo(-bDir * 96, -162, -bDir * 156, -86, -bDir * 148, 8);
-        ctx.bezierCurveTo(-bDir * 142, 98, -bDir * 64, 134, 0, 134);
-        ctx.bezierCurveTo(bDir * 52, 134, bDir * 96, 108, bDir * openEdge, 62);
-        ctx.closePath();
-      } else {
-        ctx.moveTo(-144, 34);
-        ctx.bezierCurveTo(-158, -74, -92, -152, 0, -150);
-        ctx.bezierCurveTo(96, -152, 158, -74, 144, 34);
-        ctx.lineTo(122, 26);
-        ctx.bezierCurveTo(128, -42, 92, -76, 0, -76);
-        ctx.bezierCurveTo(-92, -76, -128, -42, -122, 26);
-        ctx.closePath();
-      }
+      ctx.moveTo(-helmRx, 28);
+      ctx.bezierCurveTo(-helmRx - 10, -76, -88, -152, 0, -150);
+      ctx.bezierCurveTo(88, -152, helmRx + 10, -76, helmRx, 28);
+      ctx.bezierCurveTo(helmRx - 8, 28 + (backDrop - 28) * 0.68, 72, backDrop, 0, backDrop);
+      ctx.bezierCurveTo(-72, backDrop, -helmRx + 8, 28 + (backDrop - 28) * 0.68, -helmRx, 28);
+      ctx.closePath();
     };
     const hg = ctx.createLinearGradient(-140, -150, 140, 30);
     hg.addColorStop(0, '#23c266');
     hg.addColorStop(0.55, col);
     hg.addColorStop(1, '#128243');
-    inked(ctx, helm, hg, ink, 5.5, 3.5, 5);
-    ctx.save();
-    helm();
-    ctx.clip();
-    ctx.fillStyle = dark;
+
     if (is360) {
-      // Pita meridian 3D sejati (khusus belahan menghadap kamera p.z >= -12 agar tidak pernah self-intersect / pecah di 0° atau 180°)
-      const SN = 36;
-      const stripeR = 148;
-      ctx.save();
-      ctx.strokeStyle = dark;
-      ctx.lineWidth = 36;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      let penDown = false;
-      for (let i = 0; i <= SN; i++) {
-        const t = -0.35 * Math.PI + (i / SN) * (1.7 * Math.PI);
-        const p = rotateYaw3D([0, -stripeR * Math.sin(t), stripeR * Math.cos(t)], hy);
-        if (p.z >= -12) {
-          if (!penDown) {
-            ctx.moveTo(p.x, p.y);
-            penDown = true;
-          } else {
-            ctx.lineTo(p.x, p.y);
-          }
-        } else {
-          penDown = false;
-        }
+      if (drawBack) {
+        // Cangkang belakang helm solid simetris (digambar di belakang kepala/wajah)
+        inked(ctx, helmOuter, hg, ink, 5.5, 3.5, 5);
       }
-      ctx.stroke();
-      ctx.restore();
-    } else {
-      ctx.fillRect(-18, -160, 36, effBack ? 320 : 95);
-    }
-    ctx.fillStyle = 'rgba(255,255,255,0.34)';
-    ctx.beginPath();
-    ctx.ellipse(-62, -106, 32, 14, -0.45, 0, TAU);
-    ctx.fill();
-    ctx.restore();
-    // Visor 3D melengkung sejati memeluk dahi helm (bukan persegi terjepit jadi irisan tipis di 72°–92°!)
-    const visorAlpha = is360 ? smoothstepHair(-0.18, 0.14, frontVis) : frontVis > -0.15 ? 1 : 0;
-    if (visorAlpha > 0.02) {
-      ctx.save();
-      if (visorAlpha < 0.999) ctx.globalAlpha *= visorAlpha;
-      const visor = () => {
-        if (is360) {
+      if (drawFront) {
+        // Bukaan wajah dihitung langsung dari proyeksi silinder cylSpan (simetri cermin kiri-kanan 100% presisi!)
+        const openSpan = cylSpan(hy, -1.12, 1.12, 134);
+        const traceHelmetFrontShell = () => {
+          helmOuter();
+          if (openSpan !== null && openSpan.x1 - openSpan.x0 > 3) {
+            const ox0 = openSpan.x0;
+            const ox1 = openSpan.x1;
+            const omid = openSpan.midX;
+            const browY = -74 + 14 * (1 - openSpan.vis);
+            const jawY = 146;
+            // Winding berlawanan arah (CCW) agar 'evenodd' / nonzero memotong bukaan wajah bersih di tengah cangkang!
+            ctx.moveTo(ox0, jawY);
+            ctx.lineTo(ox0, 18);
+            ctx.bezierCurveTo(ox0, browY + 28, ox0 + (omid - ox0) * 0.45, browY, omid, browY);
+            ctx.bezierCurveTo(ox1 - (ox1 - omid) * 0.45, browY, ox1, browY + 28, ox1, 18);
+            ctx.lineTo(ox1, jawY);
+            ctx.closePath();
+          }
+        };
+
+        ctx.save();
+        helmOuter();
+        ctx.clip();
+        ctx.fillStyle = hg;
+        traceHelmetFrontShell();
+        ctx.fill('evenodd');
+        ctx.clip('evenodd');
+
+        // Pita meridian 3D (stripeR = 136 < helmRx = 144 & p.z >= -24 agar selalu terlihat utuh di 0°, 89°, 111°, & 180°!)
+        const SN = 36;
+        const stripeR = 136;
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 36;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        let penDown = false;
+        for (let i = 0; i <= SN; i++) {
+          const t = -0.35 * Math.PI + (i / SN) * (1.7 * Math.PI);
+          const p = rotateYaw3D([0, -stripeR * Math.sin(t), stripeR * Math.cos(t)], hy);
+          if (p.z >= -24) {
+            if (!penDown) {
+              ctx.moveTo(p.x, p.y);
+              penDown = true;
+            } else {
+              ctx.lineTo(p.x, p.y);
+            }
+          } else {
+            penDown = false;
+          }
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.34)';
+        ctx.beginPath();
+        ctx.ellipse(-62, -106, 32, 14, -0.45, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+
+        // Outline luar helm + rim bukaan wajah simetris
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 5.5;
+        if (openSpan !== null && openSpan.x1 - openSpan.x0 > 3) {
+          const ox0 = openSpan.x0;
+          const ox1 = openSpan.x1;
+          const omid = openSpan.midX;
+          const browY = -74 + 14 * (1 - openSpan.vis);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(-148, -152, 296, 292);
+          ctx.moveTo(ox0, 140);
+          ctx.lineTo(ox0, 18);
+          ctx.bezierCurveTo(ox0, browY + 28, ox0 + (omid - ox0) * 0.45, browY, omid, browY);
+          ctx.bezierCurveTo(ox1 - (ox1 - omid) * 0.45, browY, ox1, browY + 28, ox1, 18);
+          ctx.lineTo(ox1, 140);
+          ctx.closePath();
+          ctx.clip('evenodd');
+          helmOuter();
+          ctx.stroke();
+          ctx.restore();
+
+          // Rim lengkung dahi bukaan wajah
+          ctx.save();
+          helmOuter();
+          ctx.clip();
+          ctx.beginPath();
+          ctx.moveTo(ox0, 134);
+          ctx.lineTo(ox0, 18);
+          ctx.bezierCurveTo(ox0, browY + 28, ox0 + (omid - ox0) * 0.45, browY, omid, browY);
+          ctx.bezierCurveTo(ox1 - (ox1 - omid) * 0.45, browY, ox1, browY + 28, ox1, 18);
+          ctx.lineTo(ox1, 134);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          helmOuter();
+          ctx.stroke();
+        }
+
+        // Visor 3D melengkung sejati memeluk dahi helm
+        const visorAlpha = smoothstepHair(-0.18, 0.14, frontVis);
+        if (visorAlpha > 0.02) {
+          ctx.save();
+          if (visorAlpha < 0.999) ctx.globalAlpha *= visorAlpha;
           const VN = 18;
           const vR = 132;
           const ptsBot: { x: number; y: number }[] = [];
@@ -2776,58 +2943,95 @@ function drawHeadgear(
             const pb = rotateYaw3D([vR * Math.sin(t), -34 - 16 * Math.cos(t), vR * Math.cos(t)], hy);
             const pt = rotateYaw3D([vR * 0.88 * Math.sin(t), -94 - 14 * Math.cos(t), vR * 0.88 * Math.cos(t)], hy);
             if (pb.z > -16) {
-              ptsBot.push({ x: Math.max(-helmWL * 0.88, Math.min(helmWR * 0.88, pb.x)), y: pb.y });
-              ptsTop.push({ x: Math.max(-helmWL * 0.82, Math.min(helmWR * 0.82, pt.x)), y: pt.y });
+              ptsBot.push({ x: Math.max(-helmRx * 0.9, Math.min(helmRx * 0.9, pb.x)), y: pb.y });
+              ptsTop.push({ x: Math.max(-helmRx * 0.84, Math.min(helmRx * 0.84, pt.x)), y: pt.y });
             }
           }
-          ctx.beginPath();
           if (ptsBot.length >= 2) {
+            ctx.beginPath();
             ctx.moveTo(ptsBot[0].x, ptsBot[0].y);
             for (let i = 1; i < ptsBot.length; i++) ctx.lineTo(ptsBot[i].x, ptsBot[i].y);
             for (let i = ptsTop.length - 1; i >= 0; i--) ctx.lineTo(ptsTop[i].x, ptsTop[i].y);
             ctx.closePath();
+            ctx.fillStyle = 'rgba(135, 206, 250, 0.45)';
+            ctx.fill();
+            ctx.strokeStyle = ink;
+            ctx.lineWidth = 4.5;
+            ctx.stroke();
           }
+          ctx.restore();
+        }
+
+        for (const s of [-1, 1] as const) {
+          const rv = rotateYaw3D([s * 126, -24, 22], hy);
+          const rvVis = smoothstepHair(-28, 12, rv.z);
+          if (rvVis > 0.04) {
+            const rxClamp = Math.max(-helmRx + 4, Math.min(helmRx - 4, rv.x));
+            ctx.save();
+            ctx.globalAlpha *= rvVis;
+            inked(ctx, () => { ctx.beginPath(); ctx.ellipse(rxClamp, -26, 10 * rvVis, 10, 0, 0, TAU); }, dark, ink, 3.5, 1, 2);
+            ctx.restore();
+          }
+        }
+      }
+    } else if (drawFront) {
+      const helm = () => {
+        ctx.beginPath();
+        if (isBack && !isBack34) {
+          ctx.arc(0, -14, 148, 0, TAU);
+        } else if (isBack34 || isSide) {
+          const bDir = headFacing >= 0 ? 1 : -1;
+          const openEdge = isSide ? 86 : 116;
+          ctx.moveTo(bDir * openEdge, 62);
+          ctx.quadraticCurveTo(bDir * (openEdge - 22), 4, bDir * (openEdge + 8), -42);
+          ctx.bezierCurveTo(bDir * 136, -124, bDir * 52, -162, 0, -162);
+          ctx.bezierCurveTo(-bDir * 96, -162, -bDir * 156, -86, -bDir * 148, 8);
+          ctx.bezierCurveTo(-bDir * 142, 98, -bDir * 64, 134, 0, 134);
+          ctx.bezierCurveTo(bDir * 52, 134, bDir * 96, 108, bDir * openEdge, 62);
+          ctx.closePath();
         } else {
-          const vxShift = isSide ? (headFacing >= 0 ? 1 : -1) * 56 : headFacing * 24;
-          const vwScale = isSide ? 0.56 : 0.88;
-          const vLeft = vxShift - 132 * vwScale;
-          const vRight = vxShift + 132 * vwScale;
-          const vMid = (vLeft + vRight) * 0.5;
-          ctx.beginPath();
-          ctx.moveTo(vLeft, -34);
-          ctx.quadraticCurveTo(vMid, -54, vRight, -34);
-          ctx.quadraticCurveTo(vRight, -72, vRight - 18 * vwScale, -94);
-          ctx.quadraticCurveTo(vMid, -110, vLeft + 18 * vwScale, -94);
-          ctx.quadraticCurveTo(vLeft, -72, vLeft, -34);
+          ctx.moveTo(-144, 34);
+          ctx.bezierCurveTo(-158, -74, -92, -152, 0, -150);
+          ctx.bezierCurveTo(96, -152, 158, -74, 144, 34);
+          ctx.lineTo(122, 26);
+          ctx.bezierCurveTo(128, -42, 92, -76, 0, -76);
+          ctx.bezierCurveTo(-92, -76, -128, -42, -122, 26);
           ctx.closePath();
         }
       };
-      ctx.fillStyle = 'rgba(135, 206, 250, 0.45)';
-      visor();
+      inked(ctx, helm, hg, ink, 5.5, 3.5, 5);
+      ctx.save();
+      helm();
+      ctx.clip();
+      ctx.fillStyle = dark;
+      ctx.fillRect(-18, -160, 36, effBack ? 320 : 95);
+      ctx.fillStyle = 'rgba(255,255,255,0.34)';
+      ctx.beginPath();
+      ctx.ellipse(-62, -106, 32, 14, -0.45, 0, TAU);
       ctx.fill();
-      ctx.strokeStyle = ink;
-      ctx.lineWidth = 4.5;
-      ctx.stroke();
       ctx.restore();
-    }
-    if (is360) {
-      for (const s of [-1, 1] as const) {
-        const rv = rotateYaw3D([s * 126, -24, 22], hy);
-        const rvVis = smoothstepHair(-28, 12, rv.z);
-        if (rvVis > 0.04) {
-          const rxClamp = Math.max(-helmWL + 4, Math.min(helmWR - 4, rv.x));
-          ctx.save();
-          ctx.globalAlpha *= rvVis;
-          inked(ctx, () => { ctx.beginPath(); ctx.ellipse(rxClamp, -26, 10 * rvVis, 10, 0, 0, TAU); }, dark, ink, 3.5, 1, 2);
-          ctx.restore();
+      if (frontVis > -0.15) {
+        const vxShift = isSide ? (headFacing >= 0 ? 1 : -1) * 56 : headFacing * 24;
+        const vwScale = isSide ? 0.56 : 0.88;
+        const vLeft = vxShift - 132 * vwScale;
+        const vRight = vxShift + 132 * vwScale;
+        const vMid = (vLeft + vRight) * 0.5;
+        ctx.fillStyle = 'rgba(135, 206, 250, 0.45)';
+        ctx.beginPath();
+        ctx.moveTo(vLeft, -34);
+        ctx.quadraticCurveTo(vMid, -54, vRight, -34);
+        ctx.quadraticCurveTo(vRight, -72, vRight - 18 * vwScale, -94);
+        ctx.quadraticCurveTo(vMid, -110, vLeft + 18 * vwScale, -94);
+        ctx.quadraticCurveTo(vLeft, -72, vLeft, -34);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 4.5;
+        ctx.stroke();
+        const rivetList = !isSide ? [-130 * vwScale + vxShift, 130 * vwScale + vxShift] : [-(headFacing >= 0 ? 1 : -1) * 72 + vxShift];
+        for (const sx of rivetList) {
+          inked(ctx, () => { ctx.beginPath(); ctx.arc(sx, -24, 11, 0, TAU); }, dark, ink, 3.5, 1, 2);
         }
-      }
-    } else if (frontVis > -0.15) {
-      const vxShift = isSide ? (headFacing >= 0 ? 1 : -1) * 56 : headFacing * 24;
-      const vwScale = isSide ? 0.56 : 0.88;
-      const rivetList = !isSide ? [-130 * vwScale + vxShift, 130 * vwScale + vxShift] : [-(headFacing >= 0 ? 1 : -1) * 72 + vxShift];
-      for (const sx of rivetList) {
-        inked(ctx, () => { ctx.beginPath(); ctx.arc(sx, -24, 11, 0, TAU); }, dark, ink, 3.5, 1, 2);
       }
     }
     ctx.restore();
@@ -2835,8 +3039,27 @@ function drawHeadgear(
     const col = headgearColor ?? '#1f2638';
     const led = headgearAccent ?? '#38bdf8';
     if (is360) {
-      drawHeadphoneBand360(ctx, spec, W, cy, pop, hy, 'front');
-    } else {
+      const cups360 = (
+        [
+          { s: -1 as const, p: rotateYaw3D([-W * 0.56, cy + 14 - pop * 48, 0], hy) },
+          { s: 1 as const, p: rotateYaw3D([W * 0.56, cy + 14 - pop * 48, 0], hy) },
+        ] as const
+      )
+        .map((c) => ({ s: c.s, p: c.p, z: c.p.z }))
+        .sort((a, b) => a.z - b.z);
+      if (drawBack) {
+        for (const c of cups360) {
+          if (c.p.z < 0) drawHeadphoneCup(ctx, CX + c.p.x, c.p.y, c.s, col, led, ink, 1, hy);
+        }
+        drawHeadphoneBand360(ctx, spec, W, cy, pop, hy, 'back');
+      }
+      if (drawFront) {
+        drawHeadphoneBand360(ctx, spec, W, cy, pop, hy, 'front');
+        for (const c of cups360) {
+          if (c.p.z >= 0) drawHeadphoneCup(ctx, CX + c.p.x, c.p.y, c.s, col, led, ink, 1, hy);
+        }
+      }
+    } else if (drawFront) {
       ctx.save();
       ctx.translate(CX, cy - pop * 48);
       ctx.rotate(-0.1 * pop * wPop);
@@ -2864,101 +3087,143 @@ function drawHeadgear(
     const gold = headgearAccent ?? '#f2c144';
     ctx.save();
     ctx.translate(CX + sideSin * 11, headTop + 30 - pop * 46);
-    const baseRot = -0.03 + sideSin * 0.04;
+    // Anti-simetris murni terhadap sideSin di mode 360° agar simetri kiri-kanan 100% presisi!
+    const baseRot = is360 ? sideSin * 0.04 : -0.03 + sideSin * 0.04;
     ctx.rotate(baseRot * (1 - wPop) + -0.12 * pop * wPop);
-    const drawSatpamVisor = () => {
-      if (is360) {
-        const N = 16;
-        const visor = () => {
-          ctx.beginPath();
-          for (let i = 0; i <= N; i++) {
-            const t = -0.46 * Math.PI + (i / N) * (0.92 * Math.PI);
-            // Ketebalan vertikal bibir bawah (22) vs atas (6) agar paruh topi satpam tetap kokoh 15 px di tampak samping (bukan bilah tipis!)
-            const p = rotateYaw3D([108 * Math.sin(t), 22 + 12 * Math.cos(t), 156 * Math.cos(t)], hy);
-            if (i === 0) ctx.moveTo(p.x, p.y);
-            else ctx.lineTo(p.x, p.y);
-          }
-          for (let i = N; i >= 0; i--) {
-            const t = -0.46 * Math.PI + (i / N) * (0.92 * Math.PI);
-            const p = rotateYaw3D([102 * Math.sin(t), 6 + 6 * Math.cos(t), 92 * Math.cos(t)], hy);
-            ctx.lineTo(p.x, p.y);
-          }
-          ctx.closePath();
-        };
-        inked(ctx, visor, '#1b1d24', ink, 4.5, 2, 3);
-      } else if (!isBack || isBack34) {
-        const vs = headFacing * 48;
-        const visor = () => {
-          ctx.beginPath();
-          ctx.moveTo(-114 + vs * 0.6, 10);
-          ctx.quadraticCurveTo(vs * 1.25, 44, 114 + vs * 0.6, 10);
-          ctx.quadraticCurveTo(vs * 0.6, 24, -114 + vs * 0.6, 10);
-          ctx.closePath();
-        };
-        inked(ctx, visor, '#1b1d24', ink, 4.5, 2, 3);
-      }
-    };
-    if (is360 && frontVis < 0) drawSatpamVisor();
     const cw = is360 ? 124 * (1 - 0.08 * sideSin * sideSin) : 124;
-    const crown = () => {
-      ctx.beginPath();
-      ctx.moveTo(-cw, 6);
-      ctx.lineTo(-cw * 1.19, -56);
-      ctx.quadraticCurveTo(0, -92, cw * 1.19, -56);
-      ctx.lineTo(cw, 6);
-      ctx.quadraticCurveTo(0, 22, -cw, 6);
-      ctx.closePath();
-    };
-    inked(ctx, crown, col, ink, 5.5, 3, 4.5);
-    const band = () => {
-      ctx.beginPath();
-      ctx.moveTo(-cw * 1.02, 8);
-      ctx.quadraticCurveTo(0, 24, cw * 1.02, 8);
-      ctx.lineTo(cw * 0.98, -20);
-      ctx.quadraticCurveTo(0, -8, -cw * 0.98, -20);
-      ctx.closePath();
-    };
-    inked(ctx, band, '#241b17', ink, 4.5, 2, 3);
-    ctx.strokeStyle = gold;
-    ctx.lineWidth = 5.5;
-    ctx.beginPath();
-    ctx.moveTo(-cw * 0.95, -4);
-    ctx.quadraticCurveTo(0, 10, cw * 0.95, -4);
-    ctx.stroke();
-    if (!is360 || frontVis >= 0) drawSatpamVisor();
-    // Lencana emas menyusut mulus sampai 0 & ter-clip ke mahkota topi (nol pop di ±85.4°!)
-    const embScale = is360 ? smoothstepHair(0.02, 0.42, frontVis) : frontVis > 0.08 ? 1 : 0;
-    if (embScale > 0.02) {
-      const embX = is360 ? 96 * sideSin : Math.abs(headFacing) < 0.08 && !isSide ? 0 : headFacing * 56;
-      ctx.save();
-      if (is360) {
-        crown();
-        ctx.clip();
-        ctx.globalAlpha *= smoothstepHair(0.02, 0.25, embScale);
+
+    if (is360) {
+      if (drawBack) {
+        draw3DBrimPass(ctx, hy, 'back', 108, 22, 12, 156, 102, 6, 6, 92, '#1b1d24', ink, 4.5, 2, 3);
       }
-      inked(
-        ctx,
-        () => {
+      if (drawFront) {
+        const crown = () => {
           ctx.beginPath();
-          ctx.moveTo(embX, -64);
-          ctx.lineTo(embX + 22 * embScale, -52);
-          ctx.lineTo(embX + 16 * embScale, -24);
-          ctx.lineTo(embX, -14);
-          ctx.lineTo(embX - 16 * embScale, -24);
-          ctx.lineTo(embX - 22 * embScale, -52);
+          ctx.moveTo(-cw, 6);
+          ctx.lineTo(-cw * 1.19, -56);
+          ctx.quadraticCurveTo(0, -92, cw * 1.19, -56);
+          ctx.lineTo(cw, 6);
+          ctx.quadraticCurveTo(0, 22, -cw, 6);
           ctx.closePath();
-        },
-        gold,
-        ink,
-        4,
-        1.5,
-        2,
-      );
-      ctx.fillStyle = '#fff5d1';
+        };
+        inked(ctx, crown, col, ink, 5.5, 3, 4.5);
+        const band = () => {
+          ctx.beginPath();
+          ctx.moveTo(-cw * 1.02, 8);
+          ctx.quadraticCurveTo(0, 24, cw * 1.02, 8);
+          ctx.lineTo(cw * 0.98, -20);
+          ctx.quadraticCurveTo(0, -8, -cw * 0.98, -20);
+          ctx.closePath();
+        };
+        inked(ctx, band, '#241b17', ink, 4.5, 2, 3);
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 5.5;
+        ctx.beginPath();
+        ctx.moveTo(-cw * 0.95, -4);
+        ctx.quadraticCurveTo(0, 10, cw * 0.95, -4);
+        ctx.stroke();
+
+        draw3DBrimPass(ctx, hy, 'front', 108, 22, 12, 156, 102, 6, 6, 92, '#1b1d24', ink, 4.5, 2, 3);
+
+        // Lencana emas silindris sejati via cylSpan ter-clip ke mahkota topi
+        const embSpan = cylSpan(hy, -0.22, 0.22, cw * 0.92);
+        if (embSpan !== null && embSpan.x1 - embSpan.x0 > 3) {
+          const embX = embSpan.midX;
+          const halfW = (embSpan.x1 - embSpan.x0) * 0.5;
+          ctx.save();
+          crown();
+          ctx.clip();
+          ctx.globalAlpha *= smoothstepHair(0.05, 0.3, embSpan.vis);
+          inked(
+            ctx,
+            () => {
+              ctx.beginPath();
+              ctx.moveTo(embX, -64);
+              ctx.lineTo(embX + halfW, -52);
+              ctx.lineTo(embX + halfW * 0.72, -24);
+              ctx.lineTo(embX, -14);
+              ctx.lineTo(embX - halfW * 0.72, -24);
+              ctx.lineTo(embX - halfW, -52);
+              ctx.closePath();
+            },
+            gold,
+            ink,
+            4,
+            1.5,
+            2,
+          );
+          ctx.fillStyle = '#fff5d1';
+          ctx.beginPath();
+          ctx.ellipse(embX, -40, Math.max(1.5, halfW * 0.3), 6.5, 0, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+    } else if (drawFront) {
+      const drawLegacySatpamVisor = () => {
+        if (!isBack || isBack34) {
+          const vs = headFacing * 48;
+          const visor = () => {
+            ctx.beginPath();
+            ctx.moveTo(-114 + vs * 0.6, 10);
+            ctx.quadraticCurveTo(vs * 1.25, 44, 114 + vs * 0.6, 10);
+            ctx.quadraticCurveTo(vs * 0.6, 24, -114 + vs * 0.6, 10);
+            ctx.closePath();
+          };
+          inked(ctx, visor, '#1b1d24', ink, 4.5, 2, 3);
+        }
+      };
+      const crown = () => {
+        ctx.beginPath();
+        ctx.moveTo(-cw, 6);
+        ctx.lineTo(-cw * 1.19, -56);
+        ctx.quadraticCurveTo(0, -92, cw * 1.19, -56);
+        ctx.lineTo(cw, 6);
+        ctx.quadraticCurveTo(0, 22, -cw, 6);
+        ctx.closePath();
+      };
+      inked(ctx, crown, col, ink, 5.5, 3, 4.5);
+      const band = () => {
+        ctx.beginPath();
+        ctx.moveTo(-cw * 1.02, 8);
+        ctx.quadraticCurveTo(0, 24, cw * 1.02, 8);
+        ctx.lineTo(cw * 0.98, -20);
+        ctx.quadraticCurveTo(0, -8, -cw * 0.98, -20);
+        ctx.closePath();
+      };
+      inked(ctx, band, '#241b17', ink, 4.5, 2, 3);
+      ctx.strokeStyle = gold;
+      ctx.lineWidth = 5.5;
       ctx.beginPath();
-      ctx.ellipse(embX, -40, 6.5 * embScale, 6.5, 0, 0, TAU);
-      ctx.fill();
-      ctx.restore();
+      ctx.moveTo(-cw * 0.95, -4);
+      ctx.quadraticCurveTo(0, 10, cw * 0.95, -4);
+      ctx.stroke();
+      drawLegacySatpamVisor();
+      if (frontVis > 0.08) {
+        const embX = Math.abs(headFacing) < 0.08 && !isSide ? 0 : headFacing * 56;
+        inked(
+          ctx,
+          () => {
+            ctx.beginPath();
+            ctx.moveTo(embX, -64);
+            ctx.lineTo(embX + 22, -52);
+            ctx.lineTo(embX + 16, -24);
+            ctx.lineTo(embX, -14);
+            ctx.lineTo(embX - 16, -24);
+            ctx.lineTo(embX - 22, -52);
+            ctx.closePath();
+          },
+          gold,
+          ink,
+          4,
+          1.5,
+          2,
+        );
+        ctx.fillStyle = '#fff5d1';
+        ctx.beginPath();
+        ctx.ellipse(embX, -40, 6.5, 6.5, 0, 0, TAU);
+        ctx.fill();
+      }
     }
     ctx.restore();
   }
@@ -3896,7 +4161,7 @@ export function drawActor(
       item.draw();
     }
 
-    // 3. Kepala, Telinga, Cepol, Hijab, Wajah, Kacamata, Rambut & Headgear 360° Kontinu
+    // 3. Kepala, Telinga, Hijab 2.5D, Rambut 2.5D Klasik & Headgear 2-Pass (Atelier v6.1)
     const hyFrontVis = Math.cos(hyRad);
     const hySideSin = Math.sin(hyRad);
     const hyShowBack = hyFrontVis < 0.08;
@@ -3909,27 +4174,11 @@ export function drawActor(
       ctx.translate(-CX, -(chin - 4));
     }
 
-    // Cepol rambut Bu Siti: 100% solid (tanpa ghosting transparan!) — di belakang kepala saat bun3.z <= 16, di depan saat bun3.z > 16!
-    const bun3 = hairStyle === 'bun' ? rotateYaw3D([0, headTop + 2, -W * 0.29], hyRad) : null;
-    const drawBun360 = () => {
-      if (!bun3) return;
-      const backBlend = (1 - hyFrontVis) * 0.5;
-      const byPos = headTop - 22 + backBlend * 14 - hatPop * 10;
-      const bxPos = CX - 8 * Math.max(0, hyFrontVis) + bun3.x;
-      const bunRad = 44 + 4 * backBlend;
-      const bandY = byPos + (1 - backBlend) * 18 + backBlend * 32;
-      const bandAng = -hySideSin * 0.42;
-      inked(ctx, () => { ctx.beginPath(); ctx.arc(bxPos, byPos, bunRad, 0, TAU); }, hairColor, ink, 5.5, 3, 4);
-      ctx.save();
-      ctx.translate(bxPos, bandY);
-      ctx.rotate(bandAng);
-      inked(ctx, () => { ctx.beginPath(); ctx.roundRect(-34, -8, 68, 16, 8); }, '#e04848', ink, 4, 2, 2.5);
-      ctx.restore();
-      if (reliefOut) reliefOut.push({ kind: 'sphere', cx: bxPos, cy: byPos, rx: bunRad, ry: bunRad, z: bun3.z + 200, heightScale: 0.92, ao: bun3.z < 0 ? 0.85 : 1 });
-    };
-    if (bun3 && bun3.z <= 16) drawBun360();
+    // Pass belakang 2.5D (sebelum telinga & kepala: brim/helm/sayap iket/headphone belakang + sanggul/ahoge belakang)
+    drawHeadgear(ctx, spec, W360, headTop, cy, hatPop, hyShowBack, isBack34, hySideSin, hyRad, false, 'back');
+    renderHairBackPass360(ctx, spec, W360, headTop, cy, hatPop, hyRad, reliefOut);
 
-    // Telinga 360° murni setia `HEAD` (warna bayangan, earDetail, & anting memudar kontinu tanpa kedipan!)
+    // Telinga 360° murni setia `HEAD` (warna bayangan, earDetail, & anting mutiara tetap terbaca di profil ±90°!)
     const showEars360 = hairStyle !== 'hijab' && spec.headgear !== 'helmet';
     if (showEars360) {
       const pureBackRestore = smoothstepHair(-0.35, -0.78, hyFrontVis);
@@ -3954,7 +4203,7 @@ export function drawActor(
           ctx.stroke();
           ctx.restore();
         }
-        const earringScale = 1 - smoothstepHair(0.62, 0.95, tuckFrontCheek);
+        const earringScale = 1 - smoothstepHair(0.76, 0.98, tuckFrontCheek);
         if (spec.earrings && earringScale > 0.04) {
           inked(ctx, () => { ctx.beginPath(); ctx.arc(exPos, cy + 34, 7 * earringScale, 0, TAU); }, '#fff8e8', ink, 3, 1, 1.5);
         }
@@ -3963,40 +4212,49 @@ export function drawActor(
       for (const s of earOrder) drawClassicEar360(s);
     }
 
-    const cups360 =
-      spec.headgear === 'headphones'
-        ? (
-            [
-              { s: -1 as const, p: rotateYaw3D([-W360 * 0.56, cy + 14 - hatPop * 48, 0], hyRad) },
-              { s: 1 as const, p: rotateYaw3D([W360 * 0.56, cy + 14 - hatPop * 48, 0], hyRad) },
-            ] as const
-          )
-            .map((c) => ({ s: c.s, p: c.p, z: c.p.z }))
-            .sort((a, b) => a.z - b.z)
-        : [];
-    for (const c of cups360) {
-      if (c.p.z < 0) {
-        drawHeadphoneCup(ctx, CX + c.p.x, c.p.y, c.s, spec.headgearColor ?? '#1f2638', spec.headgearAccent ?? '#38bdf8', ink, 1, hyRad);
-      }
-    }
-    if (spec.headgear === 'headphones') {
-      drawHeadphoneBand360(ctx, spec, W360, cy, hatPop, hyRad, 'back');
-    }
-
-    // Hijab atau Kepala 360°
+    // Hijab 2.5D Teardrop Organik atau Kepala + Rambut 2.5D Klasik (Atelier v6.1)
     let hijabFaceClip360: (() => void) | null = null;
     if (hairStyle === 'hijab') {
-      const hOuterW = 140 * (1 - 0.08 * hySideSin * hySideSin);
-      const hoodShift = -hySideSin * 16;
-      const drapeFlare = hySideSin * 14;
+      const sideSq = hySideSin * hySideSin;
+      const hOuterW = 140 * (1 - 0.025 * sideSq);
+      const backDrapeFlare = 16 * sideSq;
+      const hoodShift = -hySideSin * 10;
       const hijabOuter = () => {
         ctx.beginPath();
         ctx.moveTo(CX - hOuterW, cy + 16);
-        ctx.bezierCurveTo(CX - hOuterW * 1.08 + hoodShift * 0.6, headTop - 36, CX - 80 + hoodShift, headTop - 52, CX + hoodShift * 0.7, headTop - 48);
-        ctx.bezierCurveTo(CX + 86 + hoodShift, headTop - 52, CX + hOuterW * 1.07 + hoodShift * 0.6, headTop - 30, CX + hOuterW, cy + 18);
-        ctx.bezierCurveTo(CX + hOuterW * 1.03 - drapeFlare * 0.5, torsoTop + 58, CX + 104 - drapeFlare * 0.4, torsoTop + 98, CX + 44, torsoTop + 96);
-        ctx.quadraticCurveTo(CX - drapeFlare * 0.3, torsoTop + 104, CX - 56, torsoTop + 92);
-        ctx.bezierCurveTo(CX - hOuterW * 0.87 - drapeFlare * 0.4, torsoTop + 88, CX - hOuterW * 1.06 - drapeFlare * 0.5, torsoTop + 50, CX - hOuterW, cy + 16);
+        ctx.bezierCurveTo(
+          CX - hOuterW * 1.07 + hoodShift * 0.5,
+          headTop - 36,
+          CX - 82 + hoodShift,
+          headTop - 52,
+          CX + hoodShift * 0.6,
+          headTop - 48,
+        );
+        ctx.bezierCurveTo(
+          CX + 86 + hoodShift,
+          headTop - 52,
+          CX + hOuterW * 1.07 + hoodShift * 0.5,
+          headTop - 30,
+          CX + hOuterW,
+          cy + 18,
+        );
+        ctx.bezierCurveTo(
+          CX + hOuterW * 1.04 + (hySideSin < 0 ? backDrapeFlare : 0),
+          torsoTop + 58,
+          CX + 106,
+          torsoTop + 98,
+          CX + 46,
+          torsoTop + 96,
+        );
+        ctx.quadraticCurveTo(CX, torsoTop + 106, CX - 56, torsoTop + 94);
+        ctx.bezierCurveTo(
+          CX - 118,
+          torsoTop + 90,
+          CX - hOuterW * 1.04 - (hySideSin > 0 ? backDrapeFlare : 0),
+          torsoTop + 52,
+          CX - hOuterW,
+          cy + 16,
+        );
         ctx.closePath();
       };
       const hbg = ctx.createLinearGradient(CX - 130, headTop - 40, CX + 140, torsoTop + 100);
@@ -4008,11 +4266,10 @@ export function drawActor(
       ctx.save();
       hijabOuter();
       ctx.clip();
-      // Warna garis lipatan dada diturunkan dari warna hijab aktual (bukan hijau statis pada hijab pink Mbak Yuni!)
       ctx.save();
-      ctx.globalAlpha = 0.38;
+      ctx.globalAlpha = 0.36;
       ctx.strokeStyle = darkenHex(hairHighlight ?? hairColor, 0.28);
-      ctx.lineWidth = 4.5;
+      ctx.lineWidth = 4.4;
       ctx.beginPath();
       ctx.moveTo(CX - 94, torsoTop + 26);
       ctx.quadraticCurveTo(CX - 12 + hySideSin * 36, torsoTop + 72, CX + 98, torsoTop + 34);
@@ -4021,29 +4278,22 @@ export function drawActor(
       ctx.stroke();
       ctx.restore();
 
-      // Bukaan wajah hijab solid 100% menyempit mulus ke 0 menjelang ±106.3° (nol ghosting transparan!)
-      const faceOpen = smoothstepHair(-0.24, 0.48, hyFrontVis);
-      if (faceOpen > 0.025) {
-        const faceRx = W * 0.44 * faceOpen;
-        const maxFaceShift = Math.max(0, hOuterW - faceRx * 0.85 + 6 * Math.abs(hySideSin));
-        const faceOffset = hySideSin * maxFaceShift;
-        const fx = CX + faceOffset;
+      // Bukaan wajah hijab solid 100% berbasis cylSpan lega agar kacamata Rara tidak terhimpit di 89°!
+      const faceSpan = cylSpan(hyRad, -1.12, 1.12, hOuterW * 0.96);
+      if (faceSpan !== null && faceSpan.x1 - faceSpan.x0 > 6) {
+        const faceRx = (faceSpan.x1 - faceSpan.x0) * 0.5;
+        const fx = CX + faceSpan.midX;
         hijabFaceClip360 = () => {
           ctx.beginPath();
           ctx.ellipse(fx, cy + 10, faceRx, H * 0.44, 0, 0, TAU);
         };
-        // Ciput dalaman krem (`#f7ead6`) HANYA di busur atas dahi (di atas cy - 10)
         ctx.save();
         ctx.beginPath();
-        ctx.moveTo(fx - faceRx - 8, cy - 10);
-        ctx.lineTo(fx + faceRx + 8, cy - 10);
-        ctx.lineTo(fx + faceRx + 8, headTop - 30);
-        ctx.lineTo(fx - faceRx - 8, headTop - 30);
-        ctx.closePath();
+        ctx.rect(fx - faceRx - 8, headTop - 30, (faceRx + 8) * 2, cy - 10 - (headTop - 30));
         ctx.clip();
         ctx.fillStyle = '#f7ead6';
         ctx.beginPath();
-        ctx.ellipse(fx + hySideSin * 2, cy + 4, faceRx * 1.015, H * 0.462, 0, 0, TAU);
+        ctx.ellipse(fx + hySideSin * 2, cy + 4, faceRx * 1.02, H * 0.462, 0, 0, TAU);
         ctx.fill();
         ctx.strokeStyle = ink;
         ctx.lineWidth = 4;
@@ -4061,14 +4311,13 @@ export function drawActor(
         ctx.lineWidth = 5;
         ctx.stroke();
       }
-      // Garis lipatan drape lembut hijab memudar masuk mulus pada tampak samping/belakang (nol pop di ±63.3°!)
       const drapeAlpha = smoothstepHair(0.48, 0.1, hyFrontVis);
       if (drapeAlpha > 0.02) {
         ctx.save();
         ctx.globalAlpha *= drapeAlpha;
         ctx.strokeStyle = hairHighlight ?? 'rgba(255,255,255,0.25)';
         ctx.lineWidth = 4.2;
-        const drapeX = CX - hySideSin * 28;
+        const drapeX = CX - hySideSin * 26;
         ctx.beginPath();
         ctx.moveTo(drapeX - 24, cy - 10);
         ctx.quadraticCurveTo(drapeX - 6, torsoTop + 32, drapeX - 28, torsoTop + 78);
@@ -4124,7 +4373,7 @@ export function drawActor(
       skG.addColorStop(1, skinShadow);
       inked(ctx, headPath360, skG, ink, 5.5, 3.5, 5.5);
 
-      // Rambut 3D kontinu (-180°..+180°) 2-Zona setia 100% ke siluet asli HEAD (`renderUnifiedHair360` & `renderShortHair360`)
+      // Rambut 2.5D Bezier Klasik (-180°..+180°): 6-station anatomical cutout + proyeksi silindris poni klasik (Atelier v6.1)
       if (hairStyle === 'bald') {
         ctx.save();
         headPath360();
@@ -4137,9 +4386,9 @@ export function drawActor(
         ctx.globalAlpha = 1;
         ctx.restore();
       } else if (hairStyle === 'short') {
-        renderShortHair360(ctx, spec, headPath360, W360, headTop, chin, hyRad, hyFrontVis, hySideSin);
+        renderShortHair360(ctx, spec, headPath360, skG, W360, H, headTop, chin, hyRad, hyFrontVis, hySideSin);
       } else {
-        renderUnifiedHair360(ctx, spec, headPath360, W360, H, headTop, cy, chin, hatPop, hyRad, hyFrontVis, hySideSin);
+        renderUnifiedHair360(ctx, spec, headPath360, skG, W, W360, H, headTop, cy, chin, hatPop, hyRad, hyFrontVis, hySideSin);
       }
     }
 
@@ -4351,26 +4600,32 @@ export function drawActor(
       }
       if (hijabFaceClip360) ctx.restore();
 
-      const pinVis = hairStyle === 'hijab' ? smoothstepHair(0.02, 0.24, hyFrontVis) : 0;
-      if (pinVis > 0.02) {
-        const pinX = CX - 54 * Math.max(0.08, hyFrontVis) + hySideSin * 36;
-        ctx.save();
-        ctx.globalAlpha *= pinVis;
-        inked(ctx, () => { ctx.beginPath(); ctx.arc(pinX, chin + 8, 7.5 * (0.4 + 0.6 * pinVis), 0, TAU); }, '#f5c43d', ink, 3, 1, 1.5);
-        ctx.restore();
+      if (hairStyle === 'hijab') {
+        const pin3 = rotateYaw3D([-52, chin + 8, W360 * 0.44], hyRad);
+        const pinVis = smoothstepHair(-8, 28, pin3.z);
+        if (pinVis > 0.03) {
+          ctx.save();
+          ctx.globalAlpha *= pinVis;
+          inked(
+            ctx,
+            () => {
+              ctx.beginPath();
+              ctx.arc(CX + pin3.x, pin3.y, 7.5 * (0.45 + 0.55 * pinVis), 0, TAU);
+            },
+            '#f5c43d',
+            ink,
+            3,
+            1,
+            1.5,
+          );
+          ctx.restore();
+        }
       }
     }
 
-    // Cepol pass depan solid 100% saat bun3.z > 16 (nol ghosting transparan!)
-    if (bun3 && bun3.z > 16) drawBun360();
-
-    drawHeadgear(ctx, spec, W360, headTop, cy, hatPop, hyShowBack, isBack34, hySideSin, hyRad);
-
-    for (const c of cups360) {
-      if (c.p.z >= 0) {
-        drawHeadphoneCup(ctx, CX + c.p.x, c.p.y, c.s, spec.headgearColor ?? '#1f2638', spec.headgearAccent ?? '#38bdf8', ink, 1, hyRad);
-      }
-    }
+    // Sanggul depan Bu Siti (z >= 0) & Headgear 2.5D Bezier pass depan (Atelier v6.1)
+    renderHairFrontFeatures360(ctx, spec, W360, headTop, cy, hatPop, hyRad, reliefOut);
+    drawHeadgear(ctx, spec, W360, headTop, cy, hatPop, hyShowBack, isBack34, hySideSin, hyRad, false, 'front');
 
     const fx = pose.fx !== undefined ? pose.fx : defaultFxFor(pose.face);
     const fxAlpha = pose.fx !== undefined ? 1 : smoothstepHair(0, 0.25, hyFrontVis);
@@ -5143,7 +5398,7 @@ function drawHeadphoneBand360(
   const N = 48;
   const bandRx = W * 0.56;
   const bandRy = 140;
-  const halfStrapZ = 7.5;
+  const halfStrapZ = 9.5;
   const zSplit = -6;
 
   // Bangun daftar titik t dengan lengkung Z kontur tengkorak (-12 sin t) agar di profil samping melengkung alami (bukan palang lurus!)
@@ -5199,13 +5454,13 @@ function drawHeadphoneBand360(
       ctx.closePath();
     };
     ctx.strokeStyle = spec.ink;
-    ctx.lineWidth = 10;
+    ctx.lineWidth = 12;
     traceBand();
     ctx.stroke();
     ctx.fillStyle = col;
     ctx.fill();
     ctx.strokeStyle = col;
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 7;
     ctx.stroke();
     if (pass === 'front') {
       ctx.strokeStyle = '#334155';
@@ -5513,64 +5768,171 @@ function getHeadHairPolylines(
 }
 
 /**
- * Rambut `'short'` (`arya`, `dimas`, `bangUdin`) 360° (Atelier v5.0 — Setia Sabit Samping/Belakang `HEAD`):
- * - Di depan (`0°..±40°`): identik elips dahi `HEAD` (`headTop + 18 ± 46`, lega di atas alis di bawah peci/cap!).
- * - Di samping (`±90°`): sabit belakang `22%` persis `HEAD` L4389-4396 (pipi samping bersih terbuka, menyatu dengan telinga profil!).
- * - Di belakang (`135°..180°`): menutup tempurung belakang mulus di dalam `headPath360` hingga `chin - 40`.
+ * Cangkang Rambut Penuh 360° + 6-Station Anatomical `cylSpan` Cutout (Atelier v6.1):
+ * - Mengisi volume rambut penuh di dalam `headPath360` dengan lengkung tengkuk organik melengkung lembut.
+ * - Mengekspos jendela wajah memakai profil azimut anatomis 6-stasiun (dahi -> pelipis -> jambang -> lengkung telinga -> pipi -> dagu)
+ *   disambung kurva Bezier kuadratik halus (NOL dinding pipi lurus vertikal, NOL percabangan arah diskrit!).
+ */
+function fillContinuousHairShellWithFaceCutout(
+  ctx: Ctx,
+  spec: CharacterSpec,
+  headPath360: () => void,
+  skG: CanvasGradient,
+  W360: number,
+  H: number,
+  headTop: number,
+  cy: number,
+  chin: number,
+  hyRad: number,
+  hySideSin: number,
+  napeSolidY: number,
+  foreheadY: number,
+) {
+  const { ink, hairColor, hairStyle } = spec;
+  ctx.save();
+  headPath360();
+  ctx.clip();
+
+  // 1. Cangkang rambut penuh dari puncak kepala hingga tengkuk belakang melengkung organik
+  const napeCenterY = napeSolidY - 7;
+  const napeSideY = napeSolidY + 3;
+  ctx.fillStyle = hairColor;
+  ctx.beginPath();
+  ctx.moveTo(CX - W360 * 0.72, headTop - 6);
+  ctx.lineTo(CX + W360 * 0.72, headTop - 6);
+  ctx.lineTo(CX + W360 * 0.72, napeSideY);
+  ctx.quadraticCurveTo(CX, napeCenterY, CX - W360 * 0.72, napeSideY);
+  ctx.closePath();
+  ctx.fill();
+
+  if (hairStyle === 'fadeCrop') {
+    const fadeStart = chin - 76;
+    const fadeEnd = chin - 24;
+    const fg = ctx.createLinearGradient(0, fadeStart, 0, fadeEnd);
+    fg.addColorStop(0, hairColor);
+    fg.addColorStop(0.52, 'rgba(54, 42, 44, 0.54)');
+    fg.addColorStop(1, 'rgba(54, 42, 44, 0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.moveTo(CX - W360 * 0.72, fadeStart);
+    ctx.lineTo(CX + W360 * 0.72, fadeStart);
+    ctx.lineTo(CX + W360 * 0.72, fadeEnd);
+    ctx.lineTo(CX - W360 * 0.72, fadeEnd);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 2. Profil azimut anatomis 6-stasiun via cylSpan(hyRad) + kurva Bezier kuadratik halus
+  const isFade = hairStyle === 'fadeCrop';
+  const stations: ReadonlyArray<readonly [y: number, ang: number]> = [
+    [foreheadY, isFade ? 1.22 : 1.14],
+    [cy - 18, isFade ? 1.16 : 1.06],
+    [cy + 14, isFade ? 1.34 : 1.24],
+    [cy + 28, isFade ? 1.56 : 1.48],
+    [chin - 34, isFade ? 1.74 : 1.66],
+    [chin + 8, isFade ? 1.80 : 1.72],
+  ];
+
+  const leftPts: { x: number; y: number }[] = [];
+  const rightPts: { x: number; y: number }[] = [];
+  for (const [sy, ang] of stations) {
+    const b = headWidthBoundsAtY(spec, W360, H, cy, sy, hySideSin);
+    const rxK = Math.max(24, (b.xR - b.xL) * 0.525);
+    const sp = cylSpan(hyRad, -ang, ang, rxK);
+    if (sp !== null && sp.x1 - sp.x0 > 1.5) {
+      leftPts.push({ x: CX + sp.x0, y: sy });
+      rightPts.push({ x: CX + sp.x1, y: sy });
+    }
+  }
+
+  if (leftPts.length >= 2) {
+    // Susun poligon tertutup: kiri bawah -> kiri atas -> dahi -> kanan atas -> kanan bawah
+    const poly: { x: number; y: number }[] = [];
+    for (let i = leftPts.length - 1; i >= 0; i--) poly.push(leftPts[i]);
+    const topL = leftPts[0];
+    const topR = rightPts[0];
+    const archSpan = Math.min(1, (topR.x - topL.x) / Math.max(1, W360 * 0.85));
+    poly.push({ x: (topL.x + topR.x) * 0.5, y: topL.y - (isFade ? 6 : 11) * archSpan });
+    for (let i = 0; i < rightPts.length; i++) poly.push(rightPts[i]);
+
+    const traceFaceWindow = () => {
+      ctx.beginPath();
+      const n = poly.length;
+      const startX = (poly[n - 1].x + poly[0].x) * 0.5;
+      const startY = (poly[n - 1].y + poly[0].y) * 0.5;
+      ctx.moveTo(startX, startY);
+      for (let i = 0; i < n; i++) {
+        const cur = poly[i];
+        const nxt = poly[(i + 1) % n];
+        ctx.quadraticCurveTo(cur.x, cur.y, (cur.x + nxt.x) * 0.5, (cur.y + nxt.y) * 0.5);
+      }
+      ctx.closePath();
+    };
+
+    // Untuk fadeCrop (Ebot), tambahkan feather skin-fade lembut sepanjang batas pelipis/samping (89°)!
+    if (isFade) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(54, 42, 44, 0.34)';
+      ctx.lineWidth = 15;
+      ctx.lineJoin = 'round';
+      traceFaceWindow();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.fillStyle = skG;
+    traceFaceWindow();
+    ctx.fill();
+  }
+
+  ctx.restore();
+  headPath360();
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 5.5;
+  ctx.stroke();
+}
+
+/**
+ * Rambut `'short'` (`dimas`, `bangUdin`) 360° Kontinu (Atelier v6.1):
+ * Cangkang penuh + 6-station anatomical cutout dengan lengkung dahi turun hingga `headTop + 62`
+ * sehingga rambut pendek & jambang Dimas terlihat rapi di bawah tepi topi pada `0°`.
  */
 function renderShortHair360(
   ctx: Ctx,
   spec: CharacterSpec,
   headPath360: () => void,
+  skG: CanvasGradient,
   W360: number,
+  H: number,
   headTop: number,
   chin: number,
-  _hyRad: number,
+  hyRad: number,
   hyFrontVis: number,
   hySideSin: number,
 ) {
-  const { ink, hairColor, hairHighlight } = spec;
+  const { hairHighlight } = spec;
   const cy = (headTop + chin) * 0.5;
-  const sd = hySideSin >= 0 ? 1 : -1;
-  ctx.save();
-  headPath360();
-  ctx.clip();
-
-  if (hyFrontVis < 0.84) {
-    const wSide = smoothstepHair(0.84, 0.12, hyFrontVis);
-    const wBack = smoothstepHair(0.0, -0.82, hyFrontVis);
-    const uTop = -0.54 + 0.46 * wSide + 0.74 * wBack;
-    const uCtrl = -0.54 + 0.32 * wSide + 0.92 * wBack;
-    const uEar = -0.54 + 0.24 * wSide + 0.98 * wBack;
-    const uNape = -0.54 + 0.14 * wSide + 1.08 * wBack;
-    const napeY = chin - 38;
-    const fillet = 28 * (1 - wBack * 0.65);
-    ctx.beginPath();
-    ctx.moveTo(CX - sd * W360 * 0.65, headTop - 2);
-    ctx.lineTo(CX + sd * W360 * uTop, headTop - 2);
-    ctx.quadraticCurveTo(CX + sd * W360 * (uCtrl + 0.08 * wBack * (1 - wBack)), cy - 12, CX + sd * W360 * uEar, cy + 16);
-    // Sudut tengkuk membulat organik (menghapus kotak siku 90° di 105°–116°!)
-    ctx.quadraticCurveTo(CX + sd * W360 * uNape, napeY - fillet * 0.25, CX + sd * W360 * (uNape - 0.14 * (1 - wBack)), napeY);
-    ctx.lineTo(CX - sd * W360 * 0.65, napeY);
-    ctx.closePath();
-    ctx.fillStyle = hairColor;
-    ctx.fill();
-  }
-
-  // Elips dahi asli `HEAD` dengan jarak aman dari alis di bawah peci/cap — menyusut mulus ke 0 (nol pop di ±101.5°!)
-  const frontShortVis = smoothstepHair(-0.22, 0.35, hyFrontVis);
-  if (frontShortVis > 0.01) {
-    ctx.fillStyle = hairColor;
-    ctx.beginPath();
-    const rxFront = W360 * (0.38 + 0.18 * Math.max(0, hyFrontVis)) * frontShortVis;
-    const ryFront = (44 + 6 * Math.max(0, hyFrontVis)) * (0.35 + 0.65 * frontShortVis);
-    ctx.ellipse(CX + hySideSin * W360 * 0.14 * frontShortVis, headTop + 18, rxFront, ryFront, 0, 0, TAU);
-    ctx.fill();
-  }
+  fillContinuousHairShellWithFaceCutout(
+    ctx,
+    spec,
+    headPath360,
+    skG,
+    W360,
+    H,
+    headTop,
+    cy,
+    chin,
+    hyRad,
+    hySideSin,
+    chin - 38,
+    headTop + 62,
+  );
 
   const backHiliteA = smoothstepHair(0.45, 0.08, hyFrontVis);
   if (backHiliteA > 0.01) {
     ctx.save();
+    headPath360();
+    ctx.clip();
     ctx.globalAlpha *= backHiliteA;
     ctx.strokeStyle = hairHighlight ?? 'rgba(255,255,255,0.22)';
     ctx.lineWidth = 5;
@@ -5581,27 +5943,195 @@ function renderShortHair360(
     ctx.stroke();
     ctx.restore();
   }
-  ctx.restore();
-
-  headPath360();
-  ctx.strokeStyle = ink;
-  ctx.lineWidth = 5.5;
-  ctx.stroke();
 }
 
 /**
- * Arsitektur Rambut 2-Zona Setia `HEAD` 360° (Atelier v5.0 — Zero Temple Gap, Zero Cheek Cut, Symmetric Left/Right):
- * - **Zona A (Tengkuk & Samping-Belakang, 100% Terklip `headPath360`)**:
- *   Persis `HEAD` L4307-4424! Menutup sabit belakang `22%` pada `±90°` (membiarkan 78% wajah & pipi bersih terbuka!)
- *   dan menutup penuh hingga `chin - 40` (atau gradasi mulus `fadeCrop` `chin - 78..chin - 24`) pada `180°`, NOL overhang leher!
- * - **Zona B (Topi Mahkota & Poni Klasik `HEAD`)**:
- *   Pangkal jambang kiri-kanan selalu terkunci di `headWidthBoundsAtY` (`0 px` celah kulit pucat & `0` double-outline di `f0160`/`f0105`!),
- *   poni depan melandai simetris di atas alis/kacamata pada `±90°`, dan menyatu mulus tanpa garis potong ke Zona A!
+ * Proyeksi Silindris 2.5D Kurva Poni Klasik `getHeadHairPolylines().bot`:
+ * Memetakan setiap titik `(dx_i, y_i)` dari poni klasik `drawFrontHairStyle` ke sudut azimut silinder
+ * `theta = asin(dx / R0)`, memutarnya sebesar `hyRad`, lalu memotong presisi pada batas siluet `±PI/2` (`z >= 0`).
+ * Pada `0°` hasilnya 100% identik dengan `drawFrontHairStyle`; saat berputar, poni meluncur alami membungkus dahi!
+ */
+function projectClassicFrontHairline(
+  botPts: readonly { x: number; y: number }[],
+  W: number,
+  W360: number,
+  hyRad: number,
+): { x: number; y: number }[] {
+  const R0 = Math.max(1, W * 0.5);
+  const Rh = W360 * 0.502;
+  const halfPi = Math.PI * 0.5;
+  const wrapPi = (a: number) => {
+    let r = ((a + Math.PI) % TAU + TAU) % TAU - Math.PI;
+    if (r <= -Math.PI) r += TAU;
+    return r;
+  };
+
+  // Konversi semua titik ke pasangan (phi, y) dengan sudut unwrapped berurutan
+  const phis: number[] = [];
+  const ys: number[] = [];
+  for (let i = 0; i < botPts.length; i++) {
+    const u = Math.max(-0.985, Math.min(0.985, botPts[i].x / R0));
+    const th = Math.asin(u);
+    phis.push(wrapPi(th + hyRad));
+    ys.push(botPts[i].y);
+  }
+
+  // Ekstrak run kontinu di belahan depan phi ∈ [-PI/2, +PI/2] dengan interpolasi eksak di batas ±PI/2
+  const out: { x: number; y: number }[] = [];
+  for (let i = 0; i < phis.length - 1; i++) {
+    let p0 = phis[i];
+    let p1 = phis[i + 1];
+    // Pastikan p1 - p0 adalah jarak terpendek (menangani wrap di ±PI)
+    if (p1 - p0 > Math.PI) p1 -= TAU;
+    if (p1 - p0 < -Math.PI) p1 += TAU;
+    const y0 = ys[i];
+    const y1 = ys[i + 1];
+
+    // Klip segmen [p0, p1] terhadap [-halfPi, +halfPi]
+    const lo = Math.min(p0, p1);
+    const hi = Math.max(p0, p1);
+    if (hi < -halfPi || lo > halfPi) continue;
+
+    const dP = p1 - p0;
+    let t0 = 0;
+    let t1 = 1;
+    if (Math.abs(dP) > 1e-6) {
+      const ta = (-halfPi - p0) / dP;
+      const tb = (halfPi - p0) / dP;
+      t0 = Math.max(0, Math.min(ta, tb));
+      t1 = Math.min(1, Math.max(ta, tb));
+    }
+    if (t1 < t0) continue;
+
+    const pa = p0 + dP * t0;
+    const ya = y0 + (y1 - y0) * t0;
+    const pb = p0 + dP * t1;
+    const yb = y0 + (y1 - y0) * t1;
+    const xa = CX + Rh * Math.sin(pa);
+    const xb = CX + Rh * Math.sin(pb);
+
+    if (out.length === 0 || Math.hypot(xa - out[out.length - 1].x, ya - out[out.length - 1].y) > 0.5) {
+      out.push({ x: xa, y: ya });
+    }
+    if (Math.hypot(xb - xa, yb - ya) > 0.5) {
+      out.push({ x: xb, y: yb });
+    }
+  }
+  return out;
+}
+
+/**
+ * Helper menggambar sanggul tinggi Bu Siti + pita merah `#e04848` (selalu terlihat dari 0° sampai 180°!).
+ */
+function drawClassicBun360(
+  ctx: Ctx,
+  spec: CharacterSpec,
+  headTop: number,
+  hatPop: number,
+  hyRad: number,
+  pass: 'back' | 'front',
+  reliefOut?: ReliefPrimitive[],
+) {
+  if (spec.hairStyle !== 'bun') return;
+  const bun3 = rotateYaw3D([-6, headTop - 40 - hatPop * 10, -44], hyRad);
+  if ((pass === 'back' && bun3.z >= 0) || (pass === 'front' && bun3.z < 0)) return;
+  const bx = CX + bun3.x;
+  const by = bun3.y;
+  const bunRad = 44;
+  const hySideSin = Math.sin(hyRad);
+  inked(ctx, () => { ctx.beginPath(); ctx.arc(bx, by, bunRad, 0, TAU); }, spec.hairColor, spec.ink, 5.5, 3, 4);
+  ctx.save();
+  ctx.translate(bx, by + 18);
+  ctx.rotate(hySideSin * 0.22);
+  inked(ctx, () => { ctx.beginPath(); ctx.roundRect(-33, -8, 66, 16, 8); }, '#e04848', spec.ink, 4, 2, 2.5);
+  ctx.restore();
+  if (reliefOut) {
+    reliefOut.push({ kind: 'sphere', cx: bx, cy: by, rx: bunRad, ry: bunRad, z: bun3.z + 200, heightScale: 0.92, ao: bun3.z < 0 ? 0.85 : 1 });
+  }
+}
+
+/**
+ * Helper menggambar jambul `ahoge` 2.5D Bezier murni Bang Utoh (`Tip.z = -14` agar selalu melengkung di 89°!).
+ */
+function drawClassicAhoge360(
+  ctx: Ctx,
+  spec: CharacterSpec,
+  headTop: number,
+  hatPop: number,
+  hyRad: number,
+  pass: 'back' | 'front',
+) {
+  if (spec.hairStyle !== 'messy') return;
+  const lift = -hatPop * 14;
+  const p0 = rotateYaw3D([-10, headTop - 36 + lift, 10], hyRad);
+  const c1 = rotateYaw3D([6, headTop - 76 + lift, 14], hyRad);
+  const tip = rotateYaw3D([44, headTop - 54 + lift, -14], hyRad);
+  const c2 = rotateYaw3D([26, headTop - 42 + lift, -6], hyRad);
+  const p1 = rotateYaw3D([34, headTop - 36 + lift, 6], hyRad);
+  const zMid = (p0.z + tip.z) * 0.5;
+  if ((pass === 'back' && zMid >= -12) || (pass === 'front' && zMid < -12)) return;
+
+  ctx.save();
+  ctx.fillStyle = spec.hairColor;
+  ctx.beginPath();
+  ctx.moveTo(CX + p0.x, p0.y);
+  ctx.quadraticCurveTo(CX + c1.x, c1.y, CX + tip.x, tip.y);
+  ctx.quadraticCurveTo(CX + c2.x, c2.y, CX + p1.x, p1.y);
+  ctx.closePath();
+  ctx.fill();
+  // Stroke HANYA busur luar (nol garis sambungan di pangkal mahkota!)
+  ctx.strokeStyle = spec.ink;
+  ctx.lineWidth = 5.0;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(CX + p0.x, p0.y);
+  ctx.quadraticCurveTo(CX + c1.x, c1.y, CX + tip.x, tip.y);
+  ctx.quadraticCurveTo(CX + c2.x, c2.y, CX + p1.x, p1.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function renderHairBackPass360(
+  ctx: Ctx,
+  spec: CharacterSpec,
+  _W360: number,
+  headTop: number,
+  _cy: number,
+  hatPop: number,
+  hyRad: number,
+  reliefOut?: ReliefPrimitive[],
+) {
+  drawClassicBun360(ctx, spec, headTop, hatPop, hyRad, 'back', reliefOut);
+  drawClassicAhoge360(ctx, spec, headTop, hatPop, hyRad, 'back');
+}
+
+function renderHairFrontFeatures360(
+  ctx: Ctx,
+  spec: CharacterSpec,
+  _W360: number,
+  headTop: number,
+  _cy: number,
+  hatPop: number,
+  hyRad: number,
+  reliefOut?: ReliefPrimitive[],
+) {
+  drawClassicBun360(ctx, spec, headTop, hatPop, hyRad, 'front', reliefOut);
+}
+
+/**
+ * Arsitektur Rambut 2.5D Bezier Murni Klasik (Atelier v6.1):
+ * - 6-station anatomical `cylSpan` face cutout (nol dinding pipi lurus vertikal, nol flip diskrit).
+ * - Kubah mahkota luar 2.5D tinggi KONSTAN sepanjang 0°..360° (nol penyusutan di belakang!).
+ * - Proyeksi silindris 2.5D kurva poni klasik `getHeadHairPolylines().bot` menyatu dalam satu `traceCrownPath`
+ *   (nol stiker segitiga memudar, 100% setia gaya klasik `drawFrontHairStyle`!).
  */
 function renderUnifiedHair360(
   ctx: Ctx,
   spec: CharacterSpec,
   headPath360: () => void,
+  skG: CanvasGradient,
+  W: number,
   W360: number,
   H: number,
   headTop: number,
@@ -5613,299 +6143,132 @@ function renderUnifiedHair360(
   hySideSin: number,
 ) {
   const { ink, hairStyle, hairColor, hairHighlight } = spec;
-  const poly = getHeadHairPolylines(hairStyle, W360, headTop, cy, hatPop);
   const lift = -hatPop * (hairStyle === 'messy' ? 14 : hairStyle === 'curtain' ? 12 : 10);
-  const sd = hySideSin >= 0 ? 1 : -1;
 
-  // =========================================================================
-  // ZONA A: Rambut Tengkuk, Jambang Samping, & Belakang (100% DI DALAM KLIP headPath360 — Melengkung Organik Tanpa Kotak 90°!)
-  // =========================================================================
-  if (hyFrontVis < 0.84) {
-    const wSide = smoothstepHair(0.84, 0.12, hyFrontVis);
-    const wBack = smoothstepHair(0.0, -0.82, hyFrontVis);
-    const uTop = -0.54 + 0.48 * wSide + 0.72 * wBack;
-    const uCtrl = -0.54 + 0.32 * wSide + 0.92 * wBack;
-    const uEar = -0.54 + 0.25 * wSide + 0.97 * wBack;
-    const uNape = -0.54 + 0.15 * wSide + 1.07 * wBack;
-    const napeSolidY = hairStyle === 'fadeCrop' ? chin - 74 : hairStyle === 'bun' ? chin - 44 : chin - 36;
-    const archMid = 0.09 * wBack * (1 - wBack);
-
-    ctx.save();
-    headPath360();
-    ctx.clip();
-
-    ctx.fillStyle = hairColor;
-    ctx.beginPath();
-    ctx.moveTo(CX - sd * W360 * 0.66, headTop - 2);
-    ctx.lineTo(CX + sd * W360 * uTop, headTop - 2);
-    ctx.quadraticCurveTo(CX + sd * W360 * (uCtrl + archMid), cy - 14, CX + sd * W360 * uEar, cy + 16);
-    // Lengkungan halus jambang -> tengkuk agar tidak membentuk kotak huruf L siku 90° di 105°–116°!
-    ctx.quadraticCurveTo(CX + sd * W360 * uNape, napeSolidY - 6, CX + sd * W360 * (uNape - 0.14 * (1 - wBack)), napeSolidY);
-    ctx.lineTo(CX - sd * W360 * 0.66, napeSolidY);
-    ctx.closePath();
-    ctx.fill();
-
-    if (hairStyle === 'fadeCrop') {
-      const fadeStart = chin - 76;
-      const fadeEnd = chin - 24;
-      const fg = ctx.createLinearGradient(0, fadeStart, 0, fadeEnd);
-      fg.addColorStop(0, hairColor);
-      fg.addColorStop(0.52, 'rgba(54, 42, 44, 0.54)');
-      fg.addColorStop(1, 'rgba(54, 42, 44, 0)');
-      ctx.fillStyle = fg;
-      // Lengkungkan tepi depan gradasi taper fade mengikuti lengkung tengkuk (nol kotak blur vertikal di 105°–116°!)
-      const uFadeFront = uNape - 0.14 * (1 - wBack);
-      ctx.beginPath();
-      ctx.moveTo(CX - sd * W360 * 0.66, fadeStart);
-      ctx.lineTo(CX + sd * W360 * uFadeFront, fadeStart);
-      ctx.quadraticCurveTo(
-        CX + sd * W360 * (uFadeFront - 0.06 * (1 - wBack)),
-        (fadeStart + fadeEnd) * 0.5,
-        CX + sd * W360 * (uFadeFront - 0.14 * (1 - wBack)),
-        fadeEnd,
-      );
-      ctx.lineTo(CX - sd * W360 * 0.66, fadeEnd);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    ctx.restore();
-    headPath360();
-    ctx.strokeStyle = ink;
-    ctx.lineWidth = 5.5;
-    ctx.stroke();
-  }
-
-  // =========================================================================
-  // ZONA B: Topi Mahkota & Poni Klasik `HEAD` (Pangkal Terkunci Pelipis + Profil Simetris!)
-  // =========================================================================
-  const M = 40;
-  const frontTopUniform = resamplePolylineUniform(poly.top, M);
-  const frontBotUniform = resamplePolylineUniform(poly.bot, M);
-  const yTemBaseL = frontTopUniform[0].y;
-  const yTemBaseR = frontTopUniform[M].y;
-
-  const wProfile = smoothstepHair(0.56, 0.06, hyFrontVis);
-  const wPureBack = smoothstepHair(-0.06, -0.68, hyFrontVis);
-  const profileActive = wProfile * (1 - wPureBack);
-
-  const yProfileBang =
-    hairStyle === 'spiky' || hairStyle === 'quiff'
-      ? headTop + 30
-      : hairStyle === 'fadeCrop'
-        ? headTop + 26
-        : headTop + 24;
-
-  // Jangkar kiri & kanan SELALU menempel presisi di siluet luar `headPath360` -> 0 px celah kulit & 0 double-outline!
-  // Bobot arah kontinu `wFaceL/wFaceR` bernilai 0 di 0° maupun ±180° sehingga NOL mirror flip saat melewati ±180°!
-  const wFaceL = smoothstepHair(0, 0.35, -hySideSin) * (1 - wPureBack);
-  const wFaceR = smoothstepHair(0, 0.35, hySideSin) * (1 - wPureBack);
-  const yBackSideburn = (cy + 6) * (1 - wPureBack) + (cy - 14) * wPureBack;
-  const yBackL = yTemBaseL * (1 - wProfile) + yBackSideburn * wProfile;
-  const yBackR = yTemBaseR * (1 - wProfile) + yBackSideburn * wProfile;
-  const yFrontL = yTemBaseL * (1 - profileActive) + yProfileBang * profileActive;
-  const yFrontR = yTemBaseR * (1 - profileActive) + yProfileBang * profileActive;
-  const yEndL = yBackL * (1 - wFaceL) + yFrontL * wFaceL;
-  const yEndR = yBackR * (1 - wFaceR) + yFrontR * wFaceR;
-  const bEndL = headWidthBoundsAtY(spec, W360, H, cy, yEndL, hySideSin);
-  const bEndR = headWidthBoundsAtY(spec, W360, H, cy, yEndR, hySideSin);
-  const frontBangProj = hairStyle === 'bun' ? 2 : 5;
-  const projL = 0.5 + (frontBangProj * profileActive + 0.5) * wFaceL;
-  const projR = 0.5 + (frontBangProj * profileActive + 0.5) * wFaceR;
-  const anchorL = { x: bEndL.xL - projL, y: yEndL };
-  const anchorR = { x: bEndR.xR + projR, y: yEndR };
-  // Jangkar mahkota luar (kubah) tetap di pelipis tinggi agar lebar tempurung penuh; jambang turun terpisah lewat `anchorL/anchorR`.
-  const yCrownBackL = yTemBaseL * (1 - wPureBack) + (cy - 14) * wPureBack;
-  const yCrownBackR = yTemBaseR * (1 - wPureBack) + (cy - 14) * wPureBack;
-  const yCrownL = yCrownBackL * (1 - wFaceL) + yFrontL * wFaceL;
-  const yCrownR = yCrownBackR * (1 - wFaceR) + yFrontR * wFaceR;
-  const cAnchorL = { x: headWidthBoundsAtY(spec, W360, H, cy, yCrownL, hySideSin).xL - projL, y: yCrownL };
-  const cAnchorR = { x: headWidthBoundsAtY(spec, W360, H, cy, yCrownR, hySideSin).xR + projR, y: yCrownR };
-
-  // Kubah profil/belakang setia identitas `HEAD` (fadeCrop flat-top kotak rapi, spiky tajam, curtain bervolume!)
-  const crownFrontH =
-    hairStyle === 'spiky' || hairStyle === 'quiff'
-      ? 48
-      : hairStyle === 'fadeCrop'
-        ? 50
-        : hairStyle === 'curtain'
-          ? 46
-          : hairStyle === 'messy'
-            ? 41
-            : hairStyle === 'parted'
-              ? 36
-              : 29;
-  const crownBackHBase =
+  // 1. Cangkang Rambut Penuh + 6-Station Anatomical Face-Cutout (100% kontinu!)
+  const napeSolidY = hairStyle === 'fadeCrop' ? chin - 74 : hairStyle === 'bun' ? chin - 44 : chin - 36;
+  const foreheadY =
     hairStyle === 'fadeCrop'
-      ? 24 * (1 - wPureBack * 0.72)
-      : hairStyle === 'bun'
-        ? 22 * (1 - wPureBack * 0.35)
-        : hairStyle === 'parted'
-          ? 26 * (1 - wPureBack * 0.3)
-          : hairStyle === 'spiky' || hairStyle === 'quiff'
-            ? 32
-            : 29 * (1 - wPureBack * 0.25);
-  const crownBackH = crownBackHBase;
-  const rawParietal =
+      ? headTop + 26
+      : hairStyle === 'spiky' || hairStyle === 'quiff'
+        ? headTop + 28
+        : headTop + 34;
+  fillContinuousHairShellWithFaceCutout(
+    ctx,
+    spec,
+    headPath360,
+    skG,
+    W360,
+    H,
+    headTop,
+    cy,
+    chin,
+    hyRad,
+    hySideSin,
+    napeSolidY,
+    foreheadY,
+  );
+
+  // 2. Kubah Mahkota Luar 2.5D Tinggi KONSTAN 0°..360° (nol penyusutan 45% di belakang!)
+  const wPureBack = smoothstepHair(-0.12, -0.72, hyFrontVis);
+  const yTemBase =
+    hairStyle === 'fadeCrop'
+      ? cy + 2
+      : hairStyle === 'spiky' || hairStyle === 'quiff'
+        ? cy - 16
+        : hairStyle === 'bun'
+          ? cy - 6
+          : cy - 10;
+  const yAnchor = yTemBase * (1 - wPureBack) + (cy - 14) * wPureBack;
+  const bAnchor = headWidthBoundsAtY(spec, W360, H, cy, yAnchor, hySideSin);
+  const anchorL = { x: bAnchor.xL - 1.5, y: yAnchor };
+  const anchorR = { x: bAnchor.xR + 1.5, y: yAnchor };
+
+  const crownH =
+    hairStyle === 'fadeCrop'
+      ? 54
+      : hairStyle === 'curtain'
+        ? 46
+        : hairStyle === 'spiky' || hairStyle === 'quiff'
+          ? 44
+          : hairStyle === 'messy'
+            ? 42
+            : hairStyle === 'parted'
+              ? 38
+              : 28;
+  const apexX = CX + hySideSin * W360 * (hairStyle === 'fadeCrop' ? 0.08 : 0.05);
+  const apexY = headTop - crownH + lift * 0.85;
+
+  const parietalSpread =
     hairStyle === 'curtain'
       ? 0.545
       : hairStyle === 'messy'
         ? 0.54
         : hairStyle === 'fadeCrop'
-          ? 0.538
-          : 0.536;
-  const parietalSpread =
-    0.496 + (rawParietal - 0.496) * (1 - wPureBack * (hairStyle === 'fadeCrop' ? 0.96 : 0.55));
+          ? 0.532
+          : 0.53;
+  const flatTopSpan = hairStyle === 'fadeCrop' ? 0.34 : 0.24;
 
-  const sideAbs = Math.abs(hySideSin);
-  const backFactor = smoothstepHair(0.2, -0.8, hyFrontVis);
-  const apexShiftX = hySideSin * W360 * (hairStyle === 'fadeCrop' ? 0.16 : 0.08);
-  const apexHeight = crownFrontH * (1 - backFactor * 0.55) + crownBackH * (backFactor * 0.55);
-  const apexX = CX + apexShiftX;
-  const apexY = headTop - apexHeight + lift * 0.85;
-
-  const midBackH = (apexHeight + crownBackH) * 0.5;
-  const flatTopSpan = hairStyle === 'fadeCrop' ? 0.32 * (1 - wPureBack * 0.45) : 0.24;
-  const ctrl1LX = Math.min(cAnchorL.x - (2 + (7 * sideAbs - 2) * wFaceL), CX - W360 * parietalSpread);
-  const ctrl1LY = headTop - (crownBackH * 0.36 * (1 - wFaceL) + crownFrontH * (hairStyle === 'fadeCrop' ? 0.62 : 0.38) * wFaceL) + lift * 0.5;
+  const ctrl1LX = Math.min(anchorL.x - 4, CX - W360 * parietalSpread);
+  const ctrl1LY = headTop - crownH * (hairStyle === 'fadeCrop' ? 0.72 : 0.46) + lift * 0.5;
   const ctrl2LX = apexX - W360 * flatTopSpan;
-  const ctrl2LY = headTop - (midBackH * (1 - wFaceL) + crownFrontH * wFaceL) + lift * 0.85;
+  const ctrl2LY = apexY + (hairStyle === 'fadeCrop' ? 2 : 4);
 
   const ctrl1RX = apexX + W360 * flatTopSpan;
-  const ctrl1RY = headTop - (midBackH * (1 - wFaceR) + crownFrontH * wFaceR) + lift * 0.85;
-  const ctrl2RX = Math.max(cAnchorR.x + (2 + (7 * sideAbs - 2) * wFaceR), CX + W360 * parietalSpread);
-  const ctrl2RY = headTop - (crownBackH * 0.36 * (1 - wFaceR) + crownFrontH * (hairStyle === 'fadeCrop' ? 0.62 : 0.38) * wFaceR) + lift * 0.5;
+  const ctrl1RY = apexY + (hairStyle === 'fadeCrop' ? 2 : 4);
+  const ctrl2RX = Math.max(anchorR.x + 4, CX + W360 * parietalSpread);
+  const ctrl2RY = headTop - crownH * (hairStyle === 'fadeCrop' ? 0.72 : 0.46) + lift * 0.5;
 
-  const wFrontCrown = smoothstepHair(-0.05, 0.84, hyFrontVis);
+  const M = 36;
   const outerCrown: { x: number; y: number }[] = [];
-  const hairline: { x: number; y: number; inkAlpha: number }[] = [];
-
-  const p0TopX = frontTopUniform[0].x;
-  const pMTopX = frontTopUniform[M].x;
-  const p0BotX = frontBotUniform[0].x;
-  const pMBotX = frontBotUniform[M].x;
-  const yBotBaseL = frontBotUniform[0].y;
-  const yBotBaseR = frontBotUniform[M].y;
-
-  const bTemBaseL = headWidthBoundsAtY(spec, W360, H, cy, yTemBaseL, hySideSin);
-  const bTemBaseR = headWidthBoundsAtY(spec, W360, H, cy, yTemBaseR, hySideSin);
-  const crownSpanSrc = Math.max(1, pMTopX - p0TopX);
-  const crownSpanDst = bTemBaseR.xR - bTemBaseL.xL;
-
   for (let k = 0; k <= M; k++) {
     const u = k / M;
-
-    // --- Kontur Atas (outerCrown) ---
-    const relYL = Math.max(0, Math.min(1, (frontTopUniform[k].y - (headTop - 8)) / Math.max(12, yTemBaseL - (headTop - 8))));
-    const relYR = Math.max(0, Math.min(1, (frontTopUniform[k].y - (headTop - 8)) / Math.max(12, yTemBaseR - (headTop - 8))));
-    const mappedCrownX = bTemBaseL.xL + ((frontTopUniform[k].x - p0TopX) / crownSpanSrc) * crownSpanDst;
-    const yawCrownShift = hySideSin * W360 * 0.065 * Math.sin(Math.PI * u);
-    const fxTop =
-      mappedCrownX +
-      (cAnchorL.x - bTemBaseL.xL) * relYL * Math.pow(1 - u, 3) +
-      (cAnchorR.x - bTemBaseR.xR) * relYR * Math.pow(u, 3) +
-      yawCrownShift;
-    const fyTop =
-      frontTopUniform[k].y +
-      (cAnchorL.y - yTemBaseL) * relYL * Math.pow(1 - u, 3) +
-      (cAnchorR.y - yTemBaseR) * relYR * Math.pow(u, 3);
-
-    let sxTop: number;
-    let syTop: number;
-    if (u <= 0.5) {
-      [sxTop, syTop] = cubicBezierPt(cAnchorL.x, cAnchorL.y, ctrl1LX, ctrl1LY, ctrl2LX, ctrl2LY, apexX, apexY, u * 2);
-    } else {
-      [sxTop, syTop] = cubicBezierPt(apexX, apexY, ctrl1RX, ctrl1RY, ctrl2RX, ctrl2RY, cAnchorR.x, cAnchorR.y, (u - 0.5) * 2);
-    }
-
-    // Jambul lancip khas `spiky` Saka & gelombang bervolume `curtain` Raka tetap konsisten sepanjang 360°!
-    if (hairStyle === 'spiky' || hairStyle === 'quiff') {
-      const p1 = 0.52 + hySideSin * 0.12;
-      const p2 = 0.42 - hySideSin * 0.11;
-      const tri1 = Math.max(0, 1 - Math.abs(u - p1) / 0.11);
-      const tri2 = Math.max(0, 1 - Math.abs(u - p2) / 0.09);
-      syTop -= (26 * tri1 + 16 * tri2) * (1 - backFactor * 0.18);
-    } else if (hairStyle === 'curtain') {
-      const waveU = 0.5 + hySideSin * 0.14;
-      const wave = Math.exp(-Math.pow((u - waveU) / 0.13, 2));
-      syTop -= 18 * wave * (1 - backFactor * 0.4);
-    }
-
-    outerCrown.push({
-      x: sxTop * (1 - wFrontCrown) + fxTop * wFrontCrown,
-      y: syTop * (1 - wFrontCrown) + fyTop * wFrontCrown,
-    });
-
-    // --- Kontur Bawah Poni (hairline): terkunci pelipis di front/3-4, melengkung tinggi & simetris di profil/belakang! ---
-    const baseBotX = p0BotX + (pMBotX - p0BotX) * u;
-    const offBotX = (frontBotUniform[k].x - baseBotX) * Math.max(0.25, hyFrontVis);
-    const bangShift = hySideSin * W360 * 0.12 * Math.sin(Math.PI * u);
-    const rawFxBot = anchorL.x + (anchorR.x - anchorL.x) * u + offBotX + bangShift;
-    const fxBot =
-      k === 0
-        ? anchorL.x
-        : k === M
-          ? anchorR.x
-          : Math.max(anchorL.x + 4, Math.min(anchorR.x - 4, rawFxBot));
-    const fyBotFront =
-      frontBotUniform[k].y +
-      (anchorL.y - yBotBaseL) * Math.pow(1 - u, 2.4) +
-      (anchorR.y - yBotBaseR) * Math.pow(u, 2.4);
-
-    // Kurva bawah profil/belakang: SATU kurva kubik kontinu (nol cabang wPureBack > 0.85 & nol flip sd > 0!)
-    const sMix = 0.5 + 0.5 * hySideSin; // 0 saat hadap kiri (-90°), 0.5 di 0°/180°, 1 saat hadap kanan (+90°)
-    const c1xProf = CX + W360 * (0.16 * (1 - sMix) - 0.25 * sMix);
-    const c2xProf = CX + W360 * (0.25 * (1 - sMix) - 0.16 * sMix);
-    const c1yProf = (headTop + 18) * (1 - sMix) + (cy + 4) * sMix;
-    const c2yProf = (cy + 4) * (1 - sMix) + (headTop + 18) * sMix;
-    const c1x = c1xProf * (1 - wPureBack) + (CX - W360 * 0.17) * wPureBack;
-    const c2x = c2xProf * (1 - wPureBack) + (CX + W360 * 0.17) * wPureBack;
-    const c1y = c1yProf * (1 - wPureBack) + (cy - 18) * wPureBack;
-    const c2y = c2yProf * (1 - wPureBack) + (cy - 18) * wPureBack;
-    const [sxBot, syBotRaw] = cubicBezierPt(anchorL.x, anchorL.y, c1x, c1y, c2x, c2y, anchorR.x, anchorR.y, u);
-    const distTowardFront = u * sMix + (1 - u) * (1 - sMix);
-    // Poni belah `curtain` Raka tetap turun melengkung di dahi saat profil 45°–105° (tidak berubah jadi rambut licin!)
-    const curtainDip =
-      hairStyle === 'curtain'
-        ? 26 * Math.exp(-Math.pow((distTowardFront - 0.8) / 0.16, 2)) * (1 - wPureBack)
-        : 0;
-    const syBot = syBotRaw + curtainDip;
-    const bx = sxBot * wProfile + fxBot * (1 - wProfile);
-    const by = syBot * wProfile + fyBotFront * (1 - wProfile);
-
-    // Alpha garis tinta poni & jambang kontinu (nol pop di ±73.7° & ±110.5°!)
-    const wProfStroke = smoothstepHair(0.25, 0.55, wProfile);
-    const wBackFade = 1 - smoothstepHair(0.2, 0.58, wPureBack);
-    const segVis = 1 - wProfStroke + wProfStroke * smoothstepHair(0.16, 0.34, distTowardFront);
-    hairline.push({ x: bx, y: by, inkAlpha: wBackFade * segVis });
+    const [sx, sy] =
+      u <= 0.5
+        ? cubicBezierPt(anchorL.x, anchorL.y, ctrl1LX, ctrl1LY, ctrl2LX, ctrl2LY, apexX, apexY, u * 2)
+        : cubicBezierPt(apexX, apexY, ctrl1RX, ctrl1RY, ctrl2RX, ctrl2RY, anchorR.x, anchorR.y, (u - 0.5) * 2);
+    outerCrown.push({ x: sx, y: sy });
   }
 
-  const traceCapPath = () => {
+  // 3. Proyeksi Silindris 2.5D Poni Klasik `getHeadHairPolylines().bot` menyatu dalam SATU `traceCrownPath`!
+  const classicPoly = getHeadHairPolylines(hairStyle, W, headTop, cy, hatPop);
+  const rawVisBot = projectClassicFrontHairline(classicPoly.bot, W, W360, hyRad);
+  // Kunci setiap titik visBot di dalam batas kepala aktual pada elevasinya (nol celah putih 3px di tepi dahi 45°/89°!)
+  const visBot = rawVisBot.map((p) => {
+    const b = headWidthBoundsAtY(spec, W360, H, cy, p.y, hySideSin);
+    return { x: Math.max(b.xL + 0.5, Math.min(b.xR - 0.5, p.x)), y: p.y };
+  });
+
+  const traceCrownPath = () => {
     ctx.beginPath();
     ctx.moveTo(anchorL.x, anchorL.y);
     for (let i = 0; i < outerCrown.length; i++) ctx.lineTo(outerCrown[i].x, outerCrown[i].y);
     ctx.lineTo(anchorR.x, anchorR.y);
-    for (let i = hairline.length - 2; i >= 1; i--) ctx.lineTo(hairline[i].x, hairline[i].y);
+    if (visBot.length >= 2) {
+      for (let i = visBot.length - 1; i >= 0; i--) ctx.lineTo(visBot[i].x, visBot[i].y);
+    } else {
+      ctx.quadraticCurveTo(CX, cy - 18, anchorL.x, anchorL.y);
+    }
     ctx.closePath();
   };
 
-  // Satu jalur gambar kontinu untuk bayangan jatuh, isi rambut, mahkota luar, dan poni (nol loncatan di ±68.9°!)
+  // Bayangan jatuh lembut mahkota (memudar mulus ke belakang)
   const shadowAlpha = smoothstepHair(-0.08, 0.25, hyFrontVis);
   if (shadowAlpha > 0.01) {
-    const shX = 3 * (1 - wProfile) + hySideSin * 2.5 * Math.max(0, hyFrontVis) * wProfile;
-    const shY = 4 * (1 - wProfile) + 3.5 * Math.max(0, hyFrontVis) * wProfile;
     ctx.save();
     ctx.globalAlpha *= shadowAlpha;
-    ctx.translate(shX, shY);
-    traceCapPath();
+    ctx.translate(hySideSin * 2.5, 3.5);
+    traceCrownPath();
     ctx.fillStyle = ink;
     ctx.fill();
     ctx.restore();
   }
-  traceCapPath();
+
+  traceCrownPath();
   ctx.fillStyle = hairColor;
   ctx.fill();
 
+  // Outline mahkota luar utuh
   ctx.strokeStyle = ink;
   ctx.lineWidth = 5.2;
   ctx.beginPath();
@@ -5914,25 +6277,76 @@ function renderUnifiedHair360(
   ctx.lineTo(anchorR.x, anchorR.y);
   ctx.stroke();
 
-  // Stroke hairline per-segmen dengan alpha kontinu
-  ctx.save();
-  ctx.strokeStyle = ink;
-  ctx.lineWidth = 5.2;
-  ctx.lineCap = 'round';
-  for (let i = 0; i < hairline.length - 1; i++) {
-    const a = (hairline[i].inkAlpha + hairline[i + 1].inkAlpha) * 0.5;
-    if (a <= 0.02) continue;
-    ctx.globalAlpha = a;
+  // Outline garis poni klasik HANYA pada segmen depan `visBot` yang berada di atas kulit wajah (nol garis di belakang!)
+  const frontBangAlpha = smoothstepHair(-0.18, 0.14, hyFrontVis);
+  if (visBot.length >= 2 && frontBangAlpha > 0.02) {
+    ctx.save();
+    ctx.globalAlpha *= frontBangAlpha;
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 4.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(hairline[i].x, hairline[i].y);
-    ctx.lineTo(hairline[i + 1].x, hairline[i + 1].y);
+    ctx.moveTo(visBot[0].x, visBot[0].y);
+    for (let i = 1; i < visBot.length; i++) ctx.lineTo(visBot[i].x, visBot[i].y);
     ctx.stroke();
+    ctx.restore();
   }
-  ctx.restore();
 
-  // Highlight, gelombang tekstur `fadeCrop`, uban pelipis SIMETRIS `pakBudi`, & sisiran klimis `tio` (semua pudar mulus!)
+  // 4. Fitur Khas 2.5D Bezier Puncak Mahkota (Raka wave lembut, Saka puncak tunggal klasik, Bang Utoh ahoge!)
+  if (hairStyle === 'curtain') {
+    const p0 = rotateYaw3D([4, headTop - 44 + lift, 12], hyRad);
+    const c1 = rotateYaw3D([26, headTop - 76 + lift, 16], hyRad);
+    const p1 = rotateYaw3D([62, headTop - 46 + lift, 8], hyRad);
+    const base = rotateYaw3D([30, headTop - 28 + lift, 8], hyRad);
+    ctx.save();
+    ctx.fillStyle = hairColor;
+    ctx.beginPath();
+    ctx.moveTo(CX + p0.x, p0.y);
+    ctx.quadraticCurveTo(CX + c1.x, c1.y, CX + p1.x, p1.y);
+    ctx.quadraticCurveTo(CX + base.x, base.y, CX + p0.x, p0.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 5.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(CX + p0.x, p0.y);
+    ctx.quadraticCurveTo(CX + c1.x, c1.y, CX + p1.x, p1.y);
+    ctx.stroke();
+    ctx.restore();
+  } else if (hairStyle === 'spiky' || hairStyle === 'quiff') {
+    // Puncak tengah tebal klasik Saka + punggung mahkota halus di belakang (menggantikan 6 kerucut tipis!)
+    const pL = rotateYaw3D([-W360 * 0.16, headTop - 42 + lift, 14], hyRad);
+    const peak = rotateYaw3D([W360 * 0.04, headTop - 64 + lift, 6], hyRad);
+    const pR = rotateYaw3D([W360 * 0.24, headTop - 36 + lift, 14], hyRad);
+    const pBack = rotateYaw3D([0, headTop - 52 + lift, -24], hyRad);
+    ctx.save();
+    ctx.fillStyle = hairColor;
+    ctx.beginPath();
+    ctx.moveTo(CX + pL.x, pL.y);
+    ctx.lineTo(CX + peak.x, peak.y);
+    ctx.lineTo(CX + pR.x, pR.y);
+    ctx.quadraticCurveTo(CX + pBack.x, pBack.y + 18, CX + pL.x, pL.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 5.2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(CX + pL.x, pL.y);
+    ctx.lineTo(CX + peak.x, peak.y);
+    ctx.lineTo(CX + pR.x, pR.y);
+    ctx.stroke();
+    ctx.restore();
+  } else if (hairStyle === 'messy') {
+    drawClassicAhoge360(ctx, spec, headTop, hatPop, hyRad, 'front');
+  }
+
+  // 5. Highlight permukaan 3D terklip di dalam mahkota (Ebot waves, Bang Utoh sheen, Pak Budi uban tegas, Tio sisiran!)
   ctx.save();
-  traceCapPath();
+  traceCrownPath();
   ctx.clip();
   const rSurf = W360 * 0.48;
   const rotPt = (lx: number, absY: number, dZ = 0) => {
@@ -5946,9 +6360,9 @@ function renderUnifiedHair360(
     ctx.strokeStyle = hairHighlight ?? '#33364a';
     ctx.lineWidth = 4.8;
     for (const [ox, oy, dx, dy] of [
-      [-0.26, -14, 0.38, -6],
-      [-0.1, -30, 0.36, 2],
-      [-0.16, 4, 0.42, -2],
+      [-0.22, -16, 0.44, 0],
+      [-0.18, -32, 0.36, 0],
+      [-0.24, 2, 0.48, 0],
     ]) {
       const p0 = rotPt(W360 * ox, headTop + oy + lift);
       const pc = rotPt(W360 * (ox + dx * 0.5), headTop + oy - 12 + lift, 8);
@@ -5982,14 +6396,14 @@ function renderUnifiedHair360(
     }
   } else if (hairStyle === 'parted') {
     if (hairHighlight && !spec.hairCombed) {
-      // SATU garis uban pelipis konsisten per sisi pada Pak Budi (menghapus duplikat `profUbanA` yang memunculkan 2 garis putih!)
+      // Uban pelipis tegas Pak Budi (#c5cad6) pada kedua sisi pelipis (terbaca jelas di 0° maupun 89°!)
       ctx.strokeStyle = hairHighlight;
-      ctx.lineWidth = 5.5;
+      ctx.lineWidth = 6.2;
       for (const s of [-1, 1] as const) {
-        const g0 = rotateYaw3D([s * W360 * 0.46, cy - 12, W360 * 0.1], hyRad);
-        const gc = rotateYaw3D([s * W360 * 0.42, cy - 30, W360 * 0.18], hyRad);
-        const g1 = rotateYaw3D([s * W360 * 0.32, cy - 42, W360 * 0.22], hyRad);
-        const a = smoothstepHair(-12, 22, gc.z);
+        const g0 = rotateYaw3D([s * W360 * 0.45, cy - 12, W360 * 0.14], hyRad);
+        const gc = rotateYaw3D([s * W360 * 0.4, cy - 30, W360 * 0.2], hyRad);
+        const g1 = rotateYaw3D([s * W360 * 0.3, cy - 42, W360 * 0.24], hyRad);
+        const a = smoothstepHair(-16, 16, gc.z);
         if (a > 0.02) {
           ctx.save();
           ctx.globalAlpha *= a;
@@ -6006,7 +6420,7 @@ function renderUnifiedHair360(
       const b0 = rotPt(-W360 * 0.2, headTop + 28);
       const bc = rotPt(-W360 * 0.24, headTop - 6 + pLift, 6);
       const b1 = rotPt(-W360 * 0.16, headTop - 36 + pLift, 8);
-      const partA = smoothstepHair(-W360 * 0.18, W360 * 0.06, bc.z) * smoothstepHair(0.12, 0.38, hyFrontVis);
+      const partA = smoothstepHair(-W360 * 0.18, W360 * 0.06, bc.z) * smoothstepHair(-0.08, 0.25, hyFrontVis);
       if (partA > 0.02) {
         ctx.save();
         ctx.globalAlpha *= partA;
@@ -6019,8 +6433,8 @@ function renderUnifiedHair360(
         ctx.restore();
       }
       ctx.strokeStyle = hairHighlight ?? '#4a4152';
-      ctx.lineWidth = 4.5;
-      const combFrontFade = smoothstepHair(0.22, 0.55, hyFrontVis);
+      ctx.lineWidth = 4.6;
+      const combFrontFade = smoothstepHair(-0.12, 0.32, hyFrontVis);
       if (combFrontFade > 0.02) {
         for (const [ox, oy, len] of [
           [-0.1, -24, 0.5],
@@ -6030,8 +6444,7 @@ function renderUnifiedHair360(
           const s0 = rotPt(W360 * ox, headTop + oy + pLift);
           const sc = rotPt(W360 * (ox + len * 0.5), headTop + oy - 14 + pLift, 8);
           const s1 = rotPt(W360 * (ox + len), headTop + oy + 12 + pLift);
-          const minZ = Math.min(s0.z, sc.z, s1.z);
-          const a = combFrontFade * smoothstepHair(-10, 24, minZ);
+          const a = combFrontFade * smoothstepHair(-24, 14, sc.z);
           if (a > 0.02) {
             ctx.save();
             ctx.globalAlpha *= a;
@@ -6063,26 +6476,6 @@ function renderUnifiedHair360(
     }
   }
   ctx.restore();
-
-  // Jambul ahoge ikonik Bang Utoh (`messy`): persisten di seluruh 360° (menggantikan ahoge depan saat `wFrontCrown → 0`!)
-  if (hairStyle === 'messy') {
-    const ahogeW = smoothstepHair(0.85, 0.2, wFrontCrown);
-    if (ahogeW > 0.02) {
-      const ah = rotateYaw3D([10, headTop - 24 + lift, 8], hyRad);
-      const ax = CX + ah.x;
-      const ay = ah.y;
-      const hookDir = hySideSin >= 0 ? -1 : 1;
-      const sc = 0.55 + 0.45 * ahogeW;
-      const ahogePath = () => {
-        ctx.beginPath();
-        ctx.moveTo(ax - 12 * sc, ay + 12 * sc);
-        ctx.quadraticCurveTo(ax + hookDir * 4 * sc, ay - 30 * sc, ax + hookDir * 30 * sc, ay - 14 * sc);
-        ctx.quadraticCurveTo(ax + hookDir * 12 * sc, ay - 2 * sc, ax + 14 * sc, ay + 14 * sc);
-        ctx.closePath();
-      };
-      inked(ctx, ahogePath, hairColor, ink, 4.5, 2, 3);
-    }
-  }
 }
 
 function drawFrontHairStyle(ctx: Ctx, spec: CharacterSpec, W: number, headTop: number, cy: number, hatPop: number, facing = 0) {

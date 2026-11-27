@@ -75,6 +75,43 @@ export function surfacePoint3D(
   };
 }
 
+export interface CylSpanResult {
+  x0: number;
+  x1: number;
+  midX: number;
+  vis: number;
+  a0: number;
+  a1: number;
+}
+
+/**
+ * Proyeksikan busur `[aStart, aEnd]` pada permukaan silinder menghadap kamera (`z >= 0`)
+ * ke rentang X `[-rx, +rx]`. Mengembalikan `null` hanya jika seluruh busur berada di `z <= 0`,
+ * sehingga lebar menyusut mulus tepat ke `0 px` di tepi siluet tanpa loncatan.
+ */
+export function cylSpan(yaw: number, aStart: number, aEnd: number, rx: number): CylSpanResult | null {
+  const mid = (aStart + aEnd) * 0.5 + yaw;
+  const shift = Math.round(mid / TAU) * TAU;
+  const u0 = aStart + yaw - shift;
+  const u1 = aEnd + yaw - shift;
+  const halfPi = Math.PI * 0.5;
+  const c0 = Math.max(-halfPi, u0);
+  const c1 = Math.min(halfPi, u1);
+  if (c1 <= c0 + 1e-4) return null;
+  const x0 = rx * Math.sin(c0);
+  const x1 = rx * Math.sin(c1);
+  const halfSpan = Math.min(halfPi, Math.abs(aEnd - aStart) * 0.5);
+  const fullW = Math.max(1e-4, 2 * rx * Math.sin(halfSpan));
+  return {
+    x0,
+    x1,
+    midX: (x0 + x1) * 0.5,
+    vis: Math.max(0, Math.min(1, (x1 - x0) / fullW)),
+    a0: c0,
+    a1: c1,
+  };
+}
+
 /** Faktor penggelapan halus proporsional berdasarkan kedalaman `z` anggota tubuh jauh (0..maxDark). */
 export function depthDarkenFactor(zDepth: number, refRadius: number, maxDark = 0.16): number {
   if (zDepth >= 0 || refRadius <= 1e-4) return 0;

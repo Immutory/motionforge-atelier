@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as THREE from 'three';
+import { cylSpan } from '../engine/cast/rig360';
 import {
   CAST_PRESETS,
   CAT_PRESETS,
@@ -322,7 +323,8 @@ test('v4.6 hair & headgear 360 regressions: no cheek fillRect smear, attached ik
 });
 
 test('v4.7 HEAD hair restoration & rotation fidelity: short back nape, saka spiky below iket, pakBudi gray temple, & legacy cap/iket/helmet', () => {
-  // 1. short (arya, dimas, bangUdin) pada 180° tidak botak (harus menutup hingga tengkuk y >= 370)
+  // 1. short (dimas, bangUdin) pada 180° tidak botak (harus menutup tempurung belakang); arya adalah 'bald' (botak)!
+  assert.equal(CAST_PRESETS.arya.hairStyle, 'bald', 'arya canon hairStyle must be bald');
   const fills: string[] = [];
   const spyShort = createSpyCanvasCtx();
   const rawCtx = spyShort.ctx as unknown as { fill: () => void; strokeStyle: string; fillStyle: string; stroke: () => void };
@@ -333,11 +335,11 @@ test('v4.7 HEAD hair restoration & rotation fidelity: short back nape, saka spik
     ysAtFill.push(spyShort.ys[spyShort.ys.length - 1] ?? 0);
     origFill();
   };
-  drawActor(spyShort.ctx, 'arya', { face: 'neutral', stance: 'stand', view: 'front', yawDeg: 180 }, { headgear: 'none' });
+  drawActor(spyShort.ctx, 'dimas', { face: 'neutral', stance: 'stand', view: 'front', yawDeg: 180 }, { headgear: 'none' });
   const darkHairFillYs = fills
     .map((col, idx) => ({ col, y: ysAtFill[idx] }))
-    .filter((entry) => entry.col.toLowerCase() === CAST_PRESETS.arya.hairColor.toLowerCase());
-  assert.ok(darkHairFillYs.length >= 1, 'arya@180 short hair should fill back skull');
+    .filter((entry) => entry.col.toLowerCase() === CAST_PRESETS.dimas.hairColor.toLowerCase());
+  assert.ok(darkHairFillYs.length >= 1, 'dimas@180 short hair should fill back skull');
 
   // 2. pakBudi@0° mempertahankan garis uban pelipis (#c5cad6)
   const strokeCols: string[] = [];
@@ -503,6 +505,145 @@ test('v5.1 C0/C1 360-degree continuity: zero sudden pop across -180..180 for hai
       }
       prevMinY = minY;
     }
+  }
+});
+
+test('v5.3 continuous 360° hair cutout, 2-pass headgear, 1-degree sweep & mirror symmetry', () => {
+  // 1. Unit test cylSpan: exact mirror symmetry, smooth edge shrinkage to 0, null on pure back, wrap equality at ±π
+  const s0 = cylSpan(0, -1.15, 1.15, 100);
+  assert.ok(s0 !== null);
+  assert.ok(Math.abs(s0.x0 + s0.x1) < 1e-6 && Math.abs(s0.vis - 1) < 1e-6);
+
+  for (const deg of [15, 45, 75, 90, 120, 145]) {
+    const rad = degToRad(deg);
+    const sp = cylSpan(rad, -1.15, 1.15, 100);
+    const sn = cylSpan(-rad, -1.15, 1.15, 100);
+    assert.ok(sp !== null && sn !== null, `cylSpan should be non-null at ±${deg}°`);
+    assert.ok(Math.abs(sp.x0 + sn.x1) < 1e-5 && Math.abs(sp.x1 + sn.x0) < 1e-5, `cylSpan mirror mismatch at ±${deg}°`);
+    assert.ok(Math.abs(sp.vis - sn.vis) < 1e-5, `cylSpan vis mirror mismatch at ±${deg}°`);
+  }
+  assert.equal(cylSpan(Math.PI, -1.15, 1.15, 100), null);
+  assert.equal(cylSpan(-Math.PI, -1.15, 1.15, 100), null);
+
+  // 2. Static guard: nol hard flip `sd = hySideSin >= 0 ? 1 : -1`, nol `hyFrontVis < 0.84` di rambut 360°, nol `is360 && frontVis < 0` di drawHeadgear
+  const src = readFileSync(join(process.cwd(), 'engine/cast/nusantara.ts'), 'utf8');
+  const hairSection = src.slice(src.indexOf('function renderShortHair360'), src.indexOf('function drawFrontHairStyle'));
+  assert.ok(!hairSection.includes('hySideSin >= 0 ? 1 : -1'), '360° hair must not use discrete sd = hySideSin >= 0 ? 1 : -1');
+  assert.ok(!hairSection.includes('hyFrontVis < 0.84'), '360° hair must not use hard activation if (hyFrontVis < 0.84)');
+  assert.ok(!hairSection.includes('hookDir = hySideSin >= 0'), '360° ahoge must not use discrete hookDir flip');
+  const headgearSection = src.slice(src.indexOf('function drawHeadgear'), src.indexOf('function drawHeadphoneCup'));
+  assert.ok(!headgearSection.includes('if (is360 && frontVis < 0)'), 'drawHeadgear must not hard-swap Z-order at frontVis < 0');
+
+  // 3. Sapuan 1° di seluruh sudut kritis (-180°, -90°, 0°, +90°, +180°) pada wilayah kepala/rambut/headgear (y <= 415):
+  //    nol loncatan delta bounding-box mendadak antar sudut berurutan 1°!
+  const criticalBands: Array<[number, number]> = [
+    [-180, -170],
+    [-100, -80],
+    [-10, 10],
+    [80, 100],
+    [170, 180],
+  ];
+  const headBounds = (spy: ReturnType<typeof createSpyCanvasCtx>) => {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i < spy.xs.length; i++) {
+      const y = spy.ys[i];
+      if (y > 395) continue;
+      const x = spy.xs[i];
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    return { minX, maxX, minY, maxY };
+  };
+  const sweepCast: CastPresetId[] = ['arya', 'dimas', 'ebot', 'raka', 'bangUtoh', 'saka', 'bangUdin', 'pakUjang', 'buSiti', 'pakBudi', 'tio'];
+  for (const id of sweepCast) {
+    for (const [startDeg, endDeg] of criticalBands) {
+      let prev: { minX: number; maxX: number; minY: number; maxY: number } | null = null;
+      for (let yaw = startDeg; yaw <= endDeg; yaw += 1) {
+        const spy = createSpyCanvasCtx();
+        drawActor(spy.ctx, id, { face: 'neutral', stance: 'stand', view: 'front', yawDeg: yaw });
+        const cur = headBounds(spy);
+        if (prev) {
+          const dX = Math.max(Math.abs(cur.minX - prev.minX), Math.abs(cur.maxX - prev.maxX));
+          const dY = Math.max(Math.abs(cur.minY - prev.minY), Math.abs(cur.maxY - prev.maxY));
+          assert.ok(dX <= 12, `${id} horizontal discontinuity at ${yaw - 1}°->${yaw}°: dX=${dX.toFixed(2)}px`);
+          assert.ok(dY <= 8, `${id} vertical discontinuity at ${yaw - 1}°->${yaw}°: dY=${dY.toFixed(2)}px`);
+        }
+        prev = cur;
+      }
+    }
+  }
+
+  // 4. Uji simetri cermin kiri-kanan pada wilayah kepala/rambut/headgear: render(+θ) cermin presisi terhadap CX=350 dari render(-θ)
+  const symmetricCast: CastPresetId[] = ['arya', 'dimas', 'bangUdin', 'ebot', 'pakUjang'];
+  const CX = 350;
+  for (const id of symmetricCast) {
+    for (const deg of [15, 45, 75, 90, 115, 150]) {
+      const sp = createSpyCanvasCtx();
+      const sn = createSpyCanvasCtx();
+      drawActor(sp.ctx, id, { face: 'neutral', stance: 'stand', view: 'front', yawDeg: deg, lean: 0 });
+      drawActor(sn.ctx, id, { face: 'neutral', stance: 'stand', view: 'front', yawDeg: -deg, lean: 0 });
+      const bp = headBounds(sp);
+      const bn = headBounds(sn);
+      const errL = Math.abs((bp.minX - CX) + (bn.maxX - CX));
+      const errR = Math.abs((bp.maxX - CX) + (bn.minX - CX));
+      const errY = Math.abs(bp.minY - bn.minY);
+      assert.ok(
+        errL <= 4 && errR <= 4 && errY <= 3,
+        `${id} mirror asymmetry at ±${deg}°: errL=${errL.toFixed(2)}, errR=${errR.toFixed(2)}, errY=${errY.toFixed(2)}`,
+      );
+    }
+  }
+});
+
+test('v6.1 pure 2.5D Bezier classic hair & headgear canon: bald Arya/PakUjang, non-bald Dimas, & constant crown volume', () => {
+  // 1. Kanon botak: Arya & Pak Ujang wajib hairStyle === 'bald' dan tidak menggambar hairColor di 180° (tanpa topi)
+  for (const id of ['arya', 'pakUjang'] as const) {
+    assert.equal(CAST_PRESETS[id].hairStyle, 'bald', `${id} must be bald`);
+    const spy = createSpyCanvasCtx();
+    const hairFills: string[] = [];
+    const raw = spy.ctx as unknown as { fill: () => void; fillStyle: string };
+    const origFill = raw.fill;
+    raw.fill = () => {
+      if (String(raw.fillStyle).toLowerCase() === CAST_PRESETS[id].hairColor.toLowerCase()) {
+        hairFills.push(String(raw.fillStyle));
+      }
+      origFill();
+    };
+    drawActor(spy.ctx, id, { face: 'neutral', stance: 'stand', view: 'front', yawDeg: 180 }, { headgear: 'none' });
+    assert.equal(hairFills.length, 0, `${id}@180° bald must not fill hairColor`);
+  }
+
+  // 2. Dimas (short) pada 0° tetap memiliki rambut pendek terlihat rapi
+  const spyDimas = createSpyCanvasCtx();
+  const dimasHairYs: number[] = [];
+  const rawD = spyDimas.ctx as unknown as { fill: () => void; fillStyle: string };
+  const origFillD = rawD.fill;
+  rawD.fill = () => {
+    if (String(rawD.fillStyle).toLowerCase() === CAST_PRESETS.dimas.hairColor.toLowerCase()) {
+      dimasHairYs.push(spyDimas.ys[spyDimas.ys.length - 1] ?? 0);
+    }
+    origFillD();
+  };
+  drawActor(spyDimas.ctx, 'dimas', { face: 'neutral', stance: 'stand', view: 'front', yawDeg: 0 });
+  assert.ok(dimasHairYs.length >= 1, 'dimas@0° short hair should be rendered');
+
+  // 3. Volume puncak mahkota konstan 0° vs 180° (nol penyusutan 45% pada Ebot, Raka, Bang Utoh, Pak Budi, Tio!)
+  for (const id of ['ebot', 'raka', 'bangUtoh', 'pakBudi', 'tio'] as const) {
+    const s0 = createSpyCanvasCtx();
+    const s180 = createSpyCanvasCtx();
+    drawActor(s0.ctx, id, { face: 'neutral', stance: 'stand', view: 'front', yawDeg: 0 }, { headgear: 'none' });
+    drawActor(s180.ctx, id, { face: 'neutral', stance: 'stand', view: 'front', yawDeg: 180 }, { headgear: 'none' });
+    const minY0 = Math.min(...s0.ys);
+    const minY180 = Math.min(...s180.ys);
+    assert.ok(
+      Math.abs(minY0 - minY180) <= 8,
+      `${id} crown deflated between 0° (${minY0.toFixed(1)}) and 180° (${minY180.toFixed(1)})`,
+    );
   }
 });
 
