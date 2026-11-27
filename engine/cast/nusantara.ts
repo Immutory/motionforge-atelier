@@ -2468,15 +2468,33 @@ function draw3DBrimPass(
   const keep = pass === 'back' ? (z: number) => z < 0 : (z: number) => z >= 0;
   let runStart = -1;
   const flushRun = (a: number, b: number) => {
-    const ribbon = () => {
-      ctx.beginPath();
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(segs[a].o0.x, segs[a].o0.y);
+    for (let i = a; i <= b; i++) ctx.lineTo(segs[i].o1.x, segs[i].o1.y);
+    for (let i = b; i >= a; i--) ctx.lineTo(segs[i].i1.x, segs[i].i1.y);
+    ctx.lineTo(segs[a].i0.x, segs[a].i0.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = lw;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(segs[a].o0.x, segs[a].o0.y);
+    for (let i = a; i <= b; i++) ctx.lineTo(segs[i].o1.x, segs[i].o1.y);
+    if (b === segs.length - 1) ctx.lineTo(segs[b].i1.x, segs[b].i1.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(segs[a].i0.x, segs[a].i0.y);
+    for (let i = a; i <= b; i++) ctx.lineTo(segs[i].i1.x, segs[i].i1.y);
+    if (a === 0) {
       ctx.moveTo(segs[a].o0.x, segs[a].o0.y);
-      for (let i = a; i <= b; i++) ctx.lineTo(segs[i].o1.x, segs[i].o1.y);
-      for (let i = b; i >= a; i--) ctx.lineTo(segs[i].i1.x, segs[i].i1.y);
       ctx.lineTo(segs[a].i0.x, segs[a].i0.y);
-      ctx.closePath();
-    };
-    inked(ctx, ribbon, fill, ink, lw, shX, shY);
+    }
+    ctx.stroke();
+    ctx.restore();
   };
   for (let i = 0; i < segs.length; i++) {
     if (keep(segs[i].zMid)) {
@@ -2518,7 +2536,7 @@ function drawHeadgear(
     if (!drawFront) return;
     const col = headgearColor ?? '#231e2f';
     // Oval 3D dinamis: memanjang alami di profil samping (0.48 -> 0.57) & lipatan tengah terproyeksi kontinu
-    const pw = is360 ? W * (0.48 + 0.09 * sideSin * sideSin) : Math.max(124, W * 0.495);
+    const pw = is360 ? W * (0.505 + 0.085 * sideSin * sideSin) : Math.max(124, W * 0.495);
     const archTop = is360 ? 20 - 5 * sideSin * sideSin : 20;
     const archBot = is360 ? 16 - 4 * sideSin * sideSin : 16;
     ctx.save();
@@ -2597,7 +2615,7 @@ function drawHeadgear(
           const pw = panelSpan.x1 - panelSpan.x0;
           ctx.beginPath();
           ctx.moveTo(panelSpan.x0, 26);
-          ctx.bezierCurveTo(panelSpan.x0 - pw * 0.06, -42, panelSpan.x0 + pw * 0.16, -84, panelSpan.midX, -86);
+          ctx.bezierCurveTo(panelSpan.x0 - pw * 0.06, -42, panelSpan.x0 + pw * 0.16, -84, 0, -86);
           ctx.bezierCurveTo(panelSpan.x1 - pw * 0.16, -84, panelSpan.x1 + pw * 0.06, -42, panelSpan.x1, 26);
           ctx.closePath();
           ctx.fill();
@@ -2618,7 +2636,7 @@ function drawHeadgear(
             ctx,
             () => {
               ctx.beginPath();
-              ctx.roundRect(strapSpan.x0, -4, sw, 18, Math.min(9, sw * 0.45));
+              ctx.roundRect(strapSpan.x0, -10, sw, 18, Math.min(9, sw * 0.45));
             },
             brimColor,
             ink,
@@ -2696,7 +2714,7 @@ function drawHeadgear(
     // Jangkar pangkal sayap tepat pada radius silinder pita (rBand) agar selalu menempel rapat di 0°, 89°, 111°, & 180°!
     const rBand = bw * 0.96;
     const wA = is360 ? rotateYaw3D([rBand * Math.sin(0.46), headTop + 6, -rBand * Math.cos(0.46)], hy) : { x: legDir * 38, y: headTop + 8, z: 0 };
-    const wB = is360 ? rotateYaw3D([rBand * 1.18 * Math.sin(0.84), headTop - 52, -rBand * 0.55 * Math.cos(0.84)], hy) : { x: legDir * 110, y: headTop - 50, z: 0 };
+    const wB = is360 ? rotateYaw3D([rBand * 1.12 * Math.sin(0.84), headTop - 52, -rBand * 1.12 * Math.cos(0.84)], hy) : { x: legDir * 110, y: headTop - 50, z: 0 };
     const wC = is360 ? rotateYaw3D([rBand * Math.sin(1.12), headTop + 16, -rBand * Math.cos(1.12)], hy) : { x: legDir * 116, y: headTop + 16, z: 0 };
     const wingMidZ = (wA.z + wB.z + wC.z) / 3;
     const drawWing = () => {
@@ -2739,7 +2757,7 @@ function drawHeadgear(
           const aMid = a0 + stepAng * 0.5;
           const p0 = surfacePoint3D(CX, headTop, bw, bw, a0, hy);
           const pm = surfacePoint3D(CX, headTop, bw, bw, aMid, hy);
-          if (p0.vis > -0.15 || pm.vis > -0.15) {
+          if (p0.vis > 0.02 && pm.vis > 0.02) {
             const sag0 = 14 * (1 - p0.nx * p0.nx);
             const sagM = 14 * (1 - pm.nx * pm.nx);
             ctx.moveTo(p0.x, headTop - 16 + sag0 * 0.4);
@@ -2808,7 +2826,7 @@ function drawHeadgear(
     ctx.translate(CX, cy - pop * 36);
     ctx.rotate(-0.1 * pop * wPop);
 
-    const helmRx = 144;
+    const helmRx = Math.round(W * 0.576);
     // Batok bawah helm naik rapi di sekitar pipi (y=36) saat tampak depan/samping & turun penuh menutupi tengkuk (y=128) di tampak belakang!
     const backDrop = is360 ? 36 + 92 * smoothstepHair(0.25, -0.58, frontVis) : 130;
     const helmOuter = () => {
@@ -2832,7 +2850,7 @@ function drawHeadgear(
       }
       if (drawFront) {
         // Bukaan wajah dihitung langsung dari proyeksi silinder cylSpan (simetri cermin kiri-kanan 100% presisi!)
-        const openSpan = cylSpan(hy, -1.12, 1.12, 134);
+        const openSpan = cylSpan(hy, -1.12, 1.12, helmRx + 2);
         const traceHelmetFrontShell = () => {
           helmOuter();
           if (openSpan !== null && openSpan.x1 - openSpan.x0 > 3) {
@@ -2930,7 +2948,7 @@ function drawHeadgear(
         }
 
         // Visor 3D melengkung sejati memeluk dahi helm
-        const visorAlpha = smoothstepHair(-0.18, 0.14, frontVis);
+        const visorAlpha = smoothstepHair(-0.42, -0.14, frontVis);
         if (visorAlpha > 0.02) {
           ctx.save();
           if (visorAlpha < 0.999) ctx.globalAlpha *= visorAlpha;
@@ -3047,17 +3065,26 @@ function drawHeadgear(
       )
         .map((c) => ({ s: c.s, p: c.p, z: c.p.z }))
         .sort((a, b) => a.z - b.z);
+      const cupZSplit = -W * 0.14;
       if (drawBack) {
+        ctx.save();
+        ctx.translate(CX, cy - pop * 48);
+        ctx.rotate(-0.1 * pop * wPop);
         for (const c of cups360) {
-          if (c.p.z < 0) drawHeadphoneCup(ctx, CX + c.p.x, c.p.y, c.s, col, led, ink, 1, hy);
+          if (c.p.z < cupZSplit) drawHeadphoneCup(ctx, c.p.x, 14, c.s, col, led, ink, 1, hy);
         }
+        ctx.restore();
         drawHeadphoneBand360(ctx, spec, W, cy, pop, hy, 'back');
       }
       if (drawFront) {
         drawHeadphoneBand360(ctx, spec, W, cy, pop, hy, 'front');
+        ctx.save();
+        ctx.translate(CX, cy - pop * 48);
+        ctx.rotate(-0.1 * pop * wPop);
         for (const c of cups360) {
-          if (c.p.z >= 0) drawHeadphoneCup(ctx, CX + c.p.x, c.p.y, c.s, col, led, ink, 1, hy);
+          if (c.p.z >= cupZSplit) drawHeadphoneCup(ctx, c.p.x, 14, c.s, col, led, ink, 1, hy);
         }
+        ctx.restore();
       }
     } else if (drawFront) {
       ctx.save();
@@ -3086,11 +3113,11 @@ function drawHeadgear(
     const col = headgearColor ?? '#473426';
     const gold = headgearAccent ?? '#f2c144';
     ctx.save();
-    ctx.translate(CX + sideSin * 11, headTop + 30 - pop * 46);
+    ctx.translate(CX + sideSin * 3, headTop + 30 - pop * 46);
     // Anti-simetris murni terhadap sideSin di mode 360° agar simetri kiri-kanan 100% presisi!
     const baseRot = is360 ? sideSin * 0.04 : -0.03 + sideSin * 0.04;
     ctx.rotate(baseRot * (1 - wPop) + -0.12 * pop * wPop);
-    const cw = is360 ? 124 * (1 - 0.08 * sideSin * sideSin) : 124;
+    const cw = is360 ? Math.max(W * 0.51, 124 * (1 - 0.03 * sideSin * sideSin)) : 124;
 
     if (is360) {
       if (drawBack) {
@@ -3126,7 +3153,7 @@ function drawHeadgear(
         draw3DBrimPass(ctx, hy, 'front', 108, 22, 12, 156, 102, 6, 6, 92, '#1b1d24', ink, 4.5, 2, 3);
 
         // Lencana emas silindris sejati via cylSpan ter-clip ke mahkota topi
-        const embSpan = cylSpan(hy, -0.22, 0.22, cw * 0.92);
+        const embSpan = cylSpan(hy, -0.22, 0.22, cw * 1.08);
         if (embSpan !== null && embSpan.x1 - embSpan.x0 > 3) {
           const embX = embSpan.midX;
           const halfW = (embSpan.x1 - embSpan.x0) * 0.5;
@@ -4179,7 +4206,7 @@ export function drawActor(
     renderHairBackPass360(ctx, spec, W360, headTop, cy, hatPop, hyRad, reliefOut);
 
     // Telinga 360° murni setia `HEAD` (warna bayangan, earDetail, & anting mutiara tetap terbaca di profil ±90°!)
-    const showEars360 = hairStyle !== 'hijab' && spec.headgear !== 'helmet';
+    const showEars360 = hairStyle !== 'hijab' && spec.headgear !== 'helmet' && !(spec.headgear === 'headphones' && hatPop < 0.25);
     if (showEars360) {
       const pureBackRestore = smoothstepHair(-0.35, -0.78, hyFrontVis);
       const drawClassicEar360 = (s: -1 | 1) => {
@@ -4397,7 +4424,8 @@ export function drawActor(
     }
 
     // Tali dagu helm (Ojol): solid 100%, jangkar dari tepi pipi helm (z = -18) memeluk bawah dagu (nol garis abu miring di pipi!)
-    if (spec.headgear === 'helmet' && hyFrontVis > 0.04) {
+    const chinStrapA = spec.headgear === 'helmet' ? smoothstepHair(-0.30, -0.06, hyFrontVis) : 0;
+    if (chinStrapA > 0.02) {
       const bJaw = headWidthBoundsAtY(spec, W360, H, cy, cy + 46, hySideSin);
       const pL = rotateYaw3D([-W360 * 0.48, cy + 36, -18], hyRad);
       const pR = rotateYaw3D([W360 * 0.48, cy + 36, -18], hyRad);
@@ -4452,12 +4480,12 @@ export function drawActor(
       });
 
       const eg = computeEyeGeom360(CX, cy, W360, spec.eyeStyle, hyRad);
-      const glassesFrontA = smoothstepHair(-0.14, 0.04, hyFrontVis);
+      const glassesFrontA = smoothstepHair(-0.30, -0.10, hyFrontVis);
       if (spec.glasses && glassesFrontA > 0.02) {
         const eyeY = eg.eyeY - hatPop * 9;
         const bTemple = headWidthBoundsAtY(spec, W360, H, cy, eyeY - 6, hySideSin);
         const templeTargetX = (s: number) => (s < 0 ? bTemple.xL + 1 : bTemple.xR - 1);
-        const bridgeAlpha = Math.min(eg.eyeAlpha(-1), eg.eyeAlpha(1)) * glassesFrontA;
+        const bridgeAlpha = Math.min(eg.eyeAlpha(-1), eg.eyeAlpha(1));
         ctx.save();
         if (glassesFrontA < 0.999) ctx.globalAlpha *= glassesFrontA;
         if (spec.glassesStyle === 'tech') {
@@ -5399,11 +5427,11 @@ function drawHeadphoneBand360(
   const bandRx = W * 0.56;
   const bandRy = 140;
   const halfStrapZ = 9.5;
-  const zSplit = -6;
+  const zSplit = -14;
 
-  // Bangun daftar titik t dengan lengkung Z kontur tengkorak (-12 sin t) agar di profil samping melengkung alami (bukan palang lurus!)
+  // Bangun daftar titik t dengan lengkung Z kontur tengkorak (-8 sin t) agar puncak bando + bantalan selalu utuh di pass depan (-60°..+60°)!
   const ts: number[] = [];
-  const zAt = (t: number) => rotateYaw3D([-bandRx * Math.cos(t), 6 - bandRy * Math.sin(t), -12 * Math.sin(t)], hy).z;
+  const zAt = (t: number) => rotateYaw3D([-bandRx * Math.cos(t), 6 - bandRy * Math.sin(t), -8 * Math.sin(t)], hy).z;
   for (let i = 0; i <= N; i++) {
     const t = (i / N) * Math.PI;
     if (i > 0) {
@@ -5422,8 +5450,8 @@ function drawHeadphoneBand360(
   for (let i = 0; i < ts.length - 1; i++) {
     const t0 = ts[i];
     const t1 = ts[i + 1];
-    const zArch0 = -12 * Math.sin(t0);
-    const zArch1 = -12 * Math.sin(t1);
+    const zArch0 = -8 * Math.sin(t0);
+    const zArch1 = -8 * Math.sin(t1);
     const f0 = rotateYaw3D([-bandRx * Math.cos(t0), 6 - bandRy * Math.sin(t0), zArch0 + halfStrapZ], hy);
     const f1 = rotateYaw3D([-bandRx * Math.cos(t1), 6 - bandRy * Math.sin(t1), zArch1 + halfStrapZ], hy);
     const b0 = rotateYaw3D([-bandRx * Math.cos(t0), 6 - bandRy * Math.sin(t0), zArch0 - halfStrapZ], hy);
@@ -5825,23 +5853,24 @@ function fillContinuousHairShellWithFaceCutout(
   // 2. Profil azimut anatomis 6-stasiun via cylSpan(hyRad) + kurva Bezier kuadratik halus
   const isFade = hairStyle === 'fadeCrop';
   const stations: ReadonlyArray<readonly [y: number, ang: number]> = [
-    [foreheadY, isFade ? 1.22 : 1.14],
-    [cy - 18, isFade ? 1.16 : 1.06],
-    [cy + 14, isFade ? 1.34 : 1.24],
-    [cy + 28, isFade ? 1.56 : 1.48],
-    [chin - 34, isFade ? 1.74 : 1.66],
-    [chin + 8, isFade ? 1.80 : 1.72],
+    [foreheadY, isFade ? 1.20 : 1.12],
+    [cy - 18, isFade ? 1.15 : 1.06],
+    [cy + 14, isFade ? 1.30 : 1.22],
+    [cy + 28, isFade ? 1.42 : 1.36],
+    [chin - 34, isFade ? 1.48 : 1.44],
+    [chin + 8, isFade ? 1.50 : 1.48],
   ];
 
   const leftPts: { x: number; y: number }[] = [];
   const rightPts: { x: number; y: number }[] = [];
   for (const [sy, ang] of stations) {
     const b = headWidthBoundsAtY(spec, W360, H, cy, sy, hySideSin);
-    const rxK = Math.max(24, (b.xR - b.xL) * 0.525);
+    const midX = (b.xL + b.xR) * 0.5;
+    const rxK = Math.max(24, (b.xR - b.xL) * 0.505);
     const sp = cylSpan(hyRad, -ang, ang, rxK);
     if (sp !== null && sp.x1 - sp.x0 > 1.5) {
-      leftPts.push({ x: CX + sp.x0, y: sy });
-      rightPts.push({ x: CX + sp.x1, y: sy });
+      leftPts.push({ x: midX + sp.x0, y: sy });
+      rightPts.push({ x: midX + sp.x1, y: sy });
     }
   }
 
@@ -6040,10 +6069,11 @@ function drawClassicBun360(
   const bunRad = 44;
   const hySideSin = Math.sin(hyRad);
   inked(ctx, () => { ctx.beginPath(); ctx.arc(bx, by, bunRad, 0, TAU); }, spec.hairColor, spec.ink, 5.5, 3, 4);
+  const bandW = 66 * (0.68 + 0.32 * Math.abs(Math.cos(hyRad)));
   ctx.save();
-  ctx.translate(bx, by + 18);
-  ctx.rotate(hySideSin * 0.22);
-  inked(ctx, () => { ctx.beginPath(); ctx.roundRect(-33, -8, 66, 16, 8); }, '#e04848', spec.ink, 4, 2, 2.5);
+  ctx.translate(bx - hySideSin * 10, by + 18);
+  ctx.rotate(-hySideSin * 0.36);
+  inked(ctx, () => { ctx.beginPath(); ctx.roundRect(-bandW * 0.5, -8, bandW, 16, 8); }, '#e04848', spec.ink, 4, 2, 2.5);
   ctx.restore();
   if (reliefOut) {
     reliefOut.push({ kind: 'sphere', cx: bx, cy: by, rx: bunRad, ry: bunRad, z: bun3.z + 200, heightScale: 0.92, ao: bun3.z < 0 ? 0.85 : 1 });
@@ -6063,13 +6093,12 @@ function drawClassicAhoge360(
 ) {
   if (spec.hairStyle !== 'messy') return;
   const lift = -hatPop * 14;
-  const p0 = rotateYaw3D([-10, headTop - 36 + lift, 10], hyRad);
-  const c1 = rotateYaw3D([6, headTop - 76 + lift, 14], hyRad);
+  const p0 = rotateYaw3D([-10, headTop - 36 + lift, 14], hyRad);
+  const c1 = rotateYaw3D([6, headTop - 76 + lift, 16], hyRad);
   const tip = rotateYaw3D([44, headTop - 54 + lift, -14], hyRad);
   const c2 = rotateYaw3D([26, headTop - 42 + lift, -6], hyRad);
-  const p1 = rotateYaw3D([34, headTop - 36 + lift, 6], hyRad);
-  const zMid = (p0.z + tip.z) * 0.5;
-  if ((pass === 'back' && zMid >= -12) || (pass === 'front' && zMid < -12)) return;
+  const p1 = rotateYaw3D([34, headTop - 36 + lift, -6], hyRad);
+  if (pass === 'back') return;
 
   ctx.save();
   ctx.fillStyle = spec.hairColor;
@@ -6252,10 +6281,12 @@ function renderUnifiedHair360(
     ctx.closePath();
   };
 
-  // Bayangan jatuh lembut mahkota (memudar mulus ke belakang)
+  // Bayangan jatuh lembut mahkota (ter-clip headPath360 agar tinta tidak bocor keluar siluet)
   const shadowAlpha = smoothstepHair(-0.08, 0.25, hyFrontVis);
   if (shadowAlpha > 0.01) {
     ctx.save();
+    headPath360();
+    ctx.clip();
     ctx.globalAlpha *= shadowAlpha;
     ctx.translate(hySideSin * 2.5, 3.5);
     traceCrownPath();
@@ -6295,9 +6326,9 @@ function renderUnifiedHair360(
 
   // 4. Fitur Khas 2.5D Bezier Puncak Mahkota (Raka wave lembut, Saka puncak tunggal klasik, Bang Utoh ahoge!)
   if (hairStyle === 'curtain') {
-    const p0 = rotateYaw3D([4, headTop - 44 + lift, 12], hyRad);
-    const c1 = rotateYaw3D([26, headTop - 76 + lift, 16], hyRad);
-    const p1 = rotateYaw3D([62, headTop - 46 + lift, 8], hyRad);
+    const p0 = rotateYaw3D([4, headTop - 44 + lift, 16], hyRad);
+    const c1 = rotateYaw3D([26, headTop - 76 + lift, 22], hyRad);
+    const p1 = rotateYaw3D([62, headTop - 46 + lift, -18], hyRad);
     const base = rotateYaw3D([30, headTop - 28 + lift, 8], hyRad);
     ctx.save();
     ctx.fillStyle = hairColor;
@@ -6317,9 +6348,9 @@ function renderUnifiedHair360(
     ctx.restore();
   } else if (hairStyle === 'spiky' || hairStyle === 'quiff') {
     // Puncak tengah tebal klasik Saka + punggung mahkota halus di belakang (menggantikan 6 kerucut tipis!)
-    const pL = rotateYaw3D([-W360 * 0.16, headTop - 42 + lift, 14], hyRad);
-    const peak = rotateYaw3D([W360 * 0.04, headTop - 64 + lift, 6], hyRad);
-    const pR = rotateYaw3D([W360 * 0.24, headTop - 36 + lift, 14], hyRad);
+    const pL = rotateYaw3D([-W360 * 0.16, headTop - 42 + lift, 18], hyRad);
+    const peak = rotateYaw3D([W360 * 0.04, headTop - 64 + lift, 4], hyRad);
+    const pR = rotateYaw3D([W360 * 0.24, headTop - 36 + lift, -14], hyRad);
     const pBack = rotateYaw3D([0, headTop - 52 + lift, -24], hyRad);
     ctx.save();
     ctx.fillStyle = hairColor;
